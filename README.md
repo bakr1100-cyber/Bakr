@@ -63,7 +63,7 @@ promising this to users.
 
 | Area | This build | To go to production |
 |---|---|---|
-| Flight prices & schedules | Real quotes via **Amadeus for Developers** when `AMADEUS_CLIENT_ID`/`AMADEUS_CLIENT_SECRET` are set (sandbox environment - real but limited/cached data), else deterministic synthetic data | Go through Amadeus's production-access review, or add another `FlightPriceSource` for a different aggregator |
+| Flight prices & schedules | Deterministic synthetic data (`MockFlightPriceSource`). `AmadeusFlightPriceSource` exists and is wired up, but **Amadeus's self-service developer portal was decommissioned on July 17, 2026** - new self-serve credentials are no longer obtainable, only Enterprise (contracted) access still works | Add a currently-self-serve source (e.g. Duffel) behind `FlightPriceSource`, or use Amadeus Enterprise if you have that relationship |
 | Train/bus prices & schedules | Always synthetic fixed prices (ONCF ~18 €, ICE ~35 €) - Amadeus has no rail data | Add an ONCF/rail timetable API behind a similar interface |
 | Natural language understanding | Rule-based keyword/regex parser (`NluService`) | A multilingual LLM fine-tuned/prompted for Darija, ideally with RAG over live fare data |
 | Speech | On-device OS speech engines (`speech_to_text`, `flutter_tts`) | Cloud STT/TTS (e.g. Whisper-family STT, ElevenLabs TTS) for much better Darija quality |
@@ -108,15 +108,26 @@ this repo.
 
 ## Real flight data (Amadeus for Developers)
 
-By default the app runs on synthetic flight data (`MockFlightPriceSource`)
-so it works fully offline with no setup. To see real quotes:
+> **⚠️ Currently blocked for new users.** Amadeus decommissioned the
+> self-service developer portal on **July 17, 2026** - new-user
+> registration was paused in spring 2026 and the portal (plus all existing
+> self-service API keys) is now shut down entirely. Only Amadeus
+> **Enterprise** customers (an existing paid/contracted relationship, not
+> self-signup) can still use it. This build's `AmadeusFlightPriceSource`
+> code is left in place and still works if you have Enterprise credentials
+> or the shutdown is reversed, but **no new developer can get self-serve
+> Amadeus credentials right now**. Until that changes (or this project
+> switches to another source, e.g. Duffel, which is still self-serve), the
+> app simply runs on `MockFlightPriceSource` - see "What's mocked" above.
 
-1. Sign up for free at <https://developers.amadeus.com>, create an app in
-   your dashboard, and copy its **Test environment** API Key and API
-   Secret - self-serve, no partner agreement or approval needed, unlike
-   Skyscanner. The sandbox also gives you a Test Data management tool to
-   shape what the API returns, which is why this build uses Amadeus
-   instead of Duffel.
+By default the app runs on synthetic flight data (`MockFlightPriceSource`)
+so it works fully offline with no setup. If you do have Amadeus
+credentials (Enterprise, or from before the shutdown):
+
+1. Create an app in your Amadeus dashboard and copy its **Test
+   environment** API Key and API Secret. The sandbox includes a Test Data
+   management tool to shape what the API returns, which is why this build
+   used Amadeus instead of Duffel while self-service access still existed.
 2. Run the app with them as compile-time defines:
 
    ```bash
