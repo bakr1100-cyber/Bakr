@@ -161,6 +161,15 @@ Notes/limitations of the Duffel integration as implemented:
 - Duffel's **test mode** returns realistic but fictional test-airline
   offers, not live real-world schedules/prices - going live requires
   Duffel's own review process (same as any flight-booking API).
+- Test mode has two kinds of sandbox: **Duffel Airways** (`ZZ`), a fake
+  airline Duffel runs and guarantees itself, and real airlines' own
+  third-party sandboxes (Ryanair, Royal Air Maroc, etc.), which Duffel
+  doesn't control and can be flaky (maintenance windows, sandbox
+  availability "used up" by other developers' test bookings). Either way,
+  `DuffelFlightPriceSource` falls back to mock data whenever a route
+  returns no offers, so this never breaks the app - it just means some
+  routes may silently show synthetic prices even with a real key
+  configured.
 - Only flight legs go through Duffel; ICE/ONCF train legs stay synthetic
   fixed prices (`lib/services/flight_search_service.dart`).
 - Amounts are read from Duffel as-is and displayed as EUR; Duffel doesn't
