@@ -33,57 +33,65 @@ class SettingsScreen extends StatelessWidget {
             padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
             child: Text('Sprache', style: TextStyle(fontWeight: FontWeight.w700)),
           ),
-          for (final language in AppLanguage.values)
-            RadioListTile<AppLanguage>(
-              title: Text(language.nativeName),
-              value: language,
-              groupValue: localeProvider.language,
-              onChanged: (value) {
-                if (value != null) localeProvider.setLanguage(value);
-              },
+          RadioGroup<AppLanguage>(
+            groupValue: localeProvider.language,
+            onChanged: (value) {
+              if (value != null) localeProvider.setLanguage(value);
+            },
+            child: Column(
+              children: [
+                for (final language in AppLanguage.values)
+                  RadioListTile<AppLanguage>(
+                    title: Text(language.nativeName),
+                    value: language,
+                  ),
+              ],
             ),
+          ),
           const Divider(),
           const Padding(
             padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
             child: Text('Erscheinungsbild', style: TextStyle(fontWeight: FontWeight.w700)),
           ),
-          RadioListTile<ThemeMode>(
-            title: const Text('Systemeinstellung'),
-            value: ThemeMode.system,
+          RadioGroup<ThemeMode>(
             groupValue: themeProvider.mode,
-            onChanged: (v) => themeProvider.setMode(v!),
-          ),
-          RadioListTile<ThemeMode>(
-            title: const Text('Hell'),
-            value: ThemeMode.light,
-            groupValue: themeProvider.mode,
-            onChanged: (v) => themeProvider.setMode(v!),
-          ),
-          RadioListTile<ThemeMode>(
-            title: const Text('Dunkel'),
-            value: ThemeMode.dark,
-            groupValue: themeProvider.mode,
-            onChanged: (v) => themeProvider.setMode(v!),
+            onChanged: (value) {
+              if (value != null) themeProvider.setMode(value);
+            },
+            child: const Column(
+              children: [
+                RadioListTile<ThemeMode>(
+                  title: Text('Systemeinstellung'),
+                  value: ThemeMode.system,
+                ),
+                RadioListTile<ThemeMode>(
+                  title: Text('Hell'),
+                  value: ThemeMode.light,
+                ),
+                RadioListTile<ThemeMode>(
+                  title: Text('Dunkel'),
+                  value: ThemeMode.dark,
+                ),
+              ],
+            ),
           ),
           const Divider(),
           const Padding(
             padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
             child: Text('Stimme des KI-Assistenten', style: TextStyle(fontWeight: FontWeight.w700)),
           ),
-          RadioListTile<bool>(
-            title: const Text('Weiblich'),
-            value: true,
+          RadioGroup<bool>(
             groupValue: prefsProvider.preferences.preferredVoiceIsFemale,
-            onChanged: (v) => prefsProvider.update(
-              (p) => p.copyWith(preferredVoiceIsFemale: v),
-            ),
-          ),
-          RadioListTile<bool>(
-            title: const Text('Männlich'),
-            value: false,
-            groupValue: prefsProvider.preferences.preferredVoiceIsFemale,
-            onChanged: (v) => prefsProvider.update(
-              (p) => p.copyWith(preferredVoiceIsFemale: v),
+            onChanged: (value) {
+              if (value != null) {
+                prefsProvider.update((p) => p.copyWith(preferredVoiceIsFemale: value));
+              }
+            },
+            child: const Column(
+              children: [
+                RadioListTile<bool>(title: Text('Weiblich'), value: true),
+                RadioListTile<bool>(title: Text('Männlich'), value: false),
+              ],
             ),
           ),
         ],

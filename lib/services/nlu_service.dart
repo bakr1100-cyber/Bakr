@@ -185,7 +185,7 @@ class NluService {
     // Try longest-alias-contained-in-phrase match (handles trailing words).
     String? bestAlias;
     for (final alias in _cityAliases.keys) {
-      if (cleaned.contains(alias) && (bestAlias == null || alias.length > bestAlias!.length)) {
+      if (cleaned.contains(alias) && (bestAlias == null || alias.length > bestAlias.length)) {
         bestAlias = alias;
       }
     }

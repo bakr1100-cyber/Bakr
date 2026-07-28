@@ -95,12 +95,12 @@ class _MarocFlyAppState extends State<MarocFlyApp> {
                 theme: AppTheme.light(),
                 darkTheme: AppTheme.dark(),
                 themeMode: themeProvider.mode,
-                locale: localeProvider.language.locale,
+                locale: localeProvider.language.flutterLocale,
                 localizationsDelegates: [
                   AppLocalizationsDelegate(localeProvider.language),
                   ...GlobalMaterialLocalizations.delegates,
                 ],
-                supportedLocales: AppLanguage.values.map((l) => l.locale),
+                supportedLocales: AppLanguage.values.map((l) => l.flutterLocale),
                 builder: (context, child) => Directionality(
                   textDirection: localeProvider.language.isRtl
                       ? TextDirection.rtl

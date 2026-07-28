@@ -28,6 +28,16 @@ extension AppLanguageCode on AppLanguage {
   bool get isRtl => this == AppLanguage.ary || this == AppLanguage.ar;
 
   Locale get locale => Locale(code);
+
+  /// The [Locale] to hand to `MaterialApp.locale`/`supportedLocales`.
+  /// Flutter ships no built-in Material/Cupertino translations for the
+  /// 'ary' (Darija) locale code, so passing it directly makes Flutter's
+  /// *own* widgets (date pickers, default button labels, etc.) warn/throw.
+  /// Our [AppLocalizationsDelegate] serves the real Darija UI strings
+  /// regardless of this value (it keys off [AppLanguage], not `Locale`),
+  /// so this only controls the fallback language for Flutter's built-in
+  /// widget strings - Arabic is the closest Flutter actually supports.
+  Locale get flutterLocale => this == AppLanguage.ary ? const Locale('ar') : locale;
 }
 
 class AppLocalizations {
@@ -52,7 +62,7 @@ class AppLocalizations {
       AppLanguage.ary: 'ماشي غير أرخص طيارة، بلاصة أذكى طريق للبلاد',
       AppLanguage.ar: 'ليس أرخص رحلة فقط، بل أذكى طريق إلى الوطن',
       AppLanguage.de: 'Nicht der günstigste Flug, sondern der intelligenteste Weg nach Hause.',
-      AppLanguage.fr: "Pas le vol le moins cher, le chemin le plus intelligent vers chez vous.",
+      AppLanguage.fr: 'Pas le vol le moins cher, le chemin le plus intelligent vers chez vous.',
       AppLanguage.en: 'Not the cheapest flight — the smartest way home.',
     },
     'from': {

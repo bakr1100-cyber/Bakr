@@ -20,8 +20,8 @@ class LanguageSelectScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const SizedBox(height: 32),
-              Row(
-                children: const [
+              const Row(
+                children: [
                   Expanded(child: _FlagBar(color: AppColors.moroccoRed)),
                   Expanded(child: _FlagBar(color: AppColors.moroccoGreen)),
                 ],

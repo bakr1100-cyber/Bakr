@@ -61,19 +61,22 @@ void main() {
       }
     });
 
-    test('every non-direct alternative is cheaper than the direct flight', () async {
+    test('every alternative is cheaper than the requested direct route', () async {
       final results = await service.search(intentFor(1));
-      final direct = results.firstWhere((i) => i.isDirect);
-      for (final itinerary in results.where((i) => !i.isDirect)) {
+      // `isDirect` only means "single leg" - the alt-departure itineraries
+      // (e.g. Cologne->Fès) are single-leg too, so identify the actual
+      // requested-origin direct flight by its id prefix instead.
+      final direct = results.firstWhere((i) => i.id.startsWith('direct-'));
+      for (final itinerary in results.where((i) => i.id != direct.id)) {
         expect(itinerary.totalPriceEur, lessThan(direct.totalPriceEur));
       }
     });
 
     test('passenger count multiplies the direct price exactly', () async {
-      final onePaxDirect =
-          (await service.search(intentFor(1))).firstWhere((i) => i.isDirect);
-      final fourPaxDirect =
-          (await service.search(intentFor(4))).firstWhere((i) => i.isDirect);
+      final onePaxDirect = (await service.search(intentFor(1)))
+          .firstWhere((i) => i.id.startsWith('direct-'));
+      final fourPaxDirect = (await service.search(intentFor(4)))
+          .firstWhere((i) => i.id.startsWith('direct-'));
       expect(fourPaxDirect.totalPriceEur, closeTo(onePaxDirect.totalPriceEur * 4, 0.01));
     });
 

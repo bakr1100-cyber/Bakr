@@ -48,7 +48,7 @@ class SearchProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  bool get canSearch => origin != null && destination != null && date != null;
+  bool get canSearch => origin != null && destination != null;
 
   Future<void> search() async {
     if (!canSearch) return;

@@ -56,6 +56,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
     _controller.clear();
     final chat = context.read<ChatProvider>();
     await chat.send(text);
+    if (!mounted) return;
     _scrollToBottom();
 
     final femaleVoice =
@@ -80,6 +81,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
           final chat = context.read<ChatProvider>();
           _controller.clear();
           chat.send(text, wasSpoken: true).then((_) {
+            if (!mounted) return;
             _scrollToBottom();
             final femaleVoice = context
                 .read<PreferencesProvider>()

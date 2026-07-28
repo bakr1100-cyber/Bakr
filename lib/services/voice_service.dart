@@ -31,7 +31,7 @@ class VoiceService {
       onResult: (result) {
         onResult(result.recognizedWords, result.finalResult);
       },
-      localeId: localeId,
+      listenOptions: SpeechListenOptions(localeId: localeId),
     );
   }
 

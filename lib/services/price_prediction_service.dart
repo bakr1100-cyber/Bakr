@@ -16,7 +16,7 @@ class PricePredictionService {
     final volatility = _random.nextDouble();
 
     if (daysUntilDeparture > 45 && volatility < 0.6) {
-      return PricePrediction(
+      return const PricePrediction(
         trend: PriceTrend.likelyToDrop,
         message: 'Warte noch ein paar Tage, der Preis fällt bei diesem Vorlauf meist noch.',
         confidence: 0.62,
