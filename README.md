@@ -56,8 +56,15 @@ promising this to users.
 - **Language & theme**: Darija/Arabic/German/French/English UI switcher
   (`lib/core/localization/`) with RTL support, system/light/dark theme
   toggle.
-- Unit tests for the NLU parser and the flight/multimodal search engine
-  (`test/`).
+- **Monetization: affiliate booking commissions** (`lib/services/affiliate_service.dart`):
+  the app has no payment processing or booking backend of its own, so each
+  flight leg's "book" button opens a commission-tracked outbound link to a
+  travel-affiliate network (self-serve, Travelpayouts-style - see
+  "Booking commissions" below) instead of a fake in-app checkout. Train
+  legs (ONCF/ICE) link to the operator's own site with no commission,
+  since no rail affiliate program is wired up.
+- Unit tests for the NLU parser, the flight/multimodal search engine, and
+  the affiliate link builder (`test/`).
 
 ### What's mocked and needs real integration before shipping
 
@@ -70,9 +77,10 @@ promising this to users.
 | Push notifications | `NotificationService` fails safe with no Firebase project configured | Run `flutterfire configure` against a real Firebase project, wire `DefaultFirebaseOptions` into `main.dart` |
 | Personal recommendations | Local `shared_preferences` only | Sync to Firestore per user account so it follows the user across devices |
 | iOS platform project | Not present (needs Xcode/macOS to generate - unavailable in this build environment) | Run `flutter create --platforms=ios .` on a Mac |
+| Booking commissions | Real, working outbound links via `AffiliateService`, but earn nothing until you set a real `AFFILIATE_MARKER` (no fake placeholder revenue) | Join a flight affiliate program (e.g. via Travelpayouts) and configure the marker - see "Booking commissions" below |
 
 **Verified against a real Flutter SDK** (Flutter 3.44.8): `flutter analyze`
-reports 0 issues, `flutter test` passes all 20 tests (unit tests plus an
+reports 0 issues, `flutter test` passes all 26 tests (unit tests plus an
 app-boot widget smoke test), and `flutter build web --release` succeeds.
 Android and Web platform projects are committed in this repo
 (`android/`, `web/`); iOS still needs `flutter create --platforms=ios .`
@@ -182,6 +190,50 @@ Notes/limitations of the Amadeus integration as implemented:
   `lib/services/amadeus_flight_price_source.dart` for the adapter/fallback
   logic.
 
+## Booking commissions (monetization)
+
+This app has no payment processing or its own flight/rail booking
+backend, so it earns money the way Skyscanner/Kayak-style search apps
+do: search stays in-app, booking happens on a partner's site via a
+tracked affiliate link, and the partner pays a commission when that
+booking completes.
+
+1. Join a self-serve flight affiliate network - e.g.
+   [Travelpayouts](https://www.travelpayouts.com) (free, instant signup,
+   no partner-approval gate). Pick one of its flight programs (Aviasales,
+   etc.) and note the affiliate id it gives you (Travelpayouts calls this
+   a "marker").
+2. Run the app with it as a compile-time define:
+
+   ```bash
+   flutter run --dart-define=AFFILIATE_MARKER=your_marker_id
+   ```
+
+   Without it, booking links still open (so the UI is fully demoable) but
+   use a placeholder `marker=unconfigured` value and earn nothing -
+   `AffiliateService.isConfigured` is `false` until you set a real one.
+3. If your chosen program's deep-link format differs from the default
+   Aviasales-shaped template in `AffiliateService.defaultUrlTemplate`,
+   override it: `--dart-define=AFFILIATE_URL_TEMPLATE=...` using the
+   placeholders `{origin}`, `{destination}`, `{date}` (ddMMyy), `{marker}`.
+
+Notes/limitations:
+
+- Only flight legs are monetized this way (`ItineraryDetailScreen` shows a
+  "Flug buchen" button per flight leg). Train legs (ONCF, ICE) open the
+  operator's own site with no commission - there's no rail affiliate
+  program integrated.
+- A multi-leg itinerary (e.g. the flight+train multimodal option) has to
+  be booked leg by leg on each operator's own site, since there is no
+  unified checkout across carriers/modes - the UI says so explicitly
+  above the leg list when an itinerary has more than one leg.
+- "Reisebegleiter aktivieren" (activate travel companion) is currently a
+  manual confirmation, not something triggered by an actual verified
+  booking - there's no booking-confirmation webhook wired up from the
+  affiliate network back into the app.
+- See `lib/services/affiliate_service.dart` for the link-building logic
+  and `test/affiliate_service_test.dart` for its test coverage.
+
 ## Architecture
 
 ```
@@ -191,7 +243,8 @@ lib/
   services/       FlightSearchService (+ FlightPriceSource: Mock/Amadeus),
                   NluService, AiAssistantService, VoiceService,
                   NotificationService, TravelCompanionService,
-                  PricePredictionService, UserPreferencesService
+                  PricePredictionService, UserPreferencesService,
+                  AffiliateService
   providers/      ChangeNotifier state for chat, search, locale, theme,
                   preferences, price alerts
   screens/        onboarding, home (bottom nav), search, assistant,
@@ -215,6 +268,10 @@ Advisor (chat), Companion, Alerts, Settings.
    (with strong Darija support) behind the same `TravelIntent`/
    `AssistantTurn` contracts, grounded with RAG over live fare/schedule data.
 4. Add authentication and per-user cloud sync for preferences and bookings.
-5. Add real payment/booking integration.
+5. Join a real affiliate program and set `AFFILIATE_MARKER` for production
+   (see "Booking commissions" above); consider adding hotel/car-rental
+   affiliate links alongside flights/trains, and a booking-confirmation
+   webhook so "Reisebegleiter aktivieren" reflects a real booking instead
+   of a manual tap.
 6. App Store / Play Store assets, privacy policy, and store listings in the
    target languages.

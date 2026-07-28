@@ -12,6 +12,7 @@ import 'providers/search_provider.dart';
 import 'providers/theme_provider.dart';
 import 'screens/home/home_screen.dart';
 import 'screens/onboarding/language_select_screen.dart';
+import 'services/affiliate_service.dart';
 import 'services/ai_assistant_service.dart';
 import 'services/amadeus_flight_price_source.dart';
 import 'services/flight_search_service.dart';
@@ -24,6 +25,13 @@ import 'services/mock_flight_price_source.dart';
 /// README.md.
 const _amadeusClientId = String.fromEnvironment('AMADEUS_CLIENT_ID');
 const _amadeusClientSecret = String.fromEnvironment('AMADEUS_CLIENT_SECRET');
+
+/// Set via `flutter run --dart-define=AFFILIATE_MARKER=...` (join a flight
+/// program at https://www.travelpayouts.com or similar and use the
+/// affiliate id/"marker" it gives you). Left empty, booking links still
+/// work but earn no commission - see README.md.
+const _affiliateMarker = String.fromEnvironment('AFFILIATE_MARKER');
+const _affiliateUrlTemplateOverride = String.fromEnvironment('AFFILIATE_URL_TEMPLATE');
 
 class MarocFlyApp extends StatefulWidget {
   const MarocFlyApp({super.key});
@@ -44,6 +52,12 @@ class _MarocFlyAppState extends State<MarocFlyApp> {
             clientSecret: _amadeusClientSecret,
             fallback: MockFlightPriceSource(),
           ),
+  );
+  late final AffiliateService _affiliateService = AffiliateService(
+    marker: _affiliateMarker,
+    urlTemplate: _affiliateUrlTemplateOverride.isEmpty
+        ? AffiliateService.defaultUrlTemplate
+        : _affiliateUrlTemplateOverride,
   );
   bool _loaded = false;
 
@@ -84,6 +98,7 @@ class _MarocFlyAppState extends State<MarocFlyApp> {
           ),
         ),
         ChangeNotifierProvider(create: (_) => PriceAlertsProvider()),
+        Provider<AffiliateService>.value(value: _affiliateService),
       ],
       child: Consumer<ThemeProvider>(
         builder: (context, themeProvider, _) {

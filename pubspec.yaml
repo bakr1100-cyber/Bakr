@@ -32,6 +32,9 @@ dependencies:
   # Networking (for wiring up real flight / train / LLM APIs later)
   http: ^1.2.2
 
+  # Opens affiliate booking links / official rail sites in the browser
+  url_launcher: ^6.3.1
+
   # Utilities
   intl: ^0.20.2
   uuid: ^4.4.2
