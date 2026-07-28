@@ -12,6 +12,15 @@ import 'providers/search_provider.dart';
 import 'providers/theme_provider.dart';
 import 'screens/home/home_screen.dart';
 import 'screens/onboarding/language_select_screen.dart';
+import 'services/ai_assistant_service.dart';
+import 'services/duffel_flight_price_source.dart';
+import 'services/flight_search_service.dart';
+import 'services/mock_flight_price_source.dart';
+
+/// Set via `flutter run --dart-define=DUFFEL_API_KEY=duffel_test_...` (get a
+/// free self-serve test key at https://app.duffel.com). Left empty, the app
+/// runs entirely on synthetic mock flight data - see README.md.
+const _duffelApiKey = String.fromEnvironment('DUFFEL_API_KEY');
 
 class MarocFlyApp extends StatefulWidget {
   const MarocFlyApp({super.key});
@@ -24,6 +33,14 @@ class _MarocFlyAppState extends State<MarocFlyApp> {
   final _localeProvider = LocaleProvider();
   final _themeProvider = ThemeProvider();
   final _preferencesProvider = PreferencesProvider();
+  late final FlightSearchService _flightSearchService = FlightSearchService(
+    priceSource: _duffelApiKey.isEmpty
+        ? MockFlightPriceSource()
+        : DuffelFlightPriceSource(
+            apiKey: _duffelApiKey,
+            fallback: MockFlightPriceSource(),
+          ),
+  );
   bool _loaded = false;
 
   @override
@@ -54,8 +71,14 @@ class _MarocFlyAppState extends State<MarocFlyApp> {
         ChangeNotifierProvider.value(value: _localeProvider),
         ChangeNotifierProvider.value(value: _themeProvider),
         ChangeNotifierProvider.value(value: _preferencesProvider),
-        ChangeNotifierProvider(create: (_) => SearchProvider()),
-        ChangeNotifierProvider(create: (_) => ChatProvider()),
+        ChangeNotifierProvider(
+          create: (_) => SearchProvider(service: _flightSearchService),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => ChatProvider(
+            assistantService: AiAssistantService(flightSearchService: _flightSearchService),
+          ),
+        ),
         ChangeNotifierProvider(create: (_) => PriceAlertsProvider()),
       ],
       child: Consumer<ThemeProvider>(
