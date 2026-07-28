@@ -12,14 +12,24 @@ import 'package:http/http.dart' as http;
 /// sandbox, which returns realistic but fictional test-airline offers, not
 /// live real-world schedules - going live requires Duffel's onboarding
 /// review, same as any flight-booking API.
+///
+/// Can talk to Duffel directly (pass [apiKey], fine for local/native
+/// builds that never ship the key publicly) or through the
+/// `cloudflare-worker/` proxy in this repo (pass [baseUrl] pointing at the
+/// deployed Worker and leave [apiKey] null - the proxy holds the real key
+/// server-side, so a public web build never embeds it).
 class DuffelFlightApi {
-  DuffelFlightApi({required this.apiKey, http.Client? client})
-      : _client = client ?? http.Client();
+  DuffelFlightApi({
+    this.apiKey,
+    this.baseUrl = _defaultBaseUrl,
+    http.Client? client,
+  }) : _client = client ?? http.Client();
 
-  final String apiKey;
+  final String? apiKey;
+  final String baseUrl;
   final http.Client _client;
 
-  static const _baseUrl = 'https://api.duffel.com';
+  static const _defaultBaseUrl = 'https://api.duffel.com';
   static const _apiVersion = 'v2';
 
   /// Creates an offer request for a single one-way slice and returns the
@@ -34,7 +44,7 @@ class DuffelFlightApi {
     String cabinClass = 'economy',
   }) async {
     final response = await _client.post(
-      Uri.parse('$_baseUrl/air/offer_requests?return_offers=true'),
+      Uri.parse('$baseUrl/air/offer_requests?return_offers=true'),
       headers: _headers,
       body: jsonEncode({
         'data': {
@@ -70,7 +80,7 @@ class DuffelFlightApi {
   }
 
   Map<String, String> get _headers => {
-        'Authorization': 'Bearer $apiKey',
+        if (apiKey != null) 'Authorization': 'Bearer $apiKey',
         'Duffel-Version': _apiVersion,
         'Content-Type': 'application/json',
         'Accept': 'application/json',

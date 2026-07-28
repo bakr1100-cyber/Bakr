@@ -1,0 +1,7 @@
+name = "marocfly-duffel-proxy"
+main = "src/index.js"
+compatibility_date = "2026-01-01"
+
+# DUFFEL_API_KEY is NOT set here - it's a secret, pushed via
+# `wrangler secret put DUFFEL_API_KEY` (see the GitHub Actions workflow),
+# never committed to this file or to git.

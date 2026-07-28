@@ -71,7 +71,7 @@ promising this to users.
 
 | Area | This build | To go to production |
 |---|---|---|
-| Flight prices & schedules | Real quotes via **Duffel** when `DUFFEL_API_KEY` is set (sandbox test-airline data until you go live with Duffel), else deterministic synthetic data. `AmadeusFlightPriceSource` also exists as a fallback source, but **Amadeus's self-service developer portal was decommissioned on July 17, 2026** - only Enterprise (contracted) access still works | Go through Duffel's live-mode onboarding for real production flight prices |
+| Flight prices & schedules | Real quotes via **Duffel** when `DUFFEL_PROXY_URL` (public-safe, via `cloudflare-worker/`) or `DUFFEL_API_KEY` (local-only) is set, else deterministic synthetic data. `AmadeusFlightPriceSource` also exists as a fallback source, but **Amadeus's self-service developer portal was decommissioned on July 17, 2026** - only Enterprise (contracted) access still works | Go through Duffel's live-mode onboarding for real production flight prices |
 | Train/bus prices & schedules | Always synthetic fixed prices (ONCF ~18 €, ICE ~35 €) - neither Duffel nor Amadeus has rail data | Add an ONCF/rail timetable API behind a similar interface |
 | Natural language understanding | Rule-based keyword/regex parser (`NluService`) | A multilingual LLM fine-tuned/prompted for Darija, ideally with RAG over live fare data |
 | Speech | On-device OS speech engines (`speech_to_text`, `flutter_tts`) | Cloud STT/TTS (e.g. Whisper-family STT, ElevenLabs TTS) for much better Darija quality |
@@ -155,6 +155,55 @@ so it works fully offline with no setup. To see real quotes:
    `DuffelFlightPriceSource`, which falls back to mock data automatically
    if a request errors or a route has no offers, so a bad/missing key
    never breaks the app.
+
+> ⚠️ **`DUFFEL_API_KEY` is only safe for builds that never get deployed
+> publicly** (e.g. a native build you run on your own device). A Flutter
+> *web* build compiles `--dart-define` values straight into `main.dart.js`
+> in plain text - anyone can read them via "View Source" on a publicly
+> hosted site. GitHub's own push protection will in fact refuse to let you
+> commit a build containing a recognized secret like a Duffel key for
+> exactly this reason. **For any public deployment (GitHub Pages, etc.),
+> use the Cloudflare Worker proxy below instead.**
+
+### Public deployments: route through the Cloudflare Worker proxy
+
+`cloudflare-worker/` in this repo is a small proxy that holds the real
+Duffel key server-side (as a Cloudflare secret, never in git, never
+shipped to the browser) and exposes the same `/air/offer_requests`
+shape Duffel does. The Flutter app talks to the proxy instead of Duffel
+directly, so a public web build never embeds a real key.
+
+Setup (self-serve, no credit card required for Cloudflare's free tier):
+
+1. Sign up for free at <https://dash.cloudflare.com/sign-up>.
+2. Create an API token: **My Profile → API Tokens → Create Token**, using
+   the "Edit Cloudflare Workers" template.
+3. Find your **Account ID** on the Workers & Pages overview page in the
+   Cloudflare dashboard.
+4. In this GitHub repo, go to **Settings → Secrets and variables →
+   Actions** and add three repository secrets:
+   - `CLOUDFLARE_API_TOKEN` - from step 2
+   - `CLOUDFLARE_ACCOUNT_ID` - from step 3
+   - `DUFFEL_API_KEY` - your Duffel test key
+5. Push (or re-run) the **"Deploy Duffel proxy to Cloudflare Workers"**
+   GitHub Actions workflow. It runs on GitHub's own infrastructure (not
+   this sandbox, which can't reach most third-party APIs directly) and:
+   - sets `DUFFEL_API_KEY` as a Cloudflare secret on the Worker
+     (`wrangler secret put`, value never appears in any log or git
+     history)
+   - deploys the Worker via `wrangler deploy`
+6. Cloudflare gives the Worker a URL like
+   `https://marocfly-duffel-proxy.<your-subdomain>.workers.dev`. Build the
+   app pointing at it:
+
+   ```bash
+   flutter build web --release --dart-define=DUFFEL_PROXY_URL=https://marocfly-duffel-proxy.<your-subdomain>.workers.dev
+   ```
+
+`app.dart` checks `DUFFEL_PROXY_URL` before `DUFFEL_API_KEY`, so once this
+is set, the web build is safe to publish - no key of any kind travels to
+the browser. See `cloudflare-worker/src/index.js` for the proxy and
+`.github/workflows/deploy-duffel-proxy.yml` for the deploy workflow.
 
 Notes/limitations of the Duffel integration as implemented:
 
@@ -259,6 +308,10 @@ lib/
   screens/        onboarding, home (bottom nav), search, assistant,
                   companion, alerts, profile, settings
   widgets/        shared UI (big buttons, airport picker, chat bubble, ...)
+
+cloudflare-worker/  Server-side Duffel proxy so public web builds never
+                    embed a real API key - see "Public deployments" above
+.github/workflows/  CI: deploys the Cloudflare Worker proxy on push
 ```
 
 State management is `provider`; screens are grouped in a bottom-navigation

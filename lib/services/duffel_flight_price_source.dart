@@ -10,11 +10,21 @@ import 'flight_price_source.dart';
 /// route Duffel's sandbox doesn't cover should degrade the app, never
 /// crash it.
 class DuffelFlightPriceSource implements FlightPriceSource {
+  /// Pass [apiKey] to talk to Duffel directly (only safe for builds that
+  /// never ship publicly, e.g. native local runs), or [proxyBaseUrl] to
+  /// call the `cloudflare-worker/` proxy instead, which holds the real key
+  /// server-side - use that for any build that gets deployed publicly
+  /// (e.g. GitHub Pages).
   DuffelFlightPriceSource({
-    required String apiKey,
+    String? apiKey,
+    String? proxyBaseUrl,
     required this.fallback,
     DuffelFlightApi? api,
-  }) : _api = api ?? DuffelFlightApi(apiKey: apiKey);
+  }) : _api = api ??
+            DuffelFlightApi(
+              apiKey: apiKey,
+              baseUrl: proxyBaseUrl ?? 'https://api.duffel.com',
+            );
 
   final DuffelFlightApi _api;
   final FlightPriceSource fallback;

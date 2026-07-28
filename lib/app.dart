@@ -20,10 +20,20 @@ import 'services/flight_price_source.dart';
 import 'services/flight_search_service.dart';
 import 'services/mock_flight_price_source.dart';
 
+/// Set via
+/// `flutter run --dart-define=DUFFEL_PROXY_URL=https://marocfly-duffel-proxy.<you>.workers.dev`
+/// (see `cloudflare-worker/`). Routes flight searches through our own
+/// server, which holds the real Duffel key - use this for any build that
+/// gets deployed publicly (e.g. GitHub Pages), since a key passed directly
+/// via [_duffelApiKey] would ship in plain text inside the compiled web
+/// bundle. Checked first, ahead of a direct key.
+const _duffelProxyUrl = String.fromEnvironment('DUFFEL_PROXY_URL');
+
 /// Set via `flutter run --dart-define=DUFFEL_API_KEY=duffel_test_...` (get a
 /// free self-serve test key at https://app.duffel.com - no approval wait,
-/// unlike Amadeus's now-defunct self-service program or Skyscanner).
-/// Checked first; if set, Duffel is the active flight-price source.
+/// unlike Amadeus's now-defunct self-service program or Skyscanner). Only
+/// safe for builds that never get deployed publicly (e.g. a native app you
+/// run locally) - for anything public, use [_duffelProxyUrl] instead.
 const _duffelApiKey = String.fromEnvironment('DUFFEL_API_KEY');
 
 /// Set via
@@ -58,6 +68,12 @@ class _MarocFlyAppState extends State<MarocFlyApp> {
   );
 
   static FlightPriceSource _resolvePriceSource() {
+    if (_duffelProxyUrl.isNotEmpty) {
+      return DuffelFlightPriceSource(
+        proxyBaseUrl: _duffelProxyUrl,
+        fallback: MockFlightPriceSource(),
+      );
+    }
     if (_duffelApiKey.isNotEmpty) {
       return DuffelFlightPriceSource(
         apiKey: _duffelApiKey,
