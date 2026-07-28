@@ -98082,7 +98082,7 @@ o=A.aHl(new A.az2(k),t.px)
 n=A.aHl(new A.az3(k),t.xT)
 m=A.aHl(new A.az4(),t.a7)
 l=k.w
-if(l===$)l=k.w=new A.u4("","https://www.aviasales.com/search/{origin}{date}{destination}1?marker={marker}")
+if(l===$)l=k.w=new A.u4("757411","https://www.aviasales.com/search/{origin}{date}{destination}1?marker={marker}")
 s=A.b([s,q,p,o,n,m,new A.CZ(new A.p1(l,j,j,t.in),j,j,j,j,t.pB)],t.Ds)
 return A.b_h(A.aMi(new A.az5(),r),s)}}
 A.ayZ.prototype={
