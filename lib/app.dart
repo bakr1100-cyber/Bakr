@@ -126,7 +126,10 @@ class _MarocFlyAppState extends State<MarocFlyApp> {
         ChangeNotifierProvider.value(value: _themeProvider),
         ChangeNotifierProvider.value(value: _preferencesProvider),
         ChangeNotifierProvider(
-          create: (_) => SearchProvider(service: _flightSearchService),
+          create: (_) => SearchProvider(
+            service: _flightSearchService,
+            preferences: _preferencesProvider,
+          ),
         ),
         ChangeNotifierProvider(
           create: (_) => ChatProvider(

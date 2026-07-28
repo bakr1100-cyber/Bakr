@@ -19,8 +19,9 @@ promising this to users.
 
 - **Design**: Morocco-flag palette (red/green/white), light + dark themes,
   large tap targets, fast (160-240 ms) animations. See `lib/core/theme/`.
-- **3-tap search**: origin → destination → search. See
-  `lib/screens/search/search_form_screen.dart`.
+- **3-tap search**: origin → destination → search, with one-tap date
+  presets (this week/next week/next month) instead of a full date-picker
+  dialog for the common case. See `lib/screens/search/search_form_screen.dart`.
 - **Smart Flight Engine** (`lib/services/flight_search_service.dart`):
   generates and explains direct flights, alternative departure airports,
   alternative Moroccan hub + onward ONCF train, stopovers via Madrid/
@@ -51,9 +52,11 @@ promising this to users.
   (onward ONCF connection) timeline for a booked itinerary.
 - **Price alerts & prediction**: local-notification price-drop alerts and a
   simple book-now-vs-wait heuristic (`price_prediction_service.dart`).
-- **Personal recommendations**: locally persisted preferences (favorite
-  airports/airlines, usual budget, solo vs. family) shown in the profile
-  screen and used to seed future search/chat defaults.
+- **Personal recommendations**: `SearchProvider` pre-fills the search form
+  with the last route you searched (persisted via `PreferencesProvider`),
+  shrinking the golden path for returning users toward the "max 3 taps"
+  goal from the brief - fill in a route once, then just review + tap
+  search from then on. Shown in the profile screen too.
 - **Language & theme**: Darija/Arabic/German/French/English UI switcher
   (`lib/core/localization/`) with RTL support, system/light/dark theme
   toggle.
@@ -64,8 +67,8 @@ promising this to users.
   "Booking commissions" below) instead of a fake in-app checkout. Train
   legs (ONCF/ICE) link to the operator's own site with no commission,
   since no rail affiliate program is wired up.
-- Unit tests for the NLU parser, the flight/multimodal search engine, and
-  the affiliate link builder (`test/`).
+- Unit tests for the NLU parser, the flight/multimodal search engine, the
+  affiliate link builder, and search-form personalization (`test/`).
 
 ### What's mocked and needs real integration before shipping
 
@@ -81,7 +84,7 @@ promising this to users.
 | Booking commissions | Real, working outbound links via `AffiliateService`, but earn nothing until you set a real `AFFILIATE_MARKER` (no fake placeholder revenue) | Join a flight affiliate program (e.g. via Travelpayouts) and configure the marker - see "Booking commissions" below |
 
 **Verified against a real Flutter SDK** (Flutter 3.44.8): `flutter analyze`
-reports 0 issues, `flutter test` passes all 26 tests (unit tests plus an
+reports 0 issues, `flutter test` passes all 29 tests (unit tests plus an
 app-boot widget smoke test), and `flutter build web --release` succeeds.
 Android and Web platform projects are committed in this repo
 (`android/`, `web/`); iOS still needs `flutter create --platforms=ios .`

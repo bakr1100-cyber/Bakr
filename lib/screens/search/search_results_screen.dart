@@ -17,9 +17,27 @@ class SearchResultsScreen extends StatelessWidget {
         title: Text('${search.origin?.city} → ${search.destination?.city}'),
       ),
       body: search.isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text('Ich suche die besten Verbindungen für dich...'),
+                ],
+              ),
+            )
           : search.results.isEmpty
-              ? const Center(child: Text('Keine Verbindungen gefunden.'))
+              ? const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(24),
+                    child: Text(
+                      'Für diese Route habe ich noch keine Verbindung gefunden. '
+                      'Probier ein anderes Datum oder Ziel.',
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                )
               : ListView.builder(
                   padding: const EdgeInsets.all(16),
                   itemCount: search.results.length,

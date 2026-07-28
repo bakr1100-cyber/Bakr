@@ -50,8 +50,8 @@ class _AiChatScreenState extends State<AiChatScreen> {
     });
   }
 
-  Future<void> _sendText() async {
-    final text = _controller.text;
+  Future<void> _sendText([String? textOverride]) async {
+    final text = textOverride ?? _controller.text;
     if (text.trim().isEmpty) return;
     _controller.clear();
     final chat = context.read<ChatProvider>();
@@ -109,12 +109,25 @@ class _AiChatScreenState extends State<AiChatScreen> {
               children: [
                 for (final message in chat.messages) ChatBubble(message: message),
                 if (chat.isThinking)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 8),
-                    child: SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const SizedBox(
+                            height: 16,
+                            width: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                          const SizedBox(width: 10),
+                          Text(
+                            'denkt nach...',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 if (chat.lastResults != null)
@@ -130,6 +143,26 @@ class _AiChatScreenState extends State<AiChatScreen> {
                         ),
                       ),
                     ),
+                if (chat.messages.length <= 1)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 12),
+                    child: Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        for (final suggestion in const [
+                          'Nach Casablanca',
+                          'Nach Fès',
+                          'Günstigste Option',
+                          'Ich reise mit meiner Familie',
+                        ])
+                          ActionChip(
+                            label: Text(suggestion),
+                            onPressed: () => _sendText(suggestion),
+                          ),
+                      ],
+                    ),
+                  ),
               ],
             ),
           ),

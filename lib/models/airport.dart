@@ -63,3 +63,11 @@ Airport? findAirportByCity(String query) {
   }
   return null;
 }
+
+Airport? findAirportByCode(String? code) {
+  if (code == null) return null;
+  for (final airport in [...europeanAirports, ...moroccanAirports]) {
+    if (airport.code == code) return airport;
+  }
+  return null;
+}

@@ -49,6 +49,11 @@ class SearchFormScreen extends StatelessWidget {
             date: search.date,
             onChanged: search.setDate,
           ),
+          const SizedBox(height: 10),
+          _QuickDateChips(
+            selected: search.date,
+            onChanged: search.setDate,
+          ),
           const SizedBox(height: 16),
           PassengerCounter(
             count: search.passengers,
@@ -73,6 +78,41 @@ class SearchFormScreen extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// One-tap shortcuts for the most common travel dates, so most searches
+/// never need the full date-picker dialog at all.
+class _QuickDateChips extends StatelessWidget {
+  const _QuickDateChips({required this.selected, required this.onChanged});
+
+  final DateTime selected;
+  final ValueChanged<DateTime> onChanged;
+
+  bool _isSameDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
+
+  @override
+  Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final presets = <String, DateTime>{
+      'Diese Woche': now.add(const Duration(days: 3)),
+      'Nächste Woche': now.add(const Duration(days: 7)),
+      'Nächster Monat': now.add(const Duration(days: 30)),
+    };
+
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        for (final entry in presets.entries)
+          ChoiceChip(
+            label: Text(entry.key),
+            selected: _isSameDay(selected, entry.value),
+            onSelected: (_) => onChanged(entry.value),
+          ),
+      ],
     );
   }
 }
