@@ -17,10 +17,10 @@ class FlightQuote {
 
 /// Source of flight-leg prices/schedules for the [FlightSearchService].
 /// Implemented by [MockFlightPriceSource] (synthetic fallback data) and
-/// [DuffelFlightPriceSource] (real quotes via the Duffel API). The engine
-/// asks this for one nonstop leg at a time - per-passenger price is applied
-/// by the caller, not baked in here, so a single quote can be reused across
-/// group sizes.
+/// `AmadeusFlightPriceSource` (real quotes via Amadeus for Developers). The
+/// engine asks this for one nonstop leg at a time - per-passenger price is
+/// applied by the caller, not baked in here, so a single quote can be
+/// reused across group sizes.
 abstract class FlightPriceSource {
   /// Returns a quote for one adult on a nonstop flight from [origin] to
   /// [destination] on [date], or null if no such flight could be priced

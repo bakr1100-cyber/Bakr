@@ -29,10 +29,10 @@ promising this to users.
   surfaces an alternative when it's genuinely cheaper than the direct
   route. Budget mode filters/relaxes results to the user's stated maximum.
   Each individual flight leg is priced through a swappable
-  `FlightPriceSource` - synthetic mock data by default, or **real Duffel
-  quotes** when a Duffel API key is configured (see "Real flight data"
-  below). Train/bus legs (ICE, ONCF) are always synthetic - there is no
-  rail API integrated.
+  `FlightPriceSource` - synthetic mock data by default, or **real Amadeus
+  quotes** when Amadeus sandbox credentials are configured (see "Real
+  flight data" below). Train/bus legs (ICE, ONCF) are always synthetic -
+  there is no rail API integrated.
 - **Conversational AI advisor** (`lib/services/nlu_service.dart`,
   `ai_assistant_service.dart`): understands free text/voice in Darija
   (Arabic script and Arabizi/Latin), Modern Standard Arabic, German, French
@@ -63,8 +63,8 @@ promising this to users.
 
 | Area | This build | To go to production |
 |---|---|---|
-| Flight prices & schedules | Real quotes via **Duffel** when `DUFFEL_API_KEY` is set (sandbox test data until you go live with Duffel), else deterministic synthetic data | Go through Duffel's live-mode onboarding, or add another `FlightPriceSource` for a different aggregator |
-| Train/bus prices & schedules | Always synthetic fixed prices (ONCF ~18 €, ICE ~35 €) - Duffel has no rail data | Add an ONCF/rail timetable API behind a similar interface |
+| Flight prices & schedules | Real quotes via **Amadeus for Developers** when `AMADEUS_CLIENT_ID`/`AMADEUS_CLIENT_SECRET` are set (sandbox environment - real but limited/cached data), else deterministic synthetic data | Go through Amadeus's production-access review, or add another `FlightPriceSource` for a different aggregator |
+| Train/bus prices & schedules | Always synthetic fixed prices (ONCF ~18 €, ICE ~35 €) - Amadeus has no rail data | Add an ONCF/rail timetable API behind a similar interface |
 | Natural language understanding | Rule-based keyword/regex parser (`NluService`) | A multilingual LLM fine-tuned/prompted for Darija, ideally with RAG over live fare data |
 | Speech | On-device OS speech engines (`speech_to_text`, `flutter_tts`) | Cloud STT/TTS (e.g. Whisper-family STT, ElevenLabs TTS) for much better Darija quality |
 | Push notifications | `NotificationService` fails safe with no Firebase project configured | Run `flutterfire configure` against a real Firebase project, wire `DefaultFirebaseOptions` into `main.dart` |
@@ -106,40 +106,50 @@ you answer its prompts carefully, but review the diff afterwards - it may
 add its own `pubspec.yaml` scaffolding that needs merging with the one in
 this repo.
 
-## Real flight data (Duffel)
+## Real flight data (Amadeus for Developers)
 
 By default the app runs on synthetic flight data (`MockFlightPriceSource`)
 so it works fully offline with no setup. To see real quotes:
 
-1. Sign up for free at <https://app.duffel.com> and grab a **test** API key
-   (starts with `duffel_test_`) - no partner agreement or approval needed,
-   unlike Skyscanner.
-2. Run the app with it as a compile-time define:
+1. Sign up for free at <https://developers.amadeus.com>, create an app in
+   your dashboard, and copy its **Test environment** API Key and API
+   Secret - self-serve, no partner agreement or approval needed, unlike
+   Skyscanner. The sandbox also gives you a Test Data management tool to
+   shape what the API returns, which is why this build uses Amadeus
+   instead of Duffel.
+2. Run the app with them as compile-time defines:
 
    ```bash
-   flutter run --dart-define=DUFFEL_API_KEY=duffel_test_your_key_here
+   flutter run \
+     --dart-define=AMADEUS_CLIENT_ID=your_api_key \
+     --dart-define=AMADEUS_CLIENT_SECRET=your_api_secret
    ```
 
-   Never commit a real key to the repo; pass it at build/run time only (or
-   via your CI secret store for release builds).
-3. That's it - `app.dart` picks up `DUFFEL_API_KEY` and switches
+   Never commit real credentials to the repo; pass them at build/run time
+   only (or via your CI secret store for release builds).
+3. That's it - `app.dart` picks up both defines and switches
    `FlightSearchService` from `MockFlightPriceSource` to
-   `DuffelFlightPriceSource`, which falls back to mock data automatically
-   if a request errors or a route has no offers, so a bad/missing key
-   never breaks the app.
+   `AmadeusFlightPriceSource`, which falls back to mock data automatically
+   if a request errors or a route has no offers, so bad/missing
+   credentials never break the app.
 
-Notes/limitations of the Duffel integration as implemented:
+Notes/limitations of the Amadeus integration as implemented:
 
-- Duffel's **test mode** returns realistic but fictional test-airline
-  offers, not live real-world schedules/prices - going live requires
-  Duffel's own review process (same as any flight-booking API).
-- Only flight legs go through Duffel; ICE/ONCF train legs stay synthetic
+- Amadeus's **test environment** returns real (not fictional) flight data,
+  but from a limited/cached data set - coverage of smaller regional
+  airports (Nador, Oujda) is patchy, so those routes will often silently
+  fall back to mock data. Going to full production pricing/coverage
+  requires Amadeus's paid production-access process.
+- Only flight legs go through Amadeus; ICE/ONCF train legs stay synthetic
   fixed prices (`lib/services/flight_search_service.dart`).
-- Amounts are read from Duffel as-is and displayed as EUR; Duffel doesn't
-  guarantee EUR pricing for every market, so a production build should
-  either force/convert to EUR or display the actual returned currency.
-- See `lib/services/duffel_flight_api.dart` for the raw API client and
-  `lib/services/duffel_flight_price_source.dart` for the adapter/fallback
+- The client requests `currencyCode=EUR` explicitly on every search, so
+  amounts should be in EUR for supported markets; verify this holds for
+  the specific routes you care about before trusting it blindly.
+- OAuth2 access tokens are fetched via client-credentials and cached in
+  memory until shortly before they expire (see `_accessTokenOrFetch` in
+  `lib/services/amadeus_flight_api.dart`).
+- See `lib/services/amadeus_flight_api.dart` for the raw API client and
+  `lib/services/amadeus_flight_price_source.dart` for the adapter/fallback
   logic.
 
 ## Architecture
@@ -148,7 +158,7 @@ Notes/limitations of the Duffel integration as implemented:
 lib/
   core/           theme, localization, shared constants
   models/         Airport, TripLeg, Itinerary, TravelIntent, ChatMessage, ...
-  services/       FlightSearchService (+ FlightPriceSource: Mock/Duffel),
+  services/       FlightSearchService (+ FlightPriceSource: Mock/Amadeus),
                   NluService, AiAssistantService, VoiceService,
                   NotificationService, TravelCompanionService,
                   PricePredictionService, UserPreferencesService
@@ -167,9 +177,10 @@ Advisor (chat), Companion, Alerts, Settings.
 
 1. Generate and configure the native Android/iOS projects (above) and a real
    Firebase project (Auth, Firestore, Cloud Messaging).
-2. Go through Duffel's live-mode review (or add another `FlightPriceSource`)
-   for real production flight prices, and add an ONCF/rail timetable API
-   behind a similar interface for real train pricing.
+2. Go through Amadeus's production-access review (or add another
+   `FlightPriceSource`) for real production flight prices, and add an
+   ONCF/rail timetable API behind a similar interface for real train
+   pricing.
 3. Replace `NluService`/`AiAssistantService` with a hosted multilingual LLM
    (with strong Darija support) behind the same `TravelIntent`/
    `AssistantTurn` contracts, grounded with RAG over live fare/schedule data.

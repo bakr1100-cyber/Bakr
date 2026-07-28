@@ -12,7 +12,7 @@ import 'mock_flight_price_source.dart';
 ///
 /// Every individual flight leg is priced through a [FlightPriceSource] -
 /// [MockFlightPriceSource] by default (deterministic synthetic data), or
-/// a real source such as `DuffelFlightPriceSource` when configured (see
+/// a real source such as `AmadeusFlightPriceSource` when configured (see
 /// `app.dart`). Train/bus legs (ICE, ONCF) are always synthetic fixed
 /// prices - there is no rail API wired into this build - so those numbers
 /// are illustrative, not real fares.
