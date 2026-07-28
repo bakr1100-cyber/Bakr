@@ -69,25 +69,26 @@ promising this to users.
 | Speech | On-device OS speech engines (`speech_to_text`, `flutter_tts`) | Cloud STT/TTS (e.g. Whisper-family STT, ElevenLabs TTS) for much better Darija quality |
 | Push notifications | `NotificationService` fails safe with no Firebase project configured | Run `flutterfire configure` against a real Firebase project, wire `DefaultFirebaseOptions` into `main.dart` |
 | Personal recommendations | Local `shared_preferences` only | Sync to Firestore per user account so it follows the user across devices |
-| iOS/Android platform projects | Not present in this repo (no Flutter SDK available in this environment to run `flutter create`) | See setup below |
+| iOS platform project | Not present (needs Xcode/macOS to generate - unavailable in this build environment) | Run `flutter create --platforms=ios .` on a Mac |
 
-The code has been written and manually reviewed for correctness but **has
-not been compiled or run** — this environment has no Flutter/Dart SDK
-installed. Run `flutter analyze` and `flutter test` locally before relying
-on it.
+**Verified against a real Flutter SDK** (Flutter 3.44.8): `flutter analyze`
+reports 0 issues, `flutter test` passes all 20 tests (unit tests plus an
+app-boot widget smoke test), and `flutter build web --release` succeeds.
+Android and Web platform projects are committed in this repo
+(`android/`, `web/`); iOS still needs `flutter create --platforms=ios .`
+on a Mac since generating it requires Xcode.
 
 ## Setup (on a machine with the Flutter SDK installed)
 
-This repo currently holds the Dart application (`lib/`, `pubspec.yaml`,
-`test/`) but not the generated native platform projects. To get a runnable
-app:
+Android and Web platform projects are already committed in this repo.
 
 ```bash
-# 1. Generate the iOS/Android/etc. platform scaffolding into this repo
-flutter create --project-name marocfly_ai --org com.marocfly .
-
-# 2. Install dependencies
+# 1. Install dependencies
 flutter pub get
+
+# 2. iOS only, and only possible on a Mac with Xcode installed - not
+#    needed for Android or Web:
+flutter create --platforms=ios .
 
 # 3. (Optional but needed for push notifications) wire up a real Firebase project
 dart pub global activate flutterfire_cli
@@ -97,14 +98,32 @@ flutterfire configure
 flutter analyze
 flutter test
 
-# 5. Run it
+# 5. Run it (pick a connected device/emulator, or Chrome for web)
 flutter run
 ```
 
-`flutter create .` will not overwrite `lib/main.dart` or `pubspec.yaml` if
-you answer its prompts carefully, but review the diff afterwards - it may
-add its own `pubspec.yaml` scaffolding that needs merging with the one in
-this repo.
+If you ever need to regenerate a platform project from scratch,
+`flutter create --project-name marocfly_ai --org com.marocfly .` will not
+overwrite `lib/main.dart` or `pubspec.yaml` if you answer its prompts
+carefully, but review the diff afterwards - it may add its own
+`pubspec.yaml` scaffolding that needs merging with the one in this repo.
+
+## Just want to see it running (no computer needed)
+
+If you only have a tablet/phone and no laptop, the simplest path is
+deploying the Web build somewhere you can open directly in Safari/Chrome:
+
+1. Push this branch's `build/web` output (after running
+   `flutter build web --release`) to GitHub Pages, or connect the repo to
+   a static host like Firebase Hosting, Netlify, or Vercel.
+2. Open the resulting URL in your tablet's browser - no app store, no
+   install, no laptop required. Voice input/output and other native-only
+   features won't work in the browser, but the full search/chat/UI flow
+   will.
+3. For a true native iOS build (e.g. to test via TestFlight on an iPad),
+   you need Xcode, which only runs on macOS - either borrow/rent a Mac, or
+   use a cloud Mac-build service (e.g. Codemagic) that builds and signs
+   the iOS app for you without you owning one.
 
 ## Real flight data (Amadeus for Developers)
 
