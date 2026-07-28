@@ -15,14 +15,23 @@ import 'screens/onboarding/language_select_screen.dart';
 import 'services/affiliate_service.dart';
 import 'services/ai_assistant_service.dart';
 import 'services/amadeus_flight_price_source.dart';
+import 'services/duffel_flight_price_source.dart';
+import 'services/flight_price_source.dart';
 import 'services/flight_search_service.dart';
 import 'services/mock_flight_price_source.dart';
 
+/// Set via `flutter run --dart-define=DUFFEL_API_KEY=duffel_test_...` (get a
+/// free self-serve test key at https://app.duffel.com - no approval wait,
+/// unlike Amadeus's now-defunct self-service program or Skyscanner).
+/// Checked first; if set, Duffel is the active flight-price source.
+const _duffelApiKey = String.fromEnvironment('DUFFEL_API_KEY');
+
 /// Set via
 /// `flutter run --dart-define=AMADEUS_CLIENT_ID=... --dart-define=AMADEUS_CLIENT_SECRET=...`
-/// (get free self-serve sandbox credentials at https://developers.amadeus.com).
-/// Left empty, the app runs entirely on synthetic mock flight data - see
-/// README.md.
+/// Amadeus's self-service portal was decommissioned July 17, 2026 - this
+/// only works with Enterprise credentials now (see README.md) - kept as a
+/// fallback in case that access exists or the situation changes. Only used
+/// if [_duffelApiKey] is not set.
 const _amadeusClientId = String.fromEnvironment('AMADEUS_CLIENT_ID');
 const _amadeusClientSecret = String.fromEnvironment('AMADEUS_CLIENT_SECRET');
 
@@ -45,14 +54,25 @@ class _MarocFlyAppState extends State<MarocFlyApp> {
   final _themeProvider = ThemeProvider();
   final _preferencesProvider = PreferencesProvider();
   late final FlightSearchService _flightSearchService = FlightSearchService(
-    priceSource: _amadeusClientId.isEmpty || _amadeusClientSecret.isEmpty
-        ? MockFlightPriceSource()
-        : AmadeusFlightPriceSource(
-            clientId: _amadeusClientId,
-            clientSecret: _amadeusClientSecret,
-            fallback: MockFlightPriceSource(),
-          ),
+    priceSource: _resolvePriceSource(),
   );
+
+  static FlightPriceSource _resolvePriceSource() {
+    if (_duffelApiKey.isNotEmpty) {
+      return DuffelFlightPriceSource(
+        apiKey: _duffelApiKey,
+        fallback: MockFlightPriceSource(),
+      );
+    }
+    if (_amadeusClientId.isNotEmpty && _amadeusClientSecret.isNotEmpty) {
+      return AmadeusFlightPriceSource(
+        clientId: _amadeusClientId,
+        clientSecret: _amadeusClientSecret,
+        fallback: MockFlightPriceSource(),
+      );
+    }
+    return MockFlightPriceSource();
+  }
   late final AffiliateService _affiliateService = AffiliateService(
     marker: _affiliateMarker,
     urlTemplate: _affiliateUrlTemplateOverride.isEmpty
