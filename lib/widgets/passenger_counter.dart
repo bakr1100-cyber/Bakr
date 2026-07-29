@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/localization/app_localizations.dart';
 import '../core/theme/app_colors.dart';
 
 class PassengerCounter extends StatelessWidget {
@@ -16,9 +17,9 @@ class PassengerCounter extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return InputDecorator(
-      decoration: const InputDecoration(
-        labelText: 'Personen',
-        prefixIcon: Icon(Icons.people_alt_rounded),
+      decoration: InputDecoration(
+        labelText: AppLocalizations.of(context).t('passengers'),
+        prefixIcon: const Icon(Icons.people_alt_rounded),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,

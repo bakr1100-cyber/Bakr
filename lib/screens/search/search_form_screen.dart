@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/localization/app_localizations.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../models/airport.dart';
@@ -23,6 +24,7 @@ class SearchFormScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final search = context.watch<SearchProvider>();
     final theme = Theme.of(context);
+    final t = AppLocalizations.of(context).t;
 
     return Scaffold(
       appBar: AppBar(title: const Text('MarocFly AI')),
@@ -51,7 +53,7 @@ class SearchFormScreen extends StatelessWidget {
                   children: [
                     Expanded(
                       child: AirportPicker(
-                        label: 'Von',
+                        label: t('from'),
                         compact: true,
                         options: europeanAirports,
                         selected: search.origin,
@@ -67,7 +69,7 @@ class SearchFormScreen extends StatelessWidget {
                     ),
                     Expanded(
                       child: AirportPicker(
-                        label: 'Nach',
+                        label: t('to'),
                         icon: Icons.flight_land_rounded,
                         compact: true,
                         options: moroccanAirports,
@@ -105,7 +107,7 @@ class SearchFormScreen extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.xxxl),
             BigButton(
-              label: 'Flüge suchen',
+              label: t('searchFlights'),
               icon: Icons.search_rounded,
               onPressed: search.canSearch
                   ? () async {
@@ -250,9 +252,9 @@ class _DateField extends StatelessWidget {
           if (picked != null) onChanged(picked);
         },
         child: InputDecorator(
-          decoration: const InputDecoration(
-            labelText: 'Datum',
-            prefixIcon: Icon(Icons.calendar_today_rounded),
+          decoration: InputDecoration(
+            labelText: AppLocalizations.of(context).t('date'),
+            prefixIcon: const Icon(Icons.calendar_today_rounded),
           ),
           child: Text(
             DateFormat.yMMMMd().format(date),

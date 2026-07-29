@@ -16,7 +16,13 @@ import '../../widgets/voice_mic_button.dart';
 import '../search/itinerary_detail_screen.dart';
 
 class AiChatScreen extends StatefulWidget {
-  const AiChatScreen({super.key});
+  const AiChatScreen({super.key, this.autoStartListening = false});
+
+  /// Starts listening as soon as speech-to-text is ready, without waiting
+  /// for the shared [HomeNavigationProvider] flag - used when this screen is
+  /// pushed directly (e.g. right after picking a language onboarding),
+  /// rather than being the always-mounted tab instance inside [HomeScreen].
+  final bool autoStartListening;
 
   @override
   State<AiChatScreen> createState() => _AiChatScreenState();
@@ -38,7 +44,10 @@ class _AiChatScreenState extends State<AiChatScreen> {
     _navigation.addListener(_onNavigationChanged);
     // Covers the case where the flag was already set before this listener
     // was attached (e.g. the very first frame the assistant tab exists).
-    WidgetsBinding.instance.addPostFrameCallback((_) => _onNavigationChanged());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _onNavigationChanged();
+      if (widget.autoStartListening) _startVoiceAsSoonAsReady();
+    });
   }
 
   void _onNavigationChanged() {

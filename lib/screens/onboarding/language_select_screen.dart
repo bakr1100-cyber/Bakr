@@ -5,6 +5,7 @@ import '../../core/localization/app_localizations.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../providers/locale_provider.dart';
+import '../assistant/ai_chat_screen.dart';
 import '../home/home_screen.dart';
 
 class LanguageSelectScreen extends StatelessWidget {
@@ -75,8 +76,16 @@ class LanguageSelectScreen extends StatelessWidget {
 
   void _select(BuildContext context, AppLanguage language) {
     context.read<LocaleProvider>().setLanguage(language);
+    // Land on the normal tabbed home screen underneath, but push straight
+    // into a voice-connected AI chat on top of it - the user only sees the
+    // regular search/tabs screen once they press back from the assistant.
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (_) => const HomeScreen()),
+    );
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => const AiChatScreen(autoStartListening: true),
+      ),
     );
   }
 }

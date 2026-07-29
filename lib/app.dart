@@ -157,10 +157,18 @@ class _MarocFlyAppState extends State<MarocFlyApp> {
                   ...GlobalMaterialLocalizations.delegates,
                 ],
                 supportedLocales: AppLanguage.values.map((l) => l.flutterLocale),
+                // The app's screens are not yet fully translated (most UI
+                // strings are still hardcoded German regardless of the
+                // selected language) - mirroring the whole layout to RTL for
+                // Darija/Arabic on top of that produces a broken mix (nav
+                // bar/fields/buttons flipped, but the text on them still
+                // German). Actual Arabic/Darija script still shapes and
+                // reads correctly right-to-left on its own regardless of
+                // this - Unicode bidi handles that per text run - so this
+                // only holds off on mirroring the surrounding UI chrome
+                // until it's genuinely translated everywhere.
                 builder: (context, child) => Directionality(
-                  textDirection: localeProvider.language.isRtl
-                      ? TextDirection.rtl
-                      : TextDirection.ltr,
+                  textDirection: TextDirection.ltr,
                   child: child!,
                 ),
                 home: localeProvider.hasChosenLanguageBefore
