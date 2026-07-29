@@ -26,16 +26,19 @@ class ProfileScreen extends StatelessWidget {
           children: [
             _InfoTile(
               icon: Icons.flight_takeoff_rounded,
+              color: AppColors.moroccoGreen,
               label: 'Lieblingsflughafen (Abflug)',
               value: prefs.favoriteOriginAirportCode ?? 'Noch nicht bekannt',
             ),
             _InfoTile(
               icon: Icons.flight_land_rounded,
+              color: AppColors.moroccoGold,
               label: 'Lieblingsziel',
               value: prefs.favoriteDestinationAirportCode ?? 'Noch nicht bekannt',
             ),
             _InfoTile(
               icon: Icons.airlines_rounded,
+              color: AppColors.moroccoRed,
               label: 'Lieblingsairlines',
               value: prefs.favoriteAirlines.isEmpty
                   ? 'Noch nicht bekannt'
@@ -43,6 +46,7 @@ class ProfileScreen extends StatelessWidget {
             ),
             _InfoTile(
               icon: Icons.payments_outlined,
+              color: AppColors.moroccoGold,
               label: 'Übliches Budget',
               value: prefs.usualMaxBudgetEur != null
                   ? '${prefs.usualMaxBudgetEur!.toStringAsFixed(0)} €'
@@ -50,6 +54,7 @@ class ProfileScreen extends StatelessWidget {
             ),
             _InfoTile(
               icon: Icons.family_restroom_rounded,
+              color: AppColors.moroccoGreen,
               label: 'Reisestil',
               value: prefs.travelsWithFamily ? 'Mit Familie' : 'Alleinreisend',
             ),
@@ -61,11 +66,17 @@ class ProfileScreen extends StatelessWidget {
 }
 
 class _InfoTile extends StatelessWidget {
-  const _InfoTile({required this.icon, required this.label, required this.value});
+  const _InfoTile({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.color,
+  });
 
   final IconData icon;
   final String label;
   final String value;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
@@ -76,8 +87,8 @@ class _InfoTile extends StatelessWidget {
         contentPadding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.lg, vertical: AppSpacing.xs),
         leading: CircleAvatar(
-          backgroundColor: AppColors.moroccoGreen.withValues(alpha: 0.18),
-          foregroundColor: theme.colorScheme.primary,
+          backgroundColor: color.withValues(alpha: 0.18),
+          foregroundColor: color,
           child: Icon(icon),
         ),
         title: Text(label, style: theme.textTheme.bodySmall),

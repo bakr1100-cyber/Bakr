@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/theme/app_spacing.dart';
 import '../../providers/chat_provider.dart';
+import '../../providers/home_navigation_provider.dart';
 import '../../providers/preferences_provider.dart';
 import '../../services/voice_service.dart';
 import '../../widgets/chat_bubble.dart';
@@ -27,15 +28,41 @@ class _AiChatScreenState extends State<AiChatScreen> {
   final _voice = VoiceService();
   bool _voiceReady = false;
   bool _isListening = false;
+  late final HomeNavigationProvider _navigation;
 
   @override
   void initState() {
     super.initState();
     _voice.init().then((ready) => setState(() => _voiceReady = ready));
+    _navigation = context.read<HomeNavigationProvider>();
+    _navigation.addListener(_onNavigationChanged);
+    // Covers the case where the flag was already set before this listener
+    // was attached (e.g. the very first frame the assistant tab exists).
+    WidgetsBinding.instance.addPostFrameCallback((_) => _onNavigationChanged());
+  }
+
+  void _onNavigationChanged() {
+    if (!_navigation.pendingVoiceStart) return;
+    _navigation.consumePendingVoiceStart();
+    _startVoiceAsSoonAsReady();
+  }
+
+  /// STT initialization is async, so if the user tapped the landing page's
+  /// voice card before it finished, wait briefly instead of silently
+  /// dropping the request.
+  Future<void> _startVoiceAsSoonAsReady() async {
+    var attempts = 0;
+    while (!_voiceReady && attempts < 20) {
+      await Future.delayed(const Duration(milliseconds: 100));
+      attempts++;
+    }
+    if (!mounted || _isListening || !_voiceReady) return;
+    _toggleListening();
   }
 
   @override
   void dispose() {
+    _navigation.removeListener(_onNavigationChanged);
     _controller.dispose();
     _scrollController.dispose();
     super.dispose();

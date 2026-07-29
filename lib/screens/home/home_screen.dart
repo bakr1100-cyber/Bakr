@@ -1,20 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import '../../providers/home_navigation_provider.dart';
 import '../alerts/price_alerts_screen.dart';
 import '../assistant/ai_chat_screen.dart';
 import '../companion/travel_companion_screen.dart';
 import '../search/search_form_screen.dart';
 import '../settings/settings_screen.dart';
 
-class HomeScreen extends StatefulWidget {
+class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
-
-  @override
-  State<HomeScreen> createState() => _HomeScreenState();
-}
-
-class _HomeScreenState extends State<HomeScreen> {
-  int _index = 0;
 
   static const _screens = [
     SearchFormScreen(),
@@ -26,13 +21,15 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final navigation = context.watch<HomeNavigationProvider>();
+
     return Scaffold(
       body: SafeArea(
-        child: IndexedStack(index: _index, children: _screens),
+        child: IndexedStack(index: navigation.tabIndex, children: _screens),
       ),
       bottomNavigationBar: NavigationBar(
-        selectedIndex: _index,
-        onDestinationSelected: (i) => setState(() => _index = i),
+        selectedIndex: navigation.tabIndex,
+        onDestinationSelected: (i) => context.read<HomeNavigationProvider>().goToTab(i),
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.flight_takeoff_rounded),

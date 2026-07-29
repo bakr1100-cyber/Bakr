@@ -20,12 +20,13 @@ class AppColors {
   static const Color greenDark = Color(0xFF066455);
   static const Color greenLight = Color(0xFF3FD6BC);
 
-  // Light theme surfaces — deep saturated green canvas + cards, never white.
-  // Text sits light-on-green throughout, same idea as the dark theme below.
-  static const Color lightBackground = Color(0xFF073A32);
-  static const Color lightSurface = Color(0xFF0E6B5C);
+  // Light theme surfaces — a neutral, near-charcoal canvas (just a whisper
+  // of green, never flat white), so red/green/gold accents on top of it
+  // actually stand out instead of everything reading as "all green".
+  static const Color lightBackground = Color(0xFF11201C);
+  static const Color lightSurface = Color(0xFF1A2925);
   static const Color lightOnSurface = Color(0xFFF3FBF8);
-  static const Color lightSubtle = Color(0xFFAEDFD2);
+  static const Color lightSubtle = Color(0xFFA6BDB5);
 
   // Dark theme surfaces
   static const Color darkBackground = Color(0xFF08201B);
@@ -59,6 +60,12 @@ class AppGradients {
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
     colors: [AppColors.redLight, AppColors.moroccoRed],
+  );
+
+  static const LinearGradient gold = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [AppColors.moroccoGold, Color(0xFFC98F2A)],
   );
 
   static const LinearGradient canvas = LinearGradient(

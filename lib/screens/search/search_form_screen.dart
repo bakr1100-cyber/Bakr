@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../models/airport.dart';
+import '../../providers/home_navigation_provider.dart';
 import '../../providers/search_provider.dart';
 import '../../widgets/airport_picker.dart';
 import '../../widgets/big_button.dart';
@@ -32,6 +34,8 @@ class SearchFormScreen extends StatelessWidget {
               'Nicht den günstigsten Flug —\nden intelligentesten Weg nach Marokko.',
               style: theme.textTheme.headlineSmall,
             ),
+            const SizedBox(height: AppSpacing.xl),
+            const _VoiceHeroCard(),
             const SizedBox(height: AppSpacing.xxl),
             Text(
               'ROUTE',
@@ -118,6 +122,68 @@ class SearchFormScreen extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.lg),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A direct, one-tap voice entry point on the landing page itself - jumps
+/// straight to the assistant tab and starts listening immediately, instead
+/// of making a voice-first user first find the "Berater" tab and then the
+/// mic button on their own.
+class _VoiceHeroCard extends StatelessWidget {
+  const _VoiceHeroCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppRadius.xl),
+        onTap: () => context.read<HomeNavigationProvider>().goToAssistantWithVoice(),
+        child: Ink(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          decoration: BoxDecoration(
+            gradient: AppGradients.gold,
+            borderRadius: BorderRadius.circular(AppRadius.xl),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.22),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.mic_rounded, color: Colors.white, size: 26),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Sprich einfach mit mir',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w800,
+                          ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '„Ich will nach Fès, günstig, nächste Woche“',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Colors.white.withValues(alpha: 0.85),
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white70, size: 16),
+            ],
+          ),
         ),
       ),
     );

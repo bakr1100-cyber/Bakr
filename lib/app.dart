@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'core/localization/app_localizations.dart';
 import 'core/theme/app_theme.dart';
 import 'providers/chat_provider.dart';
+import 'providers/home_navigation_provider.dart';
 import 'providers/locale_provider.dart';
 import 'providers/preferences_provider.dart';
 import 'providers/price_alerts_provider.dart';
@@ -137,6 +138,7 @@ class _MarocFlyAppState extends State<MarocFlyApp> {
           ),
         ),
         ChangeNotifierProvider(create: (_) => PriceAlertsProvider()),
+        ChangeNotifierProvider(create: (_) => HomeNavigationProvider()),
         Provider<AffiliateService>.value(value: _affiliateService),
       ],
       child: Consumer<ThemeProvider>(
