@@ -56,20 +56,25 @@ class LanguageSelectScreen extends StatelessWidget {
                         ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                   ),
                   const SizedBox(height: AppSpacing.xxl),
-                  GridView.count(
-                    crossAxisCount: 2,
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    crossAxisSpacing: AppSpacing.md,
-                    mainAxisSpacing: AppSpacing.md,
-                    childAspectRatio: 0.95,
+                  // A Wrap instead of a strict 2-column grid: with an odd
+                  // number of languages, a GridView leaves the last card
+                  // stuck on the left with empty space next to it - Wrap
+                  // centers an incomplete last row instead.
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    spacing: AppSpacing.md,
+                    runSpacing: AppSpacing.md,
                     children: [
                       for (var i = 0; i < AppLanguage.values.length; i++)
-                        _LanguageCard(
-                          language: AppLanguage.values[i],
-                          recommended: AppLanguage.values[i] == AppLanguage.ary,
-                          entranceDelay: Duration(milliseconds: 80 * i),
-                          onTap: () => _select(context, AppLanguage.values[i]),
+                        SizedBox(
+                          width: 194,
+                          height: 204,
+                          child: _LanguageCard(
+                            language: AppLanguage.values[i],
+                            recommended: AppLanguage.values[i] == AppLanguage.ary,
+                            entranceDelay: Duration(milliseconds: 80 * i),
+                            onTap: () => _select(context, AppLanguage.values[i]),
+                          ),
                         ),
                     ],
                   ),
