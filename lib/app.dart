@@ -11,7 +11,6 @@ import 'providers/preferences_provider.dart';
 import 'providers/price_alerts_provider.dart';
 import 'providers/search_provider.dart';
 import 'providers/theme_provider.dart';
-import 'screens/home/home_screen.dart';
 import 'screens/onboarding/language_select_screen.dart';
 import 'services/affiliate_service.dart';
 import 'services/ai_assistant_service.dart';
@@ -171,9 +170,11 @@ class _MarocFlyAppState extends State<MarocFlyApp> {
                   textDirection: TextDirection.ltr,
                   child: child!,
                 ),
-                home: localeProvider.hasChosenLanguageBefore
-                    ? const HomeScreen()
-                    : const LanguageSelectScreen(),
+                // Per explicit request: don't skip the language picker on
+                // repeat launches for now, even though a language is saved
+                // and can still be changed anytime from Settings. Revisit
+                // once that's confirmed as the wanted long-term behavior.
+                home: const LanguageSelectScreen(),
               );
             },
           );
