@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/theme/app_spacing.dart';
 import '../../models/airport.dart';
 import '../../providers/search_provider.dart';
 import '../../widgets/airport_picker.dart';
 import '../../widgets/big_button.dart';
 import '../../widgets/passenger_counter.dart';
+import '../../widgets/responsive_body.dart';
 import 'search_results_screen.dart';
 
 /// The three-tap fast path: pick origin, pick destination, tap search.
@@ -18,65 +20,92 @@ class SearchFormScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final search = context.watch<SearchProvider>();
+    final theme = Theme.of(context);
 
     return Scaffold(
       appBar: AppBar(title: const Text('MarocFly AI')),
-      body: ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          Text(
-            'Nicht den günstigsten Flug -\nden intelligentesten Weg nach Marokko.',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w700,
+      body: ResponsiveBody(
+        child: ListView(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          children: [
+            Text(
+              'Nicht den günstigsten Flug —\nden intelligentesten Weg nach Marokko.',
+              style: theme.textTheme.headlineSmall,
+            ),
+            const SizedBox(height: AppSpacing.xxl),
+            Text(
+              'ROUTE',
+              style: theme.textTheme.labelMedium
+                  ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                child: Column(
+                  children: [
+                    AirportPicker(
+                      label: 'Von',
+                      options: europeanAirports,
+                      selected: search.origin,
+                      onChanged: search.setOrigin,
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    AirportPicker(
+                      label: 'Nach',
+                      icon: Icons.flight_land_rounded,
+                      options: moroccanAirports,
+                      selected: search.destination,
+                      onChanged: search.setDestination,
+                    ),
+                  ],
                 ),
-          ),
-          const SizedBox(height: 24),
-          AirportPicker(
-            label: 'Von',
-            options: europeanAirports,
-            selected: search.origin,
-            onChanged: search.setOrigin,
-          ),
-          const SizedBox(height: 16),
-          AirportPicker(
-            label: 'Nach',
-            options: moroccanAirports,
-            selected: search.destination,
-            onChanged: search.setDestination,
-          ),
-          const SizedBox(height: 16),
-          _DateField(
-            date: search.date,
-            onChanged: search.setDate,
-          ),
-          const SizedBox(height: 10),
-          _QuickDateChips(
-            selected: search.date,
-            onChanged: search.setDate,
-          ),
-          const SizedBox(height: 16),
-          PassengerCounter(
-            count: search.passengers,
-            onChanged: search.setPassengers,
-          ),
-          const SizedBox(height: 32),
-          BigButton(
-            label: 'Flüge suchen',
-            icon: Icons.search_rounded,
-            onPressed: search.canSearch
-                ? () async {
-                    await search.search();
-                    if (context.mounted) {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const SearchResultsScreen(),
-                        ),
-                      );
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xxl),
+            Text(
+              'WANN & WER',
+              style: theme.textTheme.labelMedium
+                  ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                child: Column(
+                  children: [
+                    _DateField(date: search.date, onChanged: search.setDate),
+                    const SizedBox(height: AppSpacing.md),
+                    _QuickDateChips(selected: search.date, onChanged: search.setDate),
+                    const SizedBox(height: AppSpacing.md),
+                    PassengerCounter(
+                      count: search.passengers,
+                      onChanged: search.setPassengers,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xxxl),
+            BigButton(
+              label: 'Flüge suchen',
+              icon: Icons.search_rounded,
+              onPressed: search.canSearch
+                  ? () async {
+                      await search.search();
+                      if (context.mounted) {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const SearchResultsScreen(),
+                          ),
+                        );
+                      }
                     }
-                  }
-                : null,
-          ),
-        ],
+                  : null,
+            ),
+            const SizedBox(height: AppSpacing.lg),
+          ],
+        ),
       ),
     );
   }
@@ -102,17 +131,20 @@ class _QuickDateChips extends StatelessWidget {
       'Nächster Monat': now.add(const Duration(days: 30)),
     };
 
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: [
-        for (final entry in presets.entries)
-          ChoiceChip(
-            label: Text(entry.key),
-            selected: _isSameDay(selected, entry.value),
-            onSelected: (_) => onChanged(entry.value),
-          ),
-      ],
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          for (final entry in presets.entries)
+            ChoiceChip(
+              label: Text(entry.key),
+              selected: _isSameDay(selected, entry.value),
+              onSelected: (_) => onChanged(entry.value),
+            ),
+        ],
+      ),
     );
   }
 }
@@ -125,22 +157,28 @@ class _DateField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(20),
-      onTap: () async {
-        final picked = await showDatePicker(
-          context: context,
-          initialDate: date,
-          firstDate: DateTime.now(),
-          lastDate: DateTime.now().add(const Duration(days: 365)),
-        );
-        if (picked != null) onChanged(picked);
-      },
-      child: InputDecorator(
-        decoration: const InputDecoration(labelText: 'Datum'),
-        child: Text(
-          DateFormat.yMMMMd().format(date),
-          style: Theme.of(context).textTheme.titleMedium,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: () async {
+          final picked = await showDatePicker(
+            context: context,
+            initialDate: date,
+            firstDate: DateTime.now(),
+            lastDate: DateTime.now().add(const Duration(days: 365)),
+          );
+          if (picked != null) onChanged(picked);
+        },
+        child: InputDecorator(
+          decoration: const InputDecoration(
+            labelText: 'Datum',
+            prefixIcon: Icon(Icons.calendar_today_rounded),
+          ),
+          child: Text(
+            DateFormat.yMMMMd().format(date),
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
         ),
       ),
     );

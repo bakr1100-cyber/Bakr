@@ -16,7 +16,9 @@ class AppColors {
   static const Color flagGreen = Color(0xFF006233);
 
   static const Color redDark = Color(0xFF8E1B21);
+  static const Color redLight = Color(0xFFE2565D);
   static const Color greenDark = Color(0xFF066455);
+  static const Color greenLight = Color(0xFF3FD6BC);
 
   // Light theme surfaces — deep saturated green canvas + cards, never white.
   // Text sits light-on-green throughout, same idea as the dark theme below.
@@ -34,4 +36,34 @@ class AppColors {
   static const Color success = moroccoGreen;
   static const Color danger = moroccoRed;
   static const Color warning = moroccoGold;
+}
+
+/// Reusable gradients — every hero surface (app bar, primary CTA, price
+/// header) draws from this small, consistent set instead of one-off colors.
+class AppGradients {
+  AppGradients._();
+
+  static const LinearGradient primary = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [AppColors.greenLight, AppColors.moroccoGreen],
+  );
+
+  static const LinearGradient primaryDeep = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [AppColors.moroccoGreen, AppColors.greenDark],
+  );
+
+  static const LinearGradient accent = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [AppColors.redLight, AppColors.moroccoRed],
+  );
+
+  static const LinearGradient canvas = LinearGradient(
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+    colors: [AppColors.greenDark, AppColors.lightBackground],
+  );
 }

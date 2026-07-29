@@ -3,11 +3,14 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/theme/app_spacing.dart';
 import '../../providers/chat_provider.dart';
 import '../../providers/preferences_provider.dart';
 import '../../services/voice_service.dart';
 import '../../widgets/chat_bubble.dart';
 import '../../widgets/itinerary_card.dart';
+import '../../widgets/responsive_body.dart';
+import '../../widgets/typing_indicator.dart';
 import '../../widgets/voice_mic_button.dart';
 import '../search/itinerary_detail_screen.dart';
 
@@ -99,104 +102,132 @@ class _AiChatScreenState extends State<AiChatScreen> {
     final chat = context.watch<ChatProvider>();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('KI-Reiseberater')),
-      body: Column(
-        children: [
-          Expanded(
-            child: ListView(
-              controller: _scrollController,
-              padding: const EdgeInsets.all(16),
+      appBar: AppBar(
+        title: const Text('KI-Reiseberater'),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(22),
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Row(
               children: [
-                for (final message in chat.messages) ChatBubble(message: message),
-                if (chat.isThinking)
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const SizedBox(
-                            height: 16,
-                            width: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          ),
-                          const SizedBox(width: 10),
-                          Text(
-                            'denkt nach...',
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                if (chat.lastResults != null)
-                  for (final itinerary in chat.lastResults!.take(3))
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8),
-                      child: ItineraryCard(
-                        itinerary: itinerary,
-                        onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => ItineraryDetailScreen(itinerary: itinerary),
-                          ),
-                        ),
-                      ),
-                    ),
-                if (chat.messages.length <= 1)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 12),
-                    child: Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        for (final suggestion in const [
-                          'Nach Casablanca',
-                          'Nach Fès',
-                          'Günstigste Option',
-                          'Ich reise mit meiner Familie',
-                        ])
-                          ActionChip(
-                            label: Text(suggestion),
-                            onPressed: () => _sendText(suggestion),
-                          ),
-                      ],
-                    ),
-                  ),
+                Icon(Icons.auto_awesome_rounded, size: 14, color: Colors.white.withValues(alpha: 0.85)),
+                const SizedBox(width: 6),
+                Text(
+                  'Kennt Direktflüge, Zug- & Bus-Kombinationen und spricht Darija',
+                  style: Theme.of(context)
+                      .textTheme
+                      .labelSmall
+                      ?.copyWith(color: Colors.white.withValues(alpha: 0.85)),
+                ),
               ],
             ),
           ),
-          SafeArea(
-            top: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-              child: Row(
+        ),
+      ),
+      body: ResponsiveBody(
+        child: Column(
+          children: [
+            Expanded(
+              child: ListView(
+                controller: _scrollController,
+                padding: const EdgeInsets.all(AppSpacing.lg),
                 children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _controller,
-                      textInputAction: TextInputAction.send,
-                      onSubmitted: (_) => _sendText(),
-                      decoration: const InputDecoration(
-                        hintText: 'Bghit arkhass vol... / Schreib mir...',
+                  for (final message in chat.messages) ChatBubble(message: message),
+                  if (chat.isThinking)
+                    const Align(
+                      alignment: Alignment.centerLeft,
+                      child: TypingIndicator(),
+                    ),
+                  if (chat.lastResults != null)
+                    for (var i = 0; i < chat.lastResults!.take(3).length; i++)
+                      Padding(
+                        padding: const EdgeInsets.only(top: AppSpacing.sm),
+                        child: ItineraryCard(
+                          itinerary: chat.lastResults![i],
+                          isBestValue: i == 0,
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  ItineraryDetailScreen(itinerary: chat.lastResults![i]),
+                            ),
+                          ),
+                        ),
+                      ),
+                  if (chat.messages.length <= 1)
+                    Padding(
+                      padding: const EdgeInsets.only(top: AppSpacing.md),
+                      child: Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          for (final suggestion in const [
+                            'Nach Casablanca',
+                            'Nach Fès',
+                            'Günstigste Option',
+                            'Ich reise mit meiner Familie',
+                          ])
+                            ActionChip(
+                              avatar: const Icon(Icons.bolt_rounded, size: 16),
+                              label: Text(suggestion),
+                              onPressed: () => _sendText(suggestion),
+                            ),
+                        ],
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  VoiceMicButton(
-                    isListening: _isListening,
-                    onPressed: _toggleListening,
-                  ),
-                  const SizedBox(width: 8),
-                  IconButton.filled(
-                    onPressed: _sendText,
-                    icon: const Icon(Icons.send_rounded),
-                  ),
                 ],
               ),
             ),
-          ),
-        ],
+            SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.md, AppSpacing.sm, AppSpacing.md, AppSpacing.md),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(28),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.25),
+                        blurRadius: 14,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _controller,
+                          textInputAction: TextInputAction.send,
+                          onSubmitted: (_) => _sendText(),
+                          decoration: const InputDecoration(
+                            hintText: 'Bghit arkhass vol… / Schreib mir…',
+                            filled: false,
+                            border: InputBorder.none,
+                            enabledBorder: InputBorder.none,
+                            focusedBorder: InputBorder.none,
+                            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                          ),
+                        ),
+                      ),
+                      VoiceMicButton(
+                        isListening: _isListening,
+                        onPressed: _toggleListening,
+                      ),
+                      const SizedBox(width: 4),
+                      IconButton.filled(
+                        onPressed: _sendText,
+                        icon: const Icon(Icons.send_rounded),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

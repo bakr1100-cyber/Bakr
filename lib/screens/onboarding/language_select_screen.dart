@@ -3,8 +3,8 @@ import 'package:provider/provider.dart';
 
 import '../../core/localization/app_localizations.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_spacing.dart';
 import '../../providers/locale_provider.dart';
-import '../../widgets/big_button.dart';
 import '../home/home_screen.dart';
 
 class LanguageSelectScreen extends StatelessWidget {
@@ -12,46 +12,56 @@ class LanguageSelectScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(AppSpacing.xl),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(height: 32),
-              const Row(
-                children: [
-                  Expanded(child: _FlagBar(color: AppColors.moroccoRed)),
-                  Expanded(child: _FlagBar(color: AppColors.flagGreen)),
-                ],
+              const SizedBox(height: AppSpacing.lg),
+              Center(
+                child: Container(
+                  width: 76,
+                  height: 76,
+                  decoration: const BoxDecoration(
+                    gradient: AppGradients.primary,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.travel_explore_rounded,
+                      size: 38, color: Colors.white),
+                ),
               ),
-              const SizedBox(height: 40),
+              const SizedBox(height: AppSpacing.xl),
+              const Center(
+                child: _FlagPill(),
+              ),
+              const SizedBox(height: AppSpacing.xl),
               Text(
                 'MarocFly AI',
                 textAlign: TextAlign.center,
-                style: Theme.of(context)
-                    .textTheme
-                    .headlineMedium
-                    ?.copyWith(fontWeight: FontWeight.w800),
+                style: theme.textTheme.displaySmall,
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.sm),
               Text(
                 'Wähle deine Sprache · اختر لغتك',
                 textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyLarge,
+                style: theme.textTheme.bodyLarge
+                    ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: AppSpacing.xxl),
               Expanded(
                 child: ListView.separated(
                   itemCount: AppLanguage.values.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 16),
+                  separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.md),
                   itemBuilder: (context, index) {
                     final language = AppLanguage.values[index];
-                    return BigButton(
-                      label: language.nativeName,
-                      filled: language == AppLanguage.ary,
-                      onPressed: () => _select(context, language),
+                    return _LanguageOption(
+                      language: language,
+                      recommended: language == AppLanguage.ary,
+                      onTap: () => _select(context, language),
                     );
                   },
                 ),
@@ -71,12 +81,77 @@ class LanguageSelectScreen extends StatelessWidget {
   }
 }
 
-class _FlagBar extends StatelessWidget {
-  const _FlagBar({required this.color});
-  final Color color;
+class _LanguageOption extends StatelessWidget {
+  const _LanguageOption({
+    required this.language,
+    required this.recommended,
+    required this.onTap,
+  });
+
+  final AppLanguage language;
+  final bool recommended;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(height: 6, color: color);
+    final theme = Theme.of(context);
+    return Card(
+      shape: recommended
+          ? RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppRadius.xl),
+              side: const BorderSide(color: AppColors.moroccoGold, width: 1.6),
+            )
+          : null,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppRadius.xl),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(language.nativeName, style: theme.textTheme.titleLarge),
+                    if (recommended) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        'Empfohlen für dich',
+                        style: theme.textTheme.labelMedium
+                            ?.copyWith(color: AppColors.moroccoGold),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right_rounded, color: theme.colorScheme.onSurfaceVariant),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _FlagPill extends StatelessWidget {
+  const _FlagPill();
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(AppRadius.pill),
+      child: const SizedBox(
+        width: 64,
+        height: 5,
+        child: Row(
+          children: [
+            Expanded(child: ColoredBox(color: AppColors.moroccoRed)),
+            Expanded(child: ColoredBox(color: AppColors.flagGreen)),
+          ],
+        ),
+      ),
+    );
   }
 }

@@ -27,8 +27,15 @@ class NotificationService {
     );
 
     try {
-      await Firebase.initializeApp();
-      await FirebaseMessaging.instance.requestPermission();
+      // A hard timeout is essential here, not just a try/catch: if Firebase's
+      // JS SDK fails to load from its CDN (blocked network, ad blocker,
+      // corporate proxy), the underlying JS interop promise can hang forever
+      // without ever rejecting back to Dart - which would leave the whole
+      // app stuck on a blank white screen before `runApp()` ever runs.
+      await Firebase.initializeApp().timeout(const Duration(seconds: 5));
+      await FirebaseMessaging.instance
+          .requestPermission()
+          .timeout(const Duration(seconds: 5));
       _firebaseReady = true;
     } catch (error) {
       _firebaseReady = false;
