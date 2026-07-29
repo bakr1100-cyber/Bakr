@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../core/localization/app_localizations.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../models/itinerary.dart';
@@ -23,9 +24,10 @@ class ItineraryDetailScreen extends StatelessWidget {
     final dateFormat = DateFormat.yMMMMd();
     final affiliate = context.read<AffiliateService>();
     final theme = Theme.of(context);
+    final t = AppLocalizations.of(context).t;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Reisedetails')),
+      appBar: AppBar(title: Text(t('tripDetails'))),
       body: ResponsiveBody(
         child: ListView(
           padding: const EdgeInsets.all(AppSpacing.lg),
@@ -62,7 +64,7 @@ class ItineraryDetailScreen extends StatelessWidget {
                   if (itinerary.legs.length > 1) ...[
                     const SizedBox(height: AppSpacing.sm),
                     Text(
-                      'Mehrteilige Reise: jede Etappe wird separat gebucht.',
+                      t('multiStopNotice'),
                       style: theme.textTheme.bodySmall?.copyWith(color: Colors.white70),
                     ),
                   ],
@@ -89,7 +91,7 @@ class ItineraryDetailScreen extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.xxl),
             Text(
-              'ETAPPEN',
+              t('legsSectionLabel'),
               style: theme.textTheme.labelMedium
                   ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
             ),
@@ -102,7 +104,7 @@ class ItineraryDetailScreen extends StatelessWidget {
               ),
             const SizedBox(height: AppSpacing.xxl),
             BigButton(
-              label: 'Reisebegleiter aktivieren',
+              label: t('activateCompanion'),
               filled: true,
               onPressed: () => Navigator.of(context).push(
                 MaterialPageRoute(
@@ -112,7 +114,7 @@ class ItineraryDetailScreen extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.md),
             BigButton(
-              label: 'Preis beobachten',
+              label: t('watchPrice'),
               icon: Icons.notifications_active_outlined,
               onPressed: () {
                 context.read<PriceAlertsProvider>().addAlert(
@@ -121,7 +123,7 @@ class ItineraryDetailScreen extends StatelessWidget {
                       itinerary.totalPriceEur,
                     );
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Preisalarm aktiviert.')),
+                  SnackBar(content: Text(t('priceAlertActivated'))),
                 );
               },
             ),
@@ -158,7 +160,7 @@ class _LegCard extends StatelessWidget {
     final opened = await launchUrl(url, mode: LaunchMode.externalApplication);
     if (!opened && context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Der Buchungslink konnte nicht geöffnet werden.')),
+        SnackBar(content: Text(AppLocalizations.of(context).t('bookingLinkFailed'))),
       );
     }
   }
@@ -166,6 +168,7 @@ class _LegCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final t = AppLocalizations.of(context).t;
     final timeFormat = DateFormat.Hm();
     final canBook = leg.mode == LegMode.flight || leg.mode == LegMode.train;
 
@@ -235,7 +238,9 @@ class _LegCard extends StatelessWidget {
                             onPressed: () => _openBookingLink(context),
                             icon: const Icon(Icons.open_in_new_rounded, size: 18),
                             label: Text(
-                              leg.mode == LegMode.flight ? 'Flug buchen' : 'Zugticket buchen',
+                              leg.mode == LegMode.flight
+                                  ? t('bookFlight')
+                                  : t('bookTrainTicket'),
                             ),
                           ),
                         ),

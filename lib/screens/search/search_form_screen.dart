@@ -6,6 +6,7 @@ import '../../core/localization/app_localizations.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../models/airport.dart';
+import '../../models/trip_type.dart';
 import '../../providers/home_navigation_provider.dart';
 import '../../providers/search_provider.dart';
 import '../../widgets/airport_picker.dart';
@@ -33,57 +34,14 @@ class SearchFormScreen extends StatelessWidget {
           padding: const EdgeInsets.all(AppSpacing.lg),
           children: [
             Text(
-              'Nicht den günstigsten Flug —\nden intelligentesten Weg nach Marokko.',
+              t('tagline'),
               style: theme.textTheme.headlineSmall,
             ),
             const SizedBox(height: AppSpacing.xl),
             const _VoiceHeroCard(),
             const SizedBox(height: AppSpacing.xxl),
             Text(
-              'ROUTE',
-              style: theme.textTheme.labelMedium
-                  ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(AppSpacing.lg),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Expanded(
-                      child: AirportPicker(
-                        label: t('from'),
-                        compact: true,
-                        options: europeanAirports,
-                        selected: search.origin,
-                        onChanged: search.setOrigin,
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-                      child: Icon(
-                        Icons.arrow_forward_rounded,
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                    Expanded(
-                      child: AirportPicker(
-                        label: t('to'),
-                        icon: Icons.flight_land_rounded,
-                        compact: true,
-                        options: moroccanAirports,
-                        selected: search.destination,
-                        onChanged: search.setDestination,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.xxl),
-            Text(
-              'WANN & WER',
+              t('routeSectionLabel'),
               style: theme.textTheme.labelMedium
                   ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
             ),
@@ -93,7 +51,73 @@ class SearchFormScreen extends StatelessWidget {
                 padding: const EdgeInsets.all(AppSpacing.lg),
                 child: Column(
                   children: [
-                    _DateField(date: search.date, onChanged: search.setDate),
+                    _TripTypeSelector(
+                      tripType: search.tripType,
+                      onChanged: search.setTripType,
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Expanded(
+                          child: AirportPicker(
+                            label: t('from'),
+                            compact: true,
+                            options: europeanAirports,
+                            selected: search.origin,
+                            onChanged: search.setOrigin,
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+                          child: Icon(
+                            Icons.arrow_forward_rounded,
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                        Expanded(
+                          child: AirportPicker(
+                            label: t('to'),
+                            icon: Icons.flight_land_rounded,
+                            compact: true,
+                            options: moroccanAirports,
+                            selected: search.destination,
+                            onChanged: search.setDestination,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xxl),
+            Text(
+              t('whenAndWhoSectionLabel'),
+              style: theme.textTheme.labelMedium
+                  ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                child: Column(
+                  children: [
+                    _DateField(
+                      label: t('date'),
+                      date: search.date,
+                      firstDate: DateTime.now(),
+                      onChanged: search.setDate,
+                    ),
+                    if (search.tripType == TripType.roundTrip) ...[
+                      const SizedBox(height: AppSpacing.md),
+                      _DateField(
+                        label: t('returnDate'),
+                        date: search.returnDate ?? search.date,
+                        firstDate: search.date,
+                        onChanged: search.setReturnDate,
+                      ),
+                    ],
                     const SizedBox(height: AppSpacing.md),
                     _QuickDateChips(selected: search.date, onChanged: search.setDate),
                     const SizedBox(height: AppSpacing.md),
@@ -130,6 +154,40 @@ class SearchFormScreen extends StatelessWidget {
   }
 }
 
+/// One-way / round-trip toggle - visually the first thing inside the route
+/// card, since it changes what the rest of the form asks for.
+class _TripTypeSelector extends StatelessWidget {
+  const _TripTypeSelector({required this.tripType, required this.onChanged});
+
+  final TripType tripType;
+  final ValueChanged<TripType> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context).t;
+    return SegmentedButton<TripType>(
+      segments: [
+        ButtonSegment(
+          value: TripType.oneWay,
+          label: Text(t('oneWay')),
+          icon: const Icon(Icons.arrow_forward_rounded, size: 16),
+        ),
+        ButtonSegment(
+          value: TripType.roundTrip,
+          label: Text(t('roundTrip')),
+          icon: const Icon(Icons.sync_alt_rounded, size: 16),
+        ),
+      ],
+      selected: {tripType},
+      showSelectedIcon: false,
+      onSelectionChanged: (selection) => onChanged(selection.first),
+      style: SegmentedButton.styleFrom(
+        minimumSize: const Size.fromHeight(44),
+      ),
+    );
+  }
+}
+
 /// A direct, one-tap voice entry point on the landing page itself - jumps
 /// straight to the assistant tab and starts listening immediately, instead
 /// of making a voice-first user first find the "Berater" tab and then the
@@ -141,6 +199,7 @@ class _VoiceHeroCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final t = AppLocalizations.of(context).t;
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -169,7 +228,7 @@ class _VoiceHeroCard extends StatelessWidget {
               ),
               const SizedBox(height: AppSpacing.lg),
               Text(
-                'Sprich einfach mit mir',
+                t('talkToMe'),
                 textAlign: TextAlign.center,
                 style: textTheme.headlineSmall?.copyWith(
                   color: Colors.white,
@@ -178,7 +237,7 @@ class _VoiceHeroCard extends StatelessWidget {
               ),
               const SizedBox(height: AppSpacing.sm),
               Text(
-                '„Ich will nach Fès, günstig, nächste Woche“',
+                t('voiceExamplePrompt'),
                 textAlign: TextAlign.center,
                 style: textTheme.bodyMedium?.copyWith(
                   color: Colors.white.withValues(alpha: 0.9),
@@ -195,7 +254,7 @@ class _VoiceHeroCard extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      'Jetzt sprechen',
+                      t('talkNow'),
                       style: textTheme.labelLarge?.copyWith(color: Colors.white),
                     ),
                     const SizedBox(width: 6),
@@ -224,11 +283,12 @@ class _QuickDateChips extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context).t;
     final now = DateTime.now();
     final presets = <String, DateTime>{
-      'Diese Woche': now.add(const Duration(days: 3)),
-      'Nächste Woche': now.add(const Duration(days: 7)),
-      'Nächster Monat': now.add(const Duration(days: 30)),
+      t('thisWeek'): now.add(const Duration(days: 3)),
+      t('nextWeek'): now.add(const Duration(days: 7)),
+      t('nextMonth'): now.add(const Duration(days: 30)),
     };
 
     return Align(
@@ -250,9 +310,16 @@ class _QuickDateChips extends StatelessWidget {
 }
 
 class _DateField extends StatelessWidget {
-  const _DateField({required this.date, required this.onChanged});
+  const _DateField({
+    required this.label,
+    required this.date,
+    required this.firstDate,
+    required this.onChanged,
+  });
 
+  final String label;
   final DateTime date;
+  final DateTime firstDate;
   final ValueChanged<DateTime> onChanged;
 
   @override
@@ -264,15 +331,15 @@ class _DateField extends StatelessWidget {
         onTap: () async {
           final picked = await showDatePicker(
             context: context,
-            initialDate: date,
-            firstDate: DateTime.now(),
+            initialDate: date.isBefore(firstDate) ? firstDate : date,
+            firstDate: firstDate,
             lastDate: DateTime.now().add(const Duration(days: 365)),
           );
           if (picked != null) onChanged(picked);
         },
         child: InputDecorator(
           decoration: InputDecoration(
-            labelText: AppLocalizations.of(context).t('date'),
+            labelText: label,
             prefixIcon: const Icon(Icons.calendar_today_rounded),
           ),
           child: Text(

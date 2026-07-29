@@ -19,9 +19,10 @@ class SettingsScreen extends StatelessWidget {
     final themeProvider = context.watch<ThemeProvider>();
     final prefsProvider = context.watch<PreferencesProvider>();
     final theme = Theme.of(context);
+    final t = AppLocalizations.of(context).t;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Einstellungen')),
+      appBar: AppBar(title: Text(t('settings'))),
       body: ResponsiveBody(
         child: ListView(
           padding: const EdgeInsets.all(AppSpacing.lg),
@@ -35,7 +36,7 @@ class SettingsScreen extends StatelessWidget {
                   foregroundColor: theme.colorScheme.primary,
                   child: const Icon(Icons.person_outline_rounded),
                 ),
-                title: const Text('Deine Reisevorlieben'),
+                title: Text(t('yourTravelPreferences')),
                 trailing: const Icon(Icons.chevron_right_rounded),
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(builder: (_) => const ProfileScreen()),
@@ -43,7 +44,7 @@ class SettingsScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: AppSpacing.xxl),
-            const _SectionLabel('SPRACHE'),
+            _SectionLabel(t('languageSectionLabel')),
             const SizedBox(height: AppSpacing.sm),
             Card(
               child: RadioGroup<AppLanguage>(
@@ -55,7 +56,7 @@ class SettingsScreen extends StatelessWidget {
                   children: [
                     for (final language in AppLanguage.values)
                       RadioListTile<AppLanguage>(
-                        title: Text(language.nativeName),
+                        title: Text('${language.flagEmoji}  ${language.nativeName}'),
                         value: language,
                       ),
                   ],
@@ -63,7 +64,7 @@ class SettingsScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: AppSpacing.xxl),
-            const _SectionLabel('ERSCHEINUNGSBILD'),
+            _SectionLabel(t('appearanceSectionLabel')),
             const SizedBox(height: AppSpacing.sm),
             Card(
               child: RadioGroup<ThemeMode>(
@@ -71,18 +72,18 @@ class SettingsScreen extends StatelessWidget {
                 onChanged: (value) {
                   if (value != null) themeProvider.setMode(value);
                 },
-                child: const Column(
+                child: Column(
                   children: [
                     RadioListTile<ThemeMode>(
-                      title: Text('Systemeinstellung'),
+                      title: Text(t('systemDefault')),
                       value: ThemeMode.system,
                     ),
                     RadioListTile<ThemeMode>(
-                      title: Text('Hell'),
+                      title: Text(t('lightMode')),
                       value: ThemeMode.light,
                     ),
                     RadioListTile<ThemeMode>(
-                      title: Text('Dunkel'),
+                      title: Text(t('darkMode')),
                       value: ThemeMode.dark,
                     ),
                   ],
@@ -90,7 +91,7 @@ class SettingsScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: AppSpacing.xxl),
-            const _SectionLabel('STIMME DES KI-ASSISTENTEN'),
+            _SectionLabel(t('aiVoiceSectionLabel')),
             const SizedBox(height: AppSpacing.sm),
             Card(
               child: RadioGroup<bool>(
@@ -100,10 +101,10 @@ class SettingsScreen extends StatelessWidget {
                     prefsProvider.update((p) => p.copyWith(preferredVoiceIsFemale: value));
                   }
                 },
-                child: const Column(
+                child: Column(
                   children: [
-                    RadioListTile<bool>(title: Text('Weiblich'), value: true),
-                    RadioListTile<bool>(title: Text('Männlich'), value: false),
+                    RadioListTile<bool>(title: Text(t('femaleVoice')), value: true),
+                    RadioListTile<bool>(title: Text(t('maleVoice')), value: false),
                   ],
                 ),
               ),

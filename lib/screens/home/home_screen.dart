@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/localization/app_localizations.dart';
 import '../../providers/home_navigation_provider.dart';
 import '../alerts/price_alerts_screen.dart';
 import '../assistant/ai_chat_screen.dart';
@@ -22,6 +23,7 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final navigation = context.watch<HomeNavigationProvider>();
+    final t = AppLocalizations.of(context).t;
 
     return Scaffold(
       body: SafeArea(
@@ -30,26 +32,26 @@ class HomeScreen extends StatelessWidget {
       bottomNavigationBar: NavigationBar(
         selectedIndex: navigation.tabIndex,
         onDestinationSelected: (i) => context.read<HomeNavigationProvider>().goToTab(i),
-        destinations: const [
+        destinations: [
           NavigationDestination(
-            icon: Icon(Icons.flight_takeoff_rounded),
-            label: 'Suche',
+            icon: const Icon(Icons.flight_takeoff_rounded),
+            label: t('navSearch'),
           ),
           NavigationDestination(
-            icon: Icon(Icons.chat_bubble_outline_rounded),
-            label: 'Berater',
+            icon: const Icon(Icons.chat_bubble_outline_rounded),
+            label: t('navAdvisor'),
           ),
           NavigationDestination(
-            icon: Icon(Icons.explore_outlined),
-            label: 'Begleiter',
+            icon: const Icon(Icons.explore_outlined),
+            label: t('navCompanion'),
           ),
           NavigationDestination(
-            icon: Icon(Icons.notifications_none_rounded),
-            label: 'Alarme',
+            icon: const Icon(Icons.notifications_none_rounded),
+            label: t('navAlerts'),
           ),
           NavigationDestination(
-            icon: Icon(Icons.settings_outlined),
-            label: 'Mehr',
+            icon: const Icon(Icons.settings_outlined),
+            label: t('navMore'),
           ),
         ],
       ),

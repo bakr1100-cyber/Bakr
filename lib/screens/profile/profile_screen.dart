@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/localization/app_localizations.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../providers/preferences_provider.dart';
@@ -17,9 +18,10 @@ class ProfileScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final prefs = context.watch<PreferencesProvider>().preferences;
+    final t = AppLocalizations.of(context).t;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Deine Reisevorlieben')),
+      appBar: AppBar(title: Text(t('yourTravelPreferences'))),
       body: ResponsiveBody(
         child: ListView(
           padding: const EdgeInsets.all(AppSpacing.lg),
@@ -27,36 +29,36 @@ class ProfileScreen extends StatelessWidget {
             _InfoTile(
               icon: Icons.flight_takeoff_rounded,
               color: AppColors.moroccoGreen,
-              label: 'Lieblingsflughafen (Abflug)',
-              value: prefs.favoriteOriginAirportCode ?? 'Noch nicht bekannt',
+              label: t('favoriteDepartureAirport'),
+              value: prefs.favoriteOriginAirportCode ?? t('notKnownYet'),
             ),
             _InfoTile(
               icon: Icons.flight_land_rounded,
               color: AppColors.moroccoGold,
-              label: 'Lieblingsziel',
-              value: prefs.favoriteDestinationAirportCode ?? 'Noch nicht bekannt',
+              label: t('favoriteDestination'),
+              value: prefs.favoriteDestinationAirportCode ?? t('notKnownYet'),
             ),
             _InfoTile(
               icon: Icons.airlines_rounded,
               color: AppColors.moroccoRed,
-              label: 'Lieblingsairlines',
+              label: t('favoriteAirlines'),
               value: prefs.favoriteAirlines.isEmpty
-                  ? 'Noch nicht bekannt'
+                  ? t('notKnownYet')
                   : prefs.favoriteAirlines.join(', '),
             ),
             _InfoTile(
               icon: Icons.payments_outlined,
               color: AppColors.moroccoGold,
-              label: 'Übliches Budget',
+              label: t('usualBudget'),
               value: prefs.usualMaxBudgetEur != null
                   ? '${prefs.usualMaxBudgetEur!.toStringAsFixed(0)} €'
-                  : 'Noch nicht bekannt',
+                  : t('notKnownYet'),
             ),
             _InfoTile(
               icon: Icons.family_restroom_rounded,
               color: AppColors.moroccoGreen,
-              label: 'Reisestil',
-              value: prefs.travelsWithFamily ? 'Mit Familie' : 'Alleinreisend',
+              label: t('travelStyle'),
+              value: prefs.travelsWithFamily ? t('travelingWithFamily') : t('travelingSolo'),
             ),
           ],
         ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/localization/app_localizations.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../models/companion_event.dart';
@@ -15,20 +16,24 @@ class TravelCompanionScreen extends StatelessWidget {
 
   static final _service = TravelCompanionService();
 
-  String _stageTitle(CompanionStage stage) => switch (stage) {
-        CompanionStage.beforeTrip => 'Vor der Reise',
-        CompanionStage.atAirport => 'Am Flughafen',
-        CompanionStage.duringFlight => 'Während des Fluges',
-        CompanionStage.afterLanding => 'Nach der Landung',
-      };
+  String _stageTitle(BuildContext context, CompanionStage stage) {
+    final t = AppLocalizations.of(context).t;
+    return switch (stage) {
+      CompanionStage.beforeTrip => t('stageBeforeTrip'),
+      CompanionStage.atAirport => t('stageAtAirport'),
+      CompanionStage.duringFlight => t('stageDuringFlight'),
+      CompanionStage.afterLanding => t('stageAfterLanding'),
+    };
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final t = AppLocalizations.of(context).t;
 
     if (itinerary == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Reisebegleiter')),
+        appBar: AppBar(title: Text(t('travelCompanion'))),
         body: ResponsiveBody(
           child: Center(
             child: Padding(
@@ -47,12 +52,10 @@ class TravelCompanionScreen extends StatelessWidget {
                         size: 38, color: theme.colorScheme.primary),
                   ),
                   const SizedBox(height: AppSpacing.xl),
-                  Text('Noch keine aktive Reise', style: theme.textTheme.titleLarge),
+                  Text(t('noActiveTripTitle'), style: theme.textTheme.titleLarge),
                   const SizedBox(height: AppSpacing.sm),
                   Text(
-                    'Sobald du eine Reise buchst, begleite ich dich von der '
-                    'Anreise bis zur Ankunft — Check-in, Gate-Änderungen, '
-                    'Boarding, und Tipps für dein Ziel.',
+                    t('noActiveTripBody'),
                     style: theme.textTheme.bodyMedium
                         ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                     textAlign: TextAlign.center,
@@ -72,7 +75,7 @@ class TravelCompanionScreen extends StatelessWidget {
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Reisebegleiter')),
+      appBar: AppBar(title: Text(t('travelCompanion'))),
       body: ResponsiveBody(
         child: ListView(
           padding: const EdgeInsets.all(AppSpacing.lg),
@@ -82,7 +85,7 @@ class TravelCompanionScreen extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.fromLTRB(4, AppSpacing.sm, 4, AppSpacing.sm),
                   child: Text(
-                    _stageTitle(stage).toUpperCase(),
+                    _stageTitle(context, stage).toUpperCase(),
                     style: theme.textTheme.labelMedium
                         ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                   ),

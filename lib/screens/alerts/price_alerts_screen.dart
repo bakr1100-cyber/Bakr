@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/localization/app_localizations.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../providers/price_alerts_provider.dart';
@@ -13,13 +14,14 @@ class PriceAlertsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final provider = context.watch<PriceAlertsProvider>();
     final theme = Theme.of(context);
+    final t = AppLocalizations.of(context).t;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Preisalarme'),
+        title: Text(t('priceAlerts')),
         actions: [
           IconButton(
-            tooltip: 'Auf Preisänderungen prüfen',
+            tooltip: t('checkForPriceDrops'),
             icon: const Icon(Icons.refresh_rounded),
             onPressed: provider.checkForDrops,
           ),
@@ -44,11 +46,10 @@ class PriceAlertsScreen extends StatelessWidget {
                             size: 38, color: theme.colorScheme.tertiary),
                       ),
                       const SizedBox(height: AppSpacing.xl),
-                      Text('Noch keine Preisalarme', style: theme.textTheme.titleLarge),
+                      Text(t('noAlertsYetTitle'), style: theme.textTheme.titleLarge),
                       const SizedBox(height: AppSpacing.sm),
                       Text(
-                        'Aktiviere bei einer Reise "Preis beobachten", und ich '
-                        'melde mich, sobald sie günstiger wird.',
+                        t('noAlertsYetBody'),
                         style: theme.textTheme.bodyMedium
                             ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                         textAlign: TextAlign.center,
@@ -85,9 +86,9 @@ class PriceAlertsScreen extends StatelessWidget {
                         ),
                         subtitle: Text(
                           alert.dropEur != null && alert.dropEur! > 0
-                              ? 'Jetzt ${alert.currentPriceEur!.toStringAsFixed(0)} € '
-                                  '(${alert.dropEur!.toStringAsFixed(0)} € günstiger)'
-                              : 'Beobachtet ab ${alert.watchedPriceEur.toStringAsFixed(0)} €',
+                              ? '${t('nowCheaper')} ${alert.currentPriceEur!.toStringAsFixed(0)} € '
+                                  '(${alert.dropEur!.toStringAsFixed(0)} € ${t('cheaper')})'
+                              : '${t('watchedFrom')} ${alert.watchedPriceEur.toStringAsFixed(0)} €',
                           style: TextStyle(
                             color: alert.dropEur != null && alert.dropEur! > 0
                                 ? theme.colorScheme.primary

@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../models/airport.dart';
 import '../models/itinerary.dart';
 import '../models/travel_intent.dart';
+import '../models/trip_type.dart';
 import '../services/flight_search_service.dart';
 import 'preferences_provider.dart';
 
@@ -31,11 +32,21 @@ class SearchProvider extends ChangeNotifier {
   Airport? origin;
   Airport? destination;
   DateTime date = DateTime.now().add(const Duration(days: 7));
+  TripType tripType = TripType.oneWay;
+
+  /// Only meaningful when [tripType] is [TripType.roundTrip]. Kept in sync
+  /// with [date] so it can never end up before the departure date.
+  DateTime? returnDate;
+
   int passengers = 1;
   double? maxBudgetEur;
 
   bool isLoading = false;
   List<Itinerary> results = [];
+
+  /// Populated alongside [results] only for round trips - the return leg's
+  /// own itinerary options (destination back to origin, on [returnDate]).
+  List<Itinerary> returnResults = [];
 
   void setOrigin(Airport airport) {
     origin = airport;
@@ -49,6 +60,25 @@ class SearchProvider extends ChangeNotifier {
 
   void setDate(DateTime value) {
     date = value;
+    if (returnDate != null && returnDate!.isBefore(date)) {
+      returnDate = date;
+    }
+    notifyListeners();
+  }
+
+  void setReturnDate(DateTime value) {
+    returnDate = value;
+    notifyListeners();
+  }
+
+  void setTripType(TripType value) {
+    tripType = value;
+    if (value == TripType.oneWay) {
+      returnDate = null;
+      returnResults = [];
+    } else {
+      returnDate ??= date.add(const Duration(days: 7));
+    }
     notifyListeners();
   }
 
@@ -62,7 +92,11 @@ class SearchProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  bool get canSearch => origin != null && destination != null;
+  bool get canSearch =>
+      origin != null &&
+      destination != null &&
+      (tripType == TripType.oneWay ||
+          (returnDate != null && !returnDate!.isBefore(date)));
 
   Future<void> search() async {
     if (!canSearch) return;
@@ -77,6 +111,19 @@ class SearchProvider extends ChangeNotifier {
       maxBudgetEur: maxBudgetEur,
     );
     results = await _service.search(intent);
+
+    if (tripType == TripType.roundTrip && returnDate != null) {
+      final returnIntent = TravelIntent(
+        origin: destination,
+        destination: origin,
+        departureDate: returnDate,
+        passengerCount: passengers,
+        maxBudgetEur: maxBudgetEur,
+      );
+      returnResults = await _service.search(returnIntent);
+    } else {
+      returnResults = [];
+    }
 
     isLoading = false;
     notifyListeners();

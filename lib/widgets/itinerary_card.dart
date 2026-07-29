@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../core/localization/app_localizations.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_spacing.dart';
 import '../models/itinerary.dart';
@@ -37,17 +38,18 @@ class ItineraryCard extends StatelessWidget {
     return '${hours}h ${minutes}min';
   }
 
-  String get _stopsLabel {
+  String _stopsLabel(String Function(String) t) {
     final stops = itinerary.legs.length - 1;
-    if (stops == 0) return 'Direkt';
-    if (stops == 1) return '1 Umstieg';
-    return '$stops Umstiege';
+    if (stops == 0) return t('direct');
+    if (stops == 1) return '1 ${t('stop')}';
+    return '$stops ${t('stopsPlural')}';
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final t = AppLocalizations.of(context).t;
     final timeFormat = DateFormat.Hm();
 
     return Card(
@@ -74,14 +76,14 @@ class ItineraryCard extends StatelessWidget {
                     ),
                     borderRadius: BorderRadius.circular(AppRadius.pill),
                   ),
-                  child: const Row(
+                  child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.bolt_rounded, size: 14, color: Color(0xFF231A05)),
-                      SizedBox(width: 4),
+                      const Icon(Icons.bolt_rounded, size: 14, color: Color(0xFF231A05)),
+                      const SizedBox(width: 4),
                       Text(
-                        'BESTER PREIS',
-                        style: TextStyle(
+                        t('bestPrice'),
+                        style: const TextStyle(
                           color: Color(0xFF231A05),
                           fontSize: 11,
                           fontWeight: FontWeight.w800,
@@ -106,8 +108,8 @@ class ItineraryCard extends StatelessWidget {
                               ?.copyWith(fontWeight: FontWeight.w800),
                         ),
                         Text(
-                          'gesamt · ${itinerary.legs.length} '
-                          '${itinerary.legs.length == 1 ? "Etappe" : "Etappen"}',
+                          '${t('total')} · ${itinerary.legs.length} '
+                          '${itinerary.legs.length == 1 ? t('leg') : t('legsPlural')}',
                           style: theme.textTheme.bodySmall,
                         ),
                       ],
@@ -133,7 +135,7 @@ class ItineraryCard extends StatelessWidget {
                   const SizedBox(width: 8),
                   _Pill(
                     icon: Icons.alt_route_rounded,
-                    label: _stopsLabel,
+                    label: _stopsLabel(t),
                     accent: !itinerary.isDirect,
                   ),
                 ],

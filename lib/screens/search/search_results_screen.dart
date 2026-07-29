@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/localization/app_localizations.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../models/itinerary.dart';
+import '../../models/trip_type.dart';
 import '../../providers/search_provider.dart';
 import '../../widgets/itinerary_card.dart';
 import '../../widgets/skeleton_loader.dart';
@@ -14,6 +17,8 @@ class SearchResultsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final search = context.watch<SearchProvider>();
+    final isRoundTrip = search.tripType == TripType.roundTrip;
+    final bothEmpty = search.results.isEmpty && (!isRoundTrip || search.returnResults.isEmpty);
 
     return Scaffold(
       appBar: AppBar(
@@ -25,30 +30,110 @@ class SearchResultsScreen extends StatelessWidget {
         switchOutCurve: Curves.easeIn,
         child: search.isLoading
             ? const _LoadingList(key: ValueKey('loading'))
-            : search.results.isEmpty
+            : bothEmpty
                 ? const _EmptyState(key: ValueKey('empty'))
-                : ListView.builder(
+                : _ResultsList(
                     key: const ValueKey('results'),
-                    padding: const EdgeInsets.all(AppSpacing.lg),
-                    itemCount: search.results.length,
-                    itemBuilder: (context, index) {
-                      final itinerary = search.results[index];
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                        child: ItineraryCard(
-                          itinerary: itinerary,
-                          isBestValue: index == 0,
-                          onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) =>
-                                  ItineraryDetailScreen(itinerary: itinerary),
-                            ),
-                          ),
-                        ),
-                      );
-                    },
+                    isRoundTrip: isRoundTrip,
                   ),
       ),
+    );
+  }
+}
+
+class _ResultsList extends StatelessWidget {
+  const _ResultsList({super.key, required this.isRoundTrip});
+
+  final bool isRoundTrip;
+
+  @override
+  Widget build(BuildContext context) {
+    final search = context.watch<SearchProvider>();
+    final t = AppLocalizations.of(context).t;
+
+    if (!isRoundTrip) {
+      return _ItineraryList(itineraries: search.results, padding: const EdgeInsets.all(AppSpacing.lg));
+    }
+
+    return ListView(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      children: [
+        _SectionHeader(icon: Icons.flight_takeoff_rounded, label: t('outboundFlight')),
+        const SizedBox(height: AppSpacing.sm),
+        _ItineraryList(itineraries: search.results, padding: EdgeInsets.zero),
+        const SizedBox(height: AppSpacing.xxl),
+        _SectionHeader(icon: Icons.flight_land_rounded, label: t('returnFlight')),
+        const SizedBox(height: AppSpacing.sm),
+        _ItineraryList(itineraries: search.returnResults, padding: EdgeInsets.zero),
+      ],
+    );
+  }
+}
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Row(
+      children: [
+        Icon(icon, size: 18, color: theme.colorScheme.primary),
+        const SizedBox(width: 8),
+        Text(
+          label.toUpperCase(),
+          style: theme.textTheme.labelMedium
+              ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+        ),
+      ],
+    );
+  }
+}
+
+class _ItineraryList extends StatelessWidget {
+  const _ItineraryList({required this.itineraries, required this.padding});
+
+  final List<Itinerary> itineraries;
+  final EdgeInsets padding;
+
+  @override
+  Widget build(BuildContext context) {
+    if (itineraries.isEmpty) {
+      return Padding(
+        padding: padding,
+        child: Text(
+          AppLocalizations.of(context).t('noRouteFoundTitle'),
+          style: Theme.of(context)
+              .textTheme
+              .bodyMedium
+              ?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+        ),
+      );
+    }
+
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      padding: padding,
+      itemCount: itineraries.length,
+      itemBuilder: (context, index) {
+        final itinerary = itineraries[index];
+        return Padding(
+          padding: const EdgeInsets.only(bottom: AppSpacing.md),
+          child: ItineraryCard(
+            itinerary: itinerary,
+            isBestValue: index == 0,
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => ItineraryDetailScreen(itinerary: itinerary),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }
@@ -72,7 +157,7 @@ class _LoadingList extends StatelessWidget {
               ),
               const SizedBox(width: 12),
               Text(
-                'Ich suche die besten Verbindungen für dich…',
+                AppLocalizations.of(context).t('searchingBestRoutes'),
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
             ],
@@ -107,6 +192,7 @@ class _EmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final t = AppLocalizations.of(context).t;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.xxl),
@@ -128,15 +214,13 @@ class _EmptyState extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.xl),
             Text(
-              'Noch keine Verbindung gefunden',
+              t('noRouteFoundTitle'),
               style: theme.textTheme.titleLarge,
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: AppSpacing.sm),
             Text(
-              'Für diese Route ist gerade nichts dabei. Probier ein anderes '
-              'Datum oder Ziel — ich suche automatisch auch Zug- und '
-              'Bus-Kombinationen mit.',
+              t('noRouteFoundBody'),
               style: theme.textTheme.bodyMedium
                   ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
               textAlign: TextAlign.center,

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/localization/app_localizations.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../providers/chat_provider.dart';
 import '../../providers/home_navigation_provider.dart';
@@ -136,10 +137,11 @@ class _AiChatScreenState extends State<AiChatScreen> {
   @override
   Widget build(BuildContext context) {
     final chat = context.watch<ChatProvider>();
+    final t = AppLocalizations.of(context).t;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('KI-Reiseberater'),
+        title: Text(t('aiChatTitle')),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(22),
           child: Padding(
@@ -149,7 +151,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
                 Icon(Icons.auto_awesome_rounded, size: 14, color: Colors.white.withValues(alpha: 0.85)),
                 const SizedBox(width: 6),
                 Text(
-                  'Kennt Direktflüge, Zug- & Bus-Kombinationen und spricht Darija',
+                  t('aiChatSubtitle'),
                   style: Theme.of(context)
                       .textTheme
                       .labelSmall
