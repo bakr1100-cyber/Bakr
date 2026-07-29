@@ -15,8 +15,14 @@ class AppTheme {
   static ThemeData _base(Brightness brightness) {
     final isDark = brightness == Brightness.dark;
 
-    final colorScheme = ColorScheme(
+    // Seed a full Material 3 tonal palette from the brand green so every
+    // derived surface/container token (nav bar, chips, containers) comes out
+    // tinted green instead of falling back to Flutter's neutral grey/white
+    // defaults, then pin the exact brand hues on top of it.
+    final colorScheme = ColorScheme.fromSeed(
+      seedColor: AppColors.moroccoGreen,
       brightness: brightness,
+    ).copyWith(
       primary: AppColors.moroccoGreen,
       onPrimary: AppColors.moroccoWhite,
       secondary: AppColors.moroccoRed,
@@ -41,13 +47,40 @@ class AppTheme {
           isDark ? AppColors.darkBackground : AppColors.lightBackground,
       textTheme: textTheme,
       appBarTheme: AppBarTheme(
-        backgroundColor: Colors.transparent,
+        backgroundColor: AppColors.moroccoGreen,
         elevation: 0,
         centerTitle: false,
-        foregroundColor:
-            isDark ? AppColors.darkOnSurface : AppColors.lightOnSurface,
+        foregroundColor: AppColors.moroccoWhite,
+        iconTheme: const IconThemeData(color: AppColors.moroccoWhite),
         titleTextStyle: textTheme.headlineSmall?.copyWith(
+          color: AppColors.moroccoWhite,
           fontWeight: FontWeight.w700,
+        ),
+      ),
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: isDark ? AppColors.darkSurface : AppColors.moroccoGreen,
+        indicatorColor: isDark
+            ? AppColors.greenDark
+            : AppColors.moroccoWhite.withValues(alpha: 0.22),
+        labelTextStyle: WidgetStateProperty.resolveWith(
+          (states) => TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: isDark
+                ? (states.contains(WidgetState.selected)
+                    ? AppColors.moroccoGreen
+                    : AppColors.darkSubtle)
+                : AppColors.moroccoWhite,
+          ),
+        ),
+        iconTheme: WidgetStateProperty.resolveWith(
+          (states) => IconThemeData(
+            color: isDark
+                ? (states.contains(WidgetState.selected)
+                    ? AppColors.moroccoGreen
+                    : AppColors.darkSubtle)
+                : AppColors.moroccoWhite,
+          ),
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(

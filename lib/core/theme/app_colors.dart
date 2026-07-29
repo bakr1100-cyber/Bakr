@@ -18,9 +18,9 @@ class AppColors {
   static const Color redDark = Color(0xFF8E1B21);
   static const Color greenDark = Color(0xFF066455);
 
-  // Light theme surfaces
-  static const Color lightBackground = Color(0xFFF3F8F6);
-  static const Color lightSurface = Color(0xFFFFFFFF);
+  // Light theme surfaces — visibly green-tinted, never flat white.
+  static const Color lightBackground = Color(0xFFDFF2EC);
+  static const Color lightSurface = Color(0xFFF3FBF8);
   static const Color lightOnSurface = Color(0xFF0B2620);
   static const Color lightSubtle = Color(0xFF5B7A72);
 
