@@ -130,6 +130,13 @@ class _LanguageCardState extends State<_LanguageCard>
     AppGradients.gold,
     AppGradients.accent,
     AppGradients.primaryDeep,
+    // A fifth, distinct tone (deep red -> near-black) so the 5th language
+    // card doesn't just repeat the first card's gradient.
+    LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [AppColors.redDark, Color(0xFF2A0A0C)],
+    ),
   ];
 
   @override
