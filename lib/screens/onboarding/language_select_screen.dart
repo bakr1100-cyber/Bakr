@@ -23,7 +23,7 @@ class LanguageSelectScreen extends StatelessWidget {
               const Row(
                 children: [
                   Expanded(child: _FlagBar(color: AppColors.moroccoRed)),
-                  Expanded(child: _FlagBar(color: AppColors.moroccoGreen)),
+                  Expanded(child: _FlagBar(color: AppColors.flagGreen)),
                 ],
               ),
               const SizedBox(height: 40),

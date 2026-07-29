@@ -70,7 +70,7 @@ class TravelCompanionScreen extends StatelessWidget {
                           ? Icons.notifications_active_rounded
                           : Icons.info_outline_rounded,
                       color: event.isUrgent
-                          ? Theme.of(context).colorScheme.primary
+                          ? Theme.of(context).colorScheme.error
                           : null,
                     ),
                     title: Text(event.title),

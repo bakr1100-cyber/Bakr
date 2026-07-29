@@ -17,10 +17,12 @@ class AppTheme {
 
     final colorScheme = ColorScheme(
       brightness: brightness,
-      primary: AppColors.moroccoRed,
+      primary: AppColors.moroccoGreen,
       onPrimary: AppColors.moroccoWhite,
-      secondary: AppColors.moroccoGreen,
+      secondary: AppColors.moroccoRed,
       onSecondary: AppColors.moroccoWhite,
+      tertiary: AppColors.moroccoGold,
+      onTertiary: AppColors.lightOnSurface,
       error: AppColors.danger,
       onError: AppColors.moroccoWhite,
       surface: isDark ? AppColors.darkSurface : AppColors.lightSurface,
@@ -51,7 +53,7 @@ class AppTheme {
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           minimumSize: const Size.fromHeight(64),
-          backgroundColor: AppColors.moroccoRed,
+          backgroundColor: AppColors.moroccoGreen,
           foregroundColor: AppColors.moroccoWhite,
           textStyle: const TextStyle(
             fontSize: 18,
@@ -65,7 +67,7 @@ class AppTheme {
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           minimumSize: const Size.fromHeight(64),
-          backgroundColor: AppColors.moroccoGreen,
+          backgroundColor: AppColors.greenDark,
           foregroundColor: AppColors.moroccoWhite,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),

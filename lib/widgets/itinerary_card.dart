@@ -64,7 +64,7 @@ class ItineraryCard extends StatelessWidget {
               Text(
                 itinerary.explanation,
                 style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.secondary,
+                  color: theme.colorScheme.primary,
                   fontWeight: FontWeight.w600,
                 ),
               ),
