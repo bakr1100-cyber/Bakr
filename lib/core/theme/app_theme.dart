@@ -19,6 +19,10 @@ class AppTheme {
     // derived surface/container token (nav bar, chips, containers) comes out
     // tinted green instead of falling back to Flutter's neutral grey/white
     // defaults, then pin the exact brand hues on top of it.
+    final surface = isDark ? AppColors.darkSurface : AppColors.lightSurface;
+    final onSurface = isDark ? AppColors.darkOnSurface : AppColors.lightOnSurface;
+    final subtle = isDark ? AppColors.darkSubtle : AppColors.lightSubtle;
+
     final colorScheme = ColorScheme.fromSeed(
       seedColor: AppColors.moroccoGreen,
       brightness: brightness,
@@ -31,13 +35,25 @@ class AppTheme {
       onTertiary: AppColors.lightOnSurface,
       error: AppColors.danger,
       onError: AppColors.moroccoWhite,
-      surface: isDark ? AppColors.darkSurface : AppColors.lightSurface,
-      onSurface: isDark ? AppColors.darkOnSurface : AppColors.lightOnSurface,
+      surface: surface,
+      onSurface: onSurface,
+      onSurfaceVariant: subtle,
+      outline: subtle,
+      outlineVariant: subtle,
+      // Every M3 "container" tier defaults to a pale neutral tone even when
+      // seeded from a saturated color — Chips, BottomSheets, menus, etc. all
+      // pull from these, so pin them to our own surface or they render white.
+      surfaceContainerLowest:
+          isDark ? AppColors.darkBackground : AppColors.lightBackground,
+      surfaceContainerLow: surface,
+      surfaceContainer: surface,
+      surfaceContainerHigh: surface,
+      surfaceContainerHighest: surface,
     );
 
     final textTheme = GoogleFonts.interTextTheme(
       isDark ? ThemeData.dark().textTheme : ThemeData.light().textTheme,
-    );
+    ).apply(bodyColor: onSurface, displayColor: onSurface);
 
     return ThemeData(
       useMaterial3: true,
@@ -86,7 +102,7 @@ class AppTheme {
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           minimumSize: const Size.fromHeight(64),
-          backgroundColor: AppColors.moroccoGreen,
+          backgroundColor: AppColors.moroccoRed,
           foregroundColor: AppColors.moroccoWhite,
           textStyle: const TextStyle(
             fontSize: 18,
@@ -109,7 +125,7 @@ class AppTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+        fillColor: surface,
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
         border: OutlineInputBorder(
@@ -119,11 +135,16 @@ class AppTheme {
       ),
       cardTheme: CardThemeData(
         elevation: 0,
-        color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+        color: surface,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(24),
         ),
         margin: EdgeInsets.zero,
+      ),
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: surface,
+        modalBackgroundColor: surface,
+        showDragHandle: true,
       ),
       splashFactory: InkSparkle.splashFactory,
     );

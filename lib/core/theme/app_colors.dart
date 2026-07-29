@@ -18,11 +18,12 @@ class AppColors {
   static const Color redDark = Color(0xFF8E1B21);
   static const Color greenDark = Color(0xFF066455);
 
-  // Light theme surfaces — visibly green-tinted, never flat white.
-  static const Color lightBackground = Color(0xFFDFF2EC);
-  static const Color lightSurface = Color(0xFFF3FBF8);
-  static const Color lightOnSurface = Color(0xFF0B2620);
-  static const Color lightSubtle = Color(0xFF5B7A72);
+  // Light theme surfaces — deep saturated green canvas + cards, never white.
+  // Text sits light-on-green throughout, same idea as the dark theme below.
+  static const Color lightBackground = Color(0xFF073A32);
+  static const Color lightSurface = Color(0xFF0E6B5C);
+  static const Color lightOnSurface = Color(0xFFF3FBF8);
+  static const Color lightSubtle = Color(0xFFAEDFD2);
 
   // Dark theme surfaces
   static const Color darkBackground = Color(0xFF08201B);
