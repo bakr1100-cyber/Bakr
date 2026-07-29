@@ -12,6 +12,7 @@ class AirportPicker extends StatelessWidget {
     required this.selected,
     required this.onChanged,
     this.icon = Icons.flight_takeoff_rounded,
+    this.compact = false,
   });
 
   final String label;
@@ -19,6 +20,12 @@ class AirportPicker extends StatelessWidget {
   final Airport? selected;
   final ValueChanged<Airport> onChanged;
   final IconData icon;
+
+  /// Tighter layout for side-by-side placement (e.g. "Von" | "Nach" sharing
+  /// a row): drops the prefix icon and shows the airport code as a small
+  /// line under the city instead of a trailing badge, so it never has to
+  /// squeeze both onto one cramped line.
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -31,18 +38,45 @@ class AirportPicker extends StatelessWidget {
         child: InputDecorator(
           decoration: InputDecoration(
             labelText: label,
-            prefixIcon: Icon(icon, color: theme.colorScheme.primary),
+            prefixIcon: compact ? null : Icon(icon, color: theme.colorScheme.primary),
           ),
           child: selected == null
-              ? Text('Auswählen', style: theme.textTheme.titleMedium)
-              : Row(
-                  children: [
-                    Expanded(
-                      child: Text(selected!.city, style: theme.textTheme.titleMedium),
+              ? Text(
+                  'Auswählen',
+                  style: theme.textTheme.titleMedium,
+                  overflow: TextOverflow.ellipsis,
+                )
+              : compact
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          selected!.city,
+                          style: theme.textTheme.titleMedium,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          selected!.code,
+                          style: theme.textTheme.labelSmall
+                              ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                        ),
+                      ],
+                    )
+                  : Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            selected!.city,
+                            style: theme.textTheme.titleMedium,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        _CodeBadge(code: selected!.code),
+                      ],
                     ),
-                    _CodeBadge(code: selected!.code),
-                  ],
-                ),
         ),
       ),
     );

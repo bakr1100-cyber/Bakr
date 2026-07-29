@@ -42,21 +42,34 @@ class SearchFormScreen extends StatelessWidget {
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(AppSpacing.lg),
-                child: Column(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    AirportPicker(
-                      label: 'Von',
-                      options: europeanAirports,
-                      selected: search.origin,
-                      onChanged: search.setOrigin,
+                    Expanded(
+                      child: AirportPicker(
+                        label: 'Von',
+                        compact: true,
+                        options: europeanAirports,
+                        selected: search.origin,
+                        onChanged: search.setOrigin,
+                      ),
                     ),
-                    const SizedBox(height: AppSpacing.md),
-                    AirportPicker(
-                      label: 'Nach',
-                      icon: Icons.flight_land_rounded,
-                      options: moroccanAirports,
-                      selected: search.destination,
-                      onChanged: search.setDestination,
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+                      child: Icon(
+                        Icons.arrow_forward_rounded,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    Expanded(
+                      child: AirportPicker(
+                        label: 'Nach',
+                        icon: Icons.flight_land_rounded,
+                        compact: true,
+                        options: moroccanAirports,
+                        selected: search.destination,
+                        onChanged: search.setDestination,
+                      ),
                     ),
                   ],
                 ),
