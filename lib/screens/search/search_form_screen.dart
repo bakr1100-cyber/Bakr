@@ -133,57 +133,76 @@ class SearchFormScreen extends StatelessWidget {
 /// A direct, one-tap voice entry point on the landing page itself - jumps
 /// straight to the assistant tab and starts listening immediately, instead
 /// of making a voice-first user first find the "Berater" tab and then the
-/// mic button on their own.
+/// mic button on their own. Deliberately the single biggest, boldest thing
+/// on the landing page - voice is the primary way in, not an afterthought.
 class _VoiceHeroCard extends StatelessWidget {
   const _VoiceHeroCard();
 
   @override
   Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
     return Material(
       color: Colors.transparent,
       child: InkWell(
         borderRadius: BorderRadius.circular(AppRadius.xl),
         onTap: () => context.read<HomeNavigationProvider>().goToAssistantWithVoice(),
         child: Ink(
-          padding: const EdgeInsets.all(AppSpacing.lg),
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.xl, vertical: AppSpacing.xxl),
           decoration: BoxDecoration(
             gradient: AppGradients.gold,
             borderRadius: BorderRadius.circular(AppRadius.xl),
+            boxShadow: AppShadows.floating(AppColors.moroccoGold),
           ),
-          child: Row(
+          child: Column(
             children: [
               Container(
-                width: 52,
-                height: 52,
+                width: 84,
+                height: 84,
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.22),
                   shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.4), width: 2),
                 ),
-                child: const Icon(Icons.mic_rounded, color: Colors.white, size: 26),
+                child: const Icon(Icons.mic_rounded, color: Colors.white, size: 42),
               ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              const SizedBox(height: AppSpacing.lg),
+              Text(
+                'Sprich einfach mit mir',
+                textAlign: TextAlign.center,
+                style: textTheme.headlineSmall?.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                '„Ich will nach Fès, günstig, nächste Woche“',
+                textAlign: TextAlign.center,
+                style: textTheme.bodyMedium?.copyWith(
+                  color: Colors.white.withValues(alpha: 0.9),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: 10),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.22),
+                  borderRadius: BorderRadius.circular(AppRadius.pill),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      'Sprich einfach mit mir',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w800,
-                          ),
+                      'Jetzt sprechen',
+                      style: textTheme.labelLarge?.copyWith(color: Colors.white),
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      '„Ich will nach Fès, günstig, nächste Woche“',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Colors.white.withValues(alpha: 0.85),
-                          ),
-                    ),
+                    const SizedBox(width: 6),
+                    const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 18),
                   ],
                 ),
               ),
-              const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white70, size: 16),
             ],
           ),
         ),
