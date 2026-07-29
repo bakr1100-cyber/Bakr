@@ -19,12 +19,18 @@ class LanguageSelectScreen extends StatelessWidget {
         child: Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(AppSpacing.xl),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Center(
-                  child: Container(
+            // Caps the whole block's width BEFORE any stretch alignment
+            // exists inside it - a stretch Column nested directly under a
+            // loose parent forces its ConstrainedBox children to the full
+            // incoming width instead of honoring their own maxWidth, which
+            // is exactly what blew the language cards up to half the
+            // screen each on a wide/tablet viewport.
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
                     width: 76,
                     height: 76,
                     decoration: const BoxDecoration(
@@ -34,28 +40,23 @@ class LanguageSelectScreen extends StatelessWidget {
                     child: const Icon(Icons.travel_explore_rounded,
                         size: 38, color: Colors.white),
                   ),
-                ),
-                const SizedBox(height: AppSpacing.xl),
-                const Center(
-                  child: _FlagPill(),
-                ),
-                const SizedBox(height: AppSpacing.xl),
-                Text(
-                  'MarocFly AI',
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.displaySmall,
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                Text(
-                  'Wähle deine Sprache · اختر لغتك · Choisis ta langue',
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.bodyLarge
-                      ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-                ),
-                const SizedBox(height: AppSpacing.xxl),
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 480),
-                  child: GridView.count(
+                  const SizedBox(height: AppSpacing.xl),
+                  const _FlagPill(),
+                  const SizedBox(height: AppSpacing.xl),
+                  Text(
+                    'MarocFly AI',
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.displaySmall,
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  Text(
+                    'Wähle deine Sprache · اختر لغتك · Choisis ta langue',
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.bodyLarge
+                        ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                  ),
+                  const SizedBox(height: AppSpacing.xxl),
+                  GridView.count(
                     crossAxisCount: 2,
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
@@ -72,8 +73,8 @@ class LanguageSelectScreen extends StatelessWidget {
                         ),
                     ],
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
