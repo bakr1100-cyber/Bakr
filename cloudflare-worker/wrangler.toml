@@ -2,6 +2,8 @@ name = "marocfly-duffel-proxy"
 main = "src/index.js"
 compatibility_date = "2026-01-01"
 
-# DUFFEL_API_KEY is NOT set here - it's a secret, pushed via
-# `wrangler secret put DUFFEL_API_KEY` (see the GitHub Actions workflow),
-# never committed to this file or to git.
+# DUFFEL_API_KEY and ANTHROPIC_API_KEY are NOT set here - they're secrets,
+# pushed via `wrangler secret put DUFFEL_API_KEY` / `... ANTHROPIC_API_KEY`
+# (see the GitHub Actions workflow), never committed to this file or to
+# git. This one Worker proxies both Duffel (/air/offer_requests) and Claude
+# (/v1/messages) - see src/index.js.

@@ -16,9 +16,11 @@ import 'screens/onboarding/language_select_screen.dart';
 import 'services/affiliate_service.dart';
 import 'services/ai_assistant_service.dart';
 import 'services/amadeus_flight_price_source.dart';
+import 'services/claude_llm_client.dart';
 import 'services/duffel_flight_price_source.dart';
 import 'services/flight_price_source.dart';
 import 'services/flight_search_service.dart';
+import 'services/llm_client.dart';
 import 'services/mock_flight_price_source.dart';
 
 /// Set via
@@ -52,6 +54,25 @@ const _amadeusClientSecret = String.fromEnvironment('AMADEUS_CLIENT_SECRET');
 /// work but earn no commission - see README.md.
 const _affiliateMarker = String.fromEnvironment('AFFILIATE_MARKER');
 const _affiliateUrlTemplateOverride = String.fromEnvironment('AFFILIATE_URL_TEMPLATE');
+
+/// Set via
+/// `flutter run --dart-define=CLAUDE_PROXY_URL=https://marocfly-duffel-proxy.<you>.workers.dev`
+/// - the same Worker deployed for [_duffelProxyUrl] above also proxies
+/// `/v1/messages` to Anthropic (see `cloudflare-worker/`), so this is
+/// normally the same URL. Routes the AI advisor's chat turns through our
+/// own server, which holds the real Anthropic key - use this for any build
+/// that gets deployed publicly (e.g. GitHub Pages), since a key passed
+/// directly via [_anthropicApiKey] would ship in plain text inside the
+/// compiled web bundle. Checked first, ahead of a direct key.
+const _claudeProxyUrl = String.fromEnvironment('CLAUDE_PROXY_URL');
+
+/// Set via `flutter run --dart-define=ANTHROPIC_API_KEY=sk-ant-...` (get a
+/// key at https://console.anthropic.com). Only safe for builds that never
+/// get deployed publicly (e.g. a native app you run locally) - for anything
+/// public, use [_claudeProxyUrl] instead. Left unset, the chat advisor runs
+/// its deterministic offline rule-based fallback (see
+/// `AiAssistantService`) - no key, no network call, never breaks the app.
+const _anthropicApiKey = String.fromEnvironment('ANTHROPIC_API_KEY');
 
 class MarocFlyApp extends StatefulWidget {
   const MarocFlyApp({super.key});
@@ -90,6 +111,17 @@ class _MarocFlyAppState extends State<MarocFlyApp> {
     }
     return MockFlightPriceSource();
   }
+
+  static LlmClient? _resolveLlmClient() {
+    if (_claudeProxyUrl.isNotEmpty) {
+      return ClaudeLlmClient(proxyBaseUrl: _claudeProxyUrl);
+    }
+    if (_anthropicApiKey.isNotEmpty) {
+      return ClaudeLlmClient(apiKey: _anthropicApiKey);
+    }
+    return null;
+  }
+
   late final AffiliateService _affiliateService = AffiliateService(
     marker: _affiliateMarker,
     urlTemplate: _affiliateUrlTemplateOverride.isEmpty
@@ -134,7 +166,10 @@ class _MarocFlyAppState extends State<MarocFlyApp> {
         ),
         ChangeNotifierProvider(
           create: (_) => ChatProvider(
-            assistantService: AiAssistantService(flightSearchService: _flightSearchService),
+            assistantService: AiAssistantService(
+              flightSearchService: _flightSearchService,
+              llmClient: _resolveLlmClient(),
+            ),
           ),
         ),
         ChangeNotifierProvider(create: (_) => PriceAlertsProvider()),

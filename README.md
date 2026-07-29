@@ -42,7 +42,12 @@ promising this to users.
   family travel, and "no long layover" — merges it across turns, asks
   clarifying questions when something is missing or uncertain ("Ich bin mir
   nicht ganz sicher. Meintest du Düsseldorf nach Fès?"), and never
-  confirms information it isn't confident about.
+  confirms information it isn't confident about. Runs on a deterministic
+  rule-based parser by default (fully offline, no setup), or on a real
+  **Claude-powered AI agent** when configured (see "Real AI agent (Claude)"
+  below) — the LLM only ever handles language (understanding the message,
+  phrasing the reply); flight/train prices always come from
+  `FlightSearchService`, so the model can't invent a fare.
 - **Voice assistant**: on-device speech-to-text and text-to-speech
   (`lib/services/voice_service.dart`), male/female voice toggle, wired into
   the chat screen's mic button.
@@ -76,7 +81,7 @@ promising this to users.
 |---|---|---|
 | Flight prices & schedules | Real quotes via **Duffel** when `DUFFEL_PROXY_URL` (public-safe, via `cloudflare-worker/`) or `DUFFEL_API_KEY` (local-only) is set, else deterministic synthetic data. `AmadeusFlightPriceSource` also exists as a fallback source, but **Amadeus's self-service developer portal was decommissioned on July 17, 2026** - only Enterprise (contracted) access still works | Go through Duffel's live-mode onboarding for real production flight prices |
 | Train/bus prices & schedules | Always synthetic fixed prices (ONCF ~18 €, ICE ~35 €) - neither Duffel nor Amadeus has rail data | Add an ONCF/rail timetable API behind a similar interface |
-| Natural language understanding | Rule-based keyword/regex parser (`NluService`) | A multilingual LLM fine-tuned/prompted for Darija, ideally with RAG over live fare data |
+| Natural language understanding | Rule-based keyword/regex parser (`NluService`) by default; real **Claude** agent (`ClaudeLlmClient`) when `ANTHROPIC_API_KEY`/`CLAUDE_PROXY_URL` is set, falling back to the rule-based parser on any failure | Prompt-tune further for Darija quality and ground replies with RAG over live fare/schedule data |
 | Speech | On-device OS speech engines (`speech_to_text`, `flutter_tts`) | Cloud STT/TTS (e.g. Whisper-family STT, ElevenLabs TTS) for much better Darija quality |
 | Push notifications | `NotificationService` fails safe with no Firebase project configured | Run `flutterfire configure` against a real Firebase project, wire `DefaultFirebaseOptions` into `main.dart` |
 | Personal recommendations | Local `shared_preferences` only | Sync to Firestore per user account so it follows the user across devices |
@@ -251,6 +256,58 @@ contracted relationship, not self-signup) can still get credentials for
 this. See `lib/services/amadeus_flight_api.dart`/`amadeus_flight_price_source.dart`
 for the implementation if that access exists or the situation changes.
 
+## Real AI agent (Claude)
+
+By default the chat advisor runs on `NluService`, a deterministic
+rule-based parser (`AiAssistantService`'s fallback path), so it works
+fully offline with no setup. To make it a real AI agent powered by Claude:
+
+1. Get an API key at <https://console.anthropic.com>.
+2. Run the app with it as a compile-time define:
+
+   ```bash
+   flutter run --dart-define=ANTHROPIC_API_KEY=sk-ant-your_key_here
+   ```
+
+   Never commit a real key to the repo; pass it at build/run time only (or
+   via your CI secret store for release builds).
+3. That's it - `app.dart` checks `ANTHROPIC_API_KEY` first and switches
+   `AiAssistantService` from its rule-based fallback to `ClaudeLlmClient`,
+   which understands the message (any of Darija/Arabic/German/French/
+   English), merges it into the running trip details, asks clarifying
+   questions, and phrases the final recommendation - grounded in real
+   search results from `FlightSearchService` (the LLM is never asked to
+   invent a price; it only phrases numbers that `FlightSearchService`
+   already computed). Any Claude API failure (bad key, network error,
+   malformed response) falls back to the rule-based assistant
+   automatically, so a bad/missing key never breaks the chat.
+
+> ⚠️ **`ANTHROPIC_API_KEY` is only safe for builds that never get deployed
+> publicly**, for the same reason as `DUFFEL_API_KEY` above - a Flutter web
+> build compiles `--dart-define` values in plain text into `main.dart.js`.
+> **For any public deployment (GitHub Pages, etc.), use the Cloudflare
+> Worker proxy below instead.**
+
+### Public deployments: route through the Cloudflare Worker proxy
+
+The same `cloudflare-worker/` Worker used for Duffel also proxies Claude
+(`/v1/messages`), holding the real Anthropic key server-side as a
+Cloudflare secret. Setup is the same Worker as "Public deployments" under
+"Real flight data (Duffel)" above - just also add an `ANTHROPIC_API_KEY`
+repository secret (**Settings → Secrets and variables → Actions**) before
+running the **"Deploy Duffel/Claude proxy to Cloudflare Workers"** GitHub
+Actions workflow, then build pointing at the same Worker URL:
+
+```bash
+flutter build web --release \
+  --dart-define=DUFFEL_PROXY_URL=https://marocfly-duffel-proxy.<your-subdomain>.workers.dev \
+  --dart-define=CLAUDE_PROXY_URL=https://marocfly-duffel-proxy.<your-subdomain>.workers.dev
+```
+
+See `lib/services/claude_llm_client.dart` for the API client and
+`lib/services/ai_assistant_service.dart` for the conversation
+orchestration/fallback logic.
+
 ## Booking commissions (monetization)
 
 This app has no payment processing or its own flight/rail booking
@@ -302,7 +359,8 @@ lib/
   core/           theme, localization, shared constants
   models/         Airport, TripLeg, Itinerary, TravelIntent, ChatMessage, ...
   services/       FlightSearchService (+ FlightPriceSource: Mock/Duffel/Amadeus),
-                  NluService, AiAssistantService, VoiceService,
+                  NluService, AiAssistantService (+ LlmClient: ClaudeLlmClient
+                  or the rule-based fallback), VoiceService,
                   NotificationService, TravelCompanionService,
                   PricePredictionService, UserPreferencesService,
                   AffiliateService
@@ -312,8 +370,9 @@ lib/
                   companion, alerts, profile, settings
   widgets/        shared UI (big buttons, airport picker, chat bubble, ...)
 
-cloudflare-worker/  Server-side Duffel proxy so public web builds never
-                    embed a real API key - see "Public deployments" above
+cloudflare-worker/  Server-side Duffel + Claude proxy so public web builds
+                    never embed a real API key - see "Public deployments"
+                    above
 .github/workflows/  CI: deploys the Cloudflare Worker proxy on push
 ```
 
@@ -329,9 +388,12 @@ Advisor (chat), Companion, Alerts, Settings.
    `FlightPriceSource`) for real production flight prices, and add an
    ONCF/rail timetable API behind a similar interface for real train
    pricing.
-3. Replace `NluService`/`AiAssistantService` with a hosted multilingual LLM
-   (with strong Darija support) behind the same `TravelIntent`/
-   `AssistantTurn` contracts, grounded with RAG over live fare/schedule data.
+3. A hosted LLM AI agent (`ClaudeLlmClient`) is already wired in behind the
+   same `TravelIntent`/`AssistantTurn` contracts (see "Real AI agent
+   (Claude)" above) - remaining production work is prompt-tuning for
+   stronger Darija quality and grounding replies with RAG over live
+   fare/schedule data (today it's grounded only in `FlightSearchService`'s
+   own results, not a broader knowledge base).
 4. Add authentication and per-user cloud sync for preferences and bookings.
 5. Join a real affiliate program and set `AFFILIATE_MARKER` for production
    (see "Booking commissions" above); consider adding hotel/car-rental
