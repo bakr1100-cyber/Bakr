@@ -7,6 +7,7 @@ import '../../core/theme/app_spacing.dart';
 import '../../models/itinerary.dart';
 import '../../models/trip_type.dart';
 import '../../providers/search_provider.dart';
+import '../../widgets/alternative_itinerary_card.dart';
 import '../../widgets/itinerary_card.dart';
 import '../../widgets/skeleton_loader.dart';
 import 'itinerary_detail_screen.dart';
@@ -52,7 +53,10 @@ class _ResultsList extends StatelessWidget {
     final t = AppLocalizations.of(context).t;
 
     if (!isRoundTrip) {
-      return _ItineraryList(itineraries: search.results, padding: const EdgeInsets.all(AppSpacing.lg));
+      return ListView(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        children: [_ResultsSection(itineraries: search.results)],
+      );
     }
 
     return ListView(
@@ -60,11 +64,11 @@ class _ResultsList extends StatelessWidget {
       children: [
         _SectionHeader(icon: Icons.flight_takeoff_rounded, label: t('outboundFlight')),
         const SizedBox(height: AppSpacing.sm),
-        _ItineraryList(itineraries: search.results, padding: EdgeInsets.zero),
+        _ResultsSection(itineraries: search.results),
         const SizedBox(height: AppSpacing.xxl),
         _SectionHeader(icon: Icons.flight_land_rounded, label: t('returnFlight')),
         const SizedBox(height: AppSpacing.sm),
-        _ItineraryList(itineraries: search.returnResults, padding: EdgeInsets.zero),
+        _ResultsSection(itineraries: search.returnResults),
       ],
     );
   }
@@ -93,47 +97,108 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-class _ItineraryList extends StatelessWidget {
-  const _ItineraryList({required this.itineraries, required this.padding});
+/// Standard results (direct + a real layover via Casablanca) are shown
+/// immediately, sorted purely by price. Creative alternatives (other
+/// airports, flight+train/bus, multi-airline) stay collapsed behind a
+/// "Weitere Möglichkeiten anzeigen" toggle so the main results page stays
+/// simple - see "Flugsuche – Reihenfolge der Suchergebnisse und
+/// Alternativen".
+class _ResultsSection extends StatefulWidget {
+  const _ResultsSection({required this.itineraries});
 
   final List<Itinerary> itineraries;
-  final EdgeInsets padding;
+
+  @override
+  State<_ResultsSection> createState() => _ResultsSectionState();
+}
+
+class _ResultsSectionState extends State<_ResultsSection> {
+  bool _showAlternatives = false;
+
+  void _openDetail(BuildContext context, Itinerary itinerary) {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => ItineraryDetailScreen(itinerary: itinerary)),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    if (itineraries.isEmpty) {
-      return Padding(
-        padding: padding,
-        child: Text(
-          AppLocalizations.of(context).t('noRouteFoundTitle'),
-          style: Theme.of(context)
-              .textTheme
-              .bodyMedium
-              ?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
-        ),
+    final t = AppLocalizations.of(context).t;
+    final standard =
+        widget.itineraries.where((i) => i.tier == ResultTier.standard).toList();
+    final alternatives =
+        widget.itineraries.where((i) => i.tier == ResultTier.alternative).toList();
+
+    if (standard.isEmpty && alternatives.isEmpty) {
+      return Text(
+        t('noRouteFoundTitle'),
+        style: Theme.of(context)
+            .textTheme
+            .bodyMedium
+            ?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
       );
     }
 
-    return ListView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      padding: padding,
-      itemCount: itineraries.length,
-      itemBuilder: (context, index) {
-        final itinerary = itineraries[index];
-        return Padding(
-          padding: const EdgeInsets.only(bottom: AppSpacing.md),
-          child: ItineraryCard(
-            itinerary: itinerary,
-            isBestValue: index == 0,
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => ItineraryDetailScreen(itinerary: itinerary),
-              ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (var i = 0; i < standard.length; i++)
+          Padding(
+            padding: const EdgeInsets.only(bottom: AppSpacing.md),
+            child: ItineraryCard(
+              itinerary: standard[i],
+              isBestValue: i == 0,
+              onTap: () => _openDetail(context, standard[i]),
             ),
           ),
-        );
-      },
+        if (alternatives.isNotEmpty)
+          if (!_showAlternatives)
+            _ShowMoreButton(
+              count: alternatives.length,
+              onTap: () => setState(() => _showAlternatives = true),
+            )
+          else ...[
+            const SizedBox(height: AppSpacing.sm),
+            _SectionHeader(
+              icon: Icons.auto_awesome_rounded,
+              label: t('alternativeOptionsTitle'),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            for (final alt in alternatives)
+              Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                child: AlternativeItineraryCard(
+                  itinerary: alt,
+                  onTap: () => _openDetail(context, alt),
+                ),
+              ),
+          ],
+      ],
+    );
+  }
+}
+
+class _ShowMoreButton extends StatelessWidget {
+  const _ShowMoreButton({required this.count, required this.onTap});
+
+  final int count;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final t = AppLocalizations.of(context).t;
+    return OutlinedButton.icon(
+      onPressed: onTap,
+      style: OutlinedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.xl),
+        ),
+        side: BorderSide(color: theme.colorScheme.secondary.withValues(alpha: 0.5)),
+      ),
+      icon: Icon(Icons.auto_awesome_rounded, size: 18, color: theme.colorScheme.secondary),
+      label: Text('${t('showMoreOptions')} ($count)'),
     );
   }
 }

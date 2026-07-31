@@ -294,6 +294,34 @@ class AppLocalizations {
       AppLanguage.fr: 'Retour',
       AppLanguage.en: 'Return',
     },
+    'showMoreOptions': {
+      AppLanguage.ary: 'ورّيني طرق أخرى',
+      AppLanguage.ar: 'إظهار خيارات أخرى',
+      AppLanguage.de: 'Weitere Möglichkeiten anzeigen',
+      AppLanguage.fr: "Afficher d'autres possibilités",
+      AppLanguage.en: 'Show more options',
+    },
+    'alternativeOptionsTitle': {
+      AppLanguage.ary: 'طرق أخرى ديال السفر ليك',
+      AppLanguage.ar: 'طرق سفر بديلة لك',
+      AppLanguage.de: 'Alternative Reisemöglichkeiten für dich',
+      AppLanguage.fr: 'Autres possibilités de voyage pour toi',
+      AppLanguage.en: 'Alternative travel options for you',
+    },
+    'savings': {
+      AppLanguage.ary: 'الفرق ديال الفلوس',
+      AppLanguage.ar: 'التوفير',
+      AppLanguage.de: 'Ersparnis',
+      AppLanguage.fr: 'Économie',
+      AppLanguage.en: 'Savings',
+    },
+    'extraTravelTime': {
+      AppLanguage.ary: 'الوقت الزايد ف الطريق',
+      AppLanguage.ar: 'الوقت الإضافي للسفر',
+      AppLanguage.de: 'Zusätzliche Reisezeit',
+      AppLanguage.fr: 'Temps de trajet supplémentaire',
+      AppLanguage.en: 'Extra travel time',
+    },
 
     // --- Itinerary card / detail -----------------------------------------
     'bestPrice': {

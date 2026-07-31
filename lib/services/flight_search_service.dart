@@ -5,10 +5,13 @@ import '../models/trip_leg.dart';
 import 'flight_price_source.dart';
 import 'mock_flight_price_source.dart';
 
-/// The "Smart Flight Engine": generates and prices direct, alternative
-/// departure/destination-airport, stopover, and flight+train multimodal
-/// itineraries, only ever surfacing an alternative when it's actually
-/// cheaper than the direct route.
+/// The "Smart Flight Engine": generates and prices normal flight
+/// connections (direct + a real layover via Casablanca - [ResultTier.
+/// standard]) alongside creative alternative-departure/destination-airport,
+/// stopover, and flight+train multimodal itineraries ([ResultTier.
+/// alternative]), the latter only ever surfaced when actually cheaper than
+/// the direct route. The UI shows standard results first and keeps
+/// alternatives collapsed until the user asks for more options.
 ///
 /// Every individual flight leg is priced through a [FlightPriceSource] -
 /// [MockFlightPriceSource] by default (deterministic synthetic data), or
@@ -35,16 +38,20 @@ class FlightSearchService {
     if (directQuote == null) return [];
 
     final directTotal = directQuote.priceEur * passengers;
+    final directItinerary = _toDirectItinerary(origin, destination, directQuote, passengers);
+    final directDuration = directItinerary.totalDuration;
 
     final results = await Future.wait([
-      _alternativeDeparture(origin, destination, date, passengers, directTotal),
-      _alternativeDestinationWithTrain(origin, destination, date, passengers, directTotal),
-      _stopover(origin, destination, date, passengers, directTotal),
-      _multimodal(origin, destination, date, passengers, directTotal),
+      _standardConnection(origin, destination, date, passengers),
+      _alternativeDeparture(origin, destination, date, passengers, directTotal, directDuration),
+      _alternativeDestinationWithTrain(
+          origin, destination, date, passengers, directTotal, directDuration),
+      _stopover(origin, destination, date, passengers, directTotal, directDuration),
+      _multimodal(origin, destination, date, passengers, directTotal, directDuration),
     ]);
 
     final candidates = <Itinerary>[
-      _toDirectItinerary(origin, destination, directQuote, passengers),
+      directItinerary,
       for (final group in results) ...group,
     ];
 
@@ -88,7 +95,67 @@ class FlightSearchService {
         ),
       ],
       explanation: 'Direktflug von ${origin.city} nach ${destination.city}.',
+      tier: ResultTier.standard,
     );
+  }
+
+  /// A normal flight connection with a real layover through Morocco's
+  /// biggest hub, Casablanca - the kind of "1 Umstieg" option a real flight
+  /// search returns alongside the direct flight, not a creative AI
+  /// suggestion. Always included (when a quote succeeds) regardless of
+  /// whether it beats the direct price, since standard results are just
+  /// sorted by price rather than filtered for savings.
+  Future<List<Itinerary>> _standardConnection(
+    Airport origin,
+    Airport destination,
+    DateTime date,
+    int pax,
+  ) async {
+    const casablanca = Airport(code: 'CMN', city: 'Casablanca', country: 'Marokko');
+    if (origin.code == casablanca.code || destination.code == casablanca.code) {
+      return [];
+    }
+
+    final leg1Quote =
+        await _priceSource.quoteDirect(origin: origin, destination: casablanca, date: date);
+    if (leg1Quote == null) return [];
+
+    final leg2Departure = leg1Quote.arrival.add(const Duration(hours: 2));
+    final leg2Quote = await _priceSource.quoteDirect(
+        origin: casablanca, destination: destination, date: leg2Departure);
+    if (leg2Quote == null) return [];
+
+    final leg1Price = leg1Quote.priceEur * pax;
+    final leg2Price = leg2Quote.priceEur * pax;
+
+    return [
+      Itinerary(
+        id: 'connect-${casablanca.code}-${destination.code}',
+        tier: ResultTier.standard,
+        legs: [
+          TripLeg(
+            mode: LegMode.flight,
+            from: origin,
+            to: casablanca,
+            departure: leg1Quote.departure,
+            arrival: leg1Quote.arrival,
+            priceEur: leg1Price,
+            carrier: leg1Quote.carrier,
+          ),
+          TripLeg(
+            mode: LegMode.flight,
+            from: casablanca,
+            to: destination,
+            departure: leg2Quote.departure,
+            arrival: leg2Quote.arrival,
+            priceEur: leg2Price,
+            carrier: leg2Quote.carrier,
+          ),
+        ],
+        explanation: 'Verbindung über ${casablanca.city} (1 Umstieg).',
+        riskLevel: RiskLevel.medium,
+      ),
+    ];
   }
 
   Future<List<Itinerary>> _alternativeDeparture(
@@ -97,6 +164,7 @@ class FlightSearchService {
     DateTime date,
     int pax,
     double directTotal,
+    Duration directDuration,
   ) async {
     final nearby = europeanAirports
         .where((a) => a.country == origin.country && a.code != origin.code)
@@ -111,9 +179,13 @@ class FlightSearchService {
       final total = quote.priceEur * pax;
       if (total >= directTotal) continue;
 
+      final duration = quote.arrival.difference(quote.departure);
       itineraries.add(
         Itinerary(
           id: 'altdep-${alt.code}-${destination.code}',
+          tier: ResultTier.alternative,
+          savingsEur: directTotal - total,
+          extraTravelTime: duration > directDuration ? duration - directDuration : Duration.zero,
           legs: [
             TripLeg(
               mode: LegMode.flight,
@@ -139,6 +211,7 @@ class FlightSearchService {
     DateTime date,
     int pax,
     double directTotal,
+    Duration directDuration,
   ) async {
     if (destination.code == 'CMN' || destination.code == 'RBA') return [];
 
@@ -154,11 +227,16 @@ class FlightSearchService {
     if (total >= directTotal) return [];
 
     final trainDeparture = quote.arrival.add(const Duration(hours: 1));
+    final trainArrival = trainDeparture.add(const Duration(hours: 2, minutes: 50));
     final saved = directTotal - total;
+    final duration = trainArrival.difference(quote.departure);
 
     return [
       Itinerary(
         id: 'althub-${hub.code}-${destination.code}',
+        tier: ResultTier.alternative,
+        savingsEur: saved,
+        extraTravelTime: duration > directDuration ? duration - directDuration : Duration.zero,
         legs: [
           TripLeg(
             mode: LegMode.flight,
@@ -174,7 +252,7 @@ class FlightSearchService {
             from: hub,
             to: destination,
             departure: trainDeparture,
-            arrival: trainDeparture.add(const Duration(hours: 2, minutes: 50)),
+            arrival: trainArrival,
             priceEur: trainPrice,
             carrier: 'ONCF',
           ),
@@ -192,14 +270,13 @@ class FlightSearchService {
     DateTime date,
     int pax,
     double directTotal,
+    Duration directDuration,
   ) async {
-    // Casablanca first: routing through Morocco's biggest, most-competed
-    // hub before a short domestic hop onward is a genuine real-world
-    // saving (see MockFlightPriceSource's hub pricing tier) - the European
-    // cities are just fallbacks for when Casablanca is the origin/
-    // destination itself.
+    // Creative alternative-airport routing via a major European hub -
+    // Casablanca is handled separately as the standard-tier connection
+    // (see [_standardConnection]), so these are genuinely "other airport"
+    // suggestions like the product brief's Málaga/Valencia examples.
     const stopoverCities = [
-      Airport(code: 'CMN', city: 'Casablanca', country: 'Marokko'),
       Airport(code: 'MAD', city: 'Madrid', country: 'Spanien'),
       Airport(code: 'BCN', city: 'Barcelona', country: 'Spanien'),
       Airport(code: 'CDG', city: 'Paris', country: 'Frankreich'),
@@ -224,9 +301,14 @@ class FlightSearchService {
     final total = leg1Price + leg2Price;
     if (total >= directTotal) return [];
 
+    final duration = leg2Quote.arrival.difference(leg1Quote.departure);
+
     return [
       Itinerary(
         id: 'stopover-${via.code}',
+        tier: ResultTier.alternative,
+        savingsEur: directTotal - total,
+        extraTravelTime: duration > directDuration ? duration - directDuration : Duration.zero,
         legs: [
           TripLeg(
             mode: LegMode.flight,
@@ -260,6 +342,7 @@ class FlightSearchService {
     DateTime date,
     int pax,
     double directTotal,
+    Duration directDuration,
   ) async {
     if (origin.country != 'Deutschland') return [];
 
@@ -279,6 +362,12 @@ class FlightSearchService {
 
     final total = trainPrice + flightPrice + (includesOnwardTrain ? onwardTrainPrice : 0);
     if (total >= directTotal) return [];
+
+    final lastArrival = includesOnwardTrain
+        ? onwardTrainDeparture.add(const Duration(hours: 2, minutes: 50))
+        : flightQuote.arrival;
+    final duration = lastArrival.difference(
+        trainArrival.subtract(const Duration(hours: 1, minutes: 15)));
 
     final legs = <TripLeg>[
       TripLeg(
@@ -318,6 +407,9 @@ class FlightSearchService {
     return [
       Itinerary(
         id: 'multimodal-${origin.code}-${destination.code}',
+        tier: ResultTier.alternative,
+        savingsEur: directTotal - total,
+        extraTravelTime: duration > directDuration ? duration - directDuration : Duration.zero,
         legs: legs,
         explanation: 'ICE nach Frankfurt, Flug nach Rabat, Zug weiter nach '
             '${destination.city}. Gesamtpreis ${total.toStringAsFixed(0)} €, '

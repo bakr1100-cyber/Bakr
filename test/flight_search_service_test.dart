@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:marocfly_ai/models/airport.dart';
+import 'package:marocfly_ai/models/itinerary.dart';
 import 'package:marocfly_ai/models/travel_intent.dart';
 import 'package:marocfly_ai/services/flight_price_source.dart';
 import 'package:marocfly_ai/services/flight_search_service.dart';
@@ -61,15 +62,37 @@ void main() {
       }
     });
 
-    test('every alternative is cheaper than the requested direct route', () async {
+    test('every alternative-tier result is cheaper than the requested direct route', () async {
       final results = await service.search(intentFor(1));
-      // `isDirect` only means "single leg" - the alt-departure itineraries
-      // (e.g. Cologne->Fès) are single-leg too, so identify the actual
-      // requested-origin direct flight by its id prefix instead.
+      // Standard-tier results (direct, and a real layover via Casablanca)
+      // are shown regardless of price - only alternative-tier results are
+      // required to actually be cheaper.
       final direct = results.firstWhere((i) => i.id.startsWith('direct-'));
-      for (final itinerary in results.where((i) => i.id != direct.id)) {
+      for (final itinerary in results.where((i) => i.tier == ResultTier.alternative)) {
         expect(itinerary.totalPriceEur, lessThan(direct.totalPriceEur));
       }
+    });
+
+    test('alternative-tier results carry savings and extra-time data', () async {
+      final results = await service.search(intentFor(1));
+      for (final itinerary in results.where((i) => i.tier == ResultTier.alternative)) {
+        expect(itinerary.savingsEur, isNotNull);
+        expect(itinerary.savingsEur, greaterThan(0));
+        expect(itinerary.extraTravelTime, isNotNull);
+      }
+    });
+
+    test('standard-tier results have no savings/extra-time data', () async {
+      final results = await service.search(intentFor(1));
+      for (final itinerary in results.where((i) => i.tier == ResultTier.standard)) {
+        expect(itinerary.savingsEur, isNull);
+        expect(itinerary.extraTravelTime, isNull);
+      }
+    });
+
+    test('reliably surfaces a standard-tier connection via Casablanca', () async {
+      final results = await service.search(intentFor(1));
+      expect(results.any((i) => i.id.startsWith('connect-')), isTrue);
     });
 
     test('passenger count multiplies the direct price exactly', () async {
