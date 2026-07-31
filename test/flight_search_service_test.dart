@@ -97,6 +97,19 @@ void main() {
       final results = await service.search(intentFor(1, maxBudgetEur: 1));
       expect(results, hasLength(1));
     });
+
+    // Regression test: MockFlightPriceSource used to price every airport
+    // pair from the same flat random range, which made the hub+train
+    // itinerary (fly into the cheaper Casablanca/Rabat hub, then a short
+    // domestic train onward) cheaper than a direct flight to a smaller
+    // regional Moroccan airport (like Fès) only ~17% of the time, and made
+    // the stopover itinerary cheaper essentially never (0%) - so the
+    // "smart engine" rarely had anything but the direct flight to show.
+    // Fès isn't a major hub, so this must now reliably surface.
+    test('reliably surfaces the hub+train alternative for a non-hub destination', () async {
+      final results = await service.search(intentFor(1));
+      expect(results.any((i) => i.id.startsWith('althub-')), isTrue);
+    });
   });
 
   group('with a controlled fake price source', () {

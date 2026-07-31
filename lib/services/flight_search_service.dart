@@ -193,12 +193,17 @@ class FlightSearchService {
     int pax,
     double directTotal,
   ) async {
+    // Casablanca first: routing through Morocco's biggest, most-competed
+    // hub before a short domestic hop onward is a genuine real-world
+    // saving (see MockFlightPriceSource's hub pricing tier) - the European
+    // cities are just fallbacks for when Casablanca is the origin/
+    // destination itself.
     const stopoverCities = [
+      Airport(code: 'CMN', city: 'Casablanca', country: 'Marokko'),
       Airport(code: 'MAD', city: 'Madrid', country: 'Spanien'),
       Airport(code: 'BCN', city: 'Barcelona', country: 'Spanien'),
       Airport(code: 'CDG', city: 'Paris', country: 'Frankreich'),
       Airport(code: 'LIS', city: 'Lissabon', country: 'Portugal'),
-      Airport(code: 'CMN', city: 'Casablanca', country: 'Marokko'),
     ];
 
     final via = stopoverCities.firstWhere(
