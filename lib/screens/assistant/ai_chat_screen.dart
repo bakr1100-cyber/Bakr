@@ -7,6 +7,7 @@ import '../../core/localization/app_localizations.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../providers/chat_provider.dart';
 import '../../providers/home_navigation_provider.dart';
+import '../../providers/locale_provider.dart';
 import '../../providers/preferences_provider.dart';
 import '../../services/voice_service.dart';
 import '../../widgets/chat_bubble.dart';
@@ -95,7 +96,8 @@ class _AiChatScreenState extends State<AiChatScreen> {
     if (text.trim().isEmpty) return;
     _controller.clear();
     final chat = context.read<ChatProvider>();
-    await chat.send(text);
+    final language = context.read<LocaleProvider>().language;
+    await chat.send(text, language: language);
     if (!mounted) return;
     _scrollToBottom();
 
@@ -119,8 +121,9 @@ class _AiChatScreenState extends State<AiChatScreen> {
         if (isFinal) {
           setState(() => _isListening = false);
           final chat = context.read<ChatProvider>();
+          final language = context.read<LocaleProvider>().language;
           _controller.clear();
-          chat.send(text, wasSpoken: true).then((_) {
+          chat.send(text, wasSpoken: true, language: language).then((_) {
             if (!mounted) return;
             _scrollToBottom();
             final femaleVoice = context

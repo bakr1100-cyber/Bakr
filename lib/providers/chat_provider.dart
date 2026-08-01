@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 
+import '../core/localization/app_localizations.dart';
 import '../models/chat_message.dart';
 import '../models/itinerary.dart';
 import '../models/travel_intent.dart';
@@ -35,7 +36,7 @@ class ChatProvider extends ChangeNotifier {
   bool _isThinking = false;
   bool get isThinking => _isThinking;
 
-  Future<void> send(String text, {bool wasSpoken = false}) async {
+  Future<void> send(String text, {bool wasSpoken = false, AppLanguage language = AppLanguage.de}) async {
     if (text.trim().isEmpty) return;
 
     _messages.add(
@@ -50,7 +51,12 @@ class ChatProvider extends ChangeNotifier {
     _isThinking = true;
     notifyListeners();
 
-    final turn = await _assistant.handleMessage(text, _intent);
+    final turn = await _assistant.handleMessage(
+      text,
+      _intent,
+      history: _messages,
+      language: language,
+    );
     _intent = turn.intent;
     _lastResults = turn.results ?? _lastResults;
 

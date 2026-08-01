@@ -5,3 +5,11 @@ compatibility_date = "2026-01-01"
 # DUFFEL_API_KEY is NOT set here - it's a secret, pushed via
 # `wrangler secret put DUFFEL_API_KEY` (see the GitHub Actions workflow),
 # never committed to this file or to git.
+
+# Workers AI: runs open-source LLMs (Llama 3.1, etc.) directly on
+# Cloudflare's infrastructure. This binding needs no separate API key/
+# signup - it uses the same Cloudflare account already deploying this
+# Worker - and has a free daily quota (10,000 "neurons"/day as of this
+# writing), which is what powers the AI chat's natural-language replies.
+[ai]
+binding = "AI"

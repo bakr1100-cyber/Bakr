@@ -42,7 +42,14 @@ promising this to users.
   family travel, and "no long layover" — merges it across turns, asks
   clarifying questions when something is missing or uncertain ("Ich bin mir
   nicht ganz sicher. Meintest du Düsseldorf nach Fès?"), and never
-  confirms information it isn't confident about.
+  confirms information it isn't confident about. Intent extraction and the
+  actual flight search stay fully deterministic (see above), but the
+  reply text itself is phrased by a **real, free LLM** (Llama 3.1 8B via
+  Cloudflare Workers AI, see `lib/services/llm_chat_service.dart` and
+  "Public deployments" below) when `DUFFEL_PROXY_URL` is configured -
+  grounded in the concrete facts of each turn so it can't invent prices or
+  cities, and falling back to fixed template replies if the LLM call
+  fails, times out, or the free daily quota runs out.
 - **Voice assistant**: on-device speech-to-text and text-to-speech
   (`lib/services/voice_service.dart`), male/female voice toggle, wired into
   the chat screen's mic button.
@@ -76,7 +83,8 @@ promising this to users.
 |---|---|---|
 | Flight prices & schedules | Real quotes via **Duffel** when `DUFFEL_PROXY_URL` (public-safe, via `cloudflare-worker/`) or `DUFFEL_API_KEY` (local-only) is set, else deterministic synthetic data. `AmadeusFlightPriceSource` also exists as a fallback source, but **Amadeus's self-service developer portal was decommissioned on July 17, 2026** - only Enterprise (contracted) access still works | Go through Duffel's live-mode onboarding for real production flight prices |
 | Train/bus prices & schedules | Always synthetic fixed prices (ONCF ~18 €, ICE ~35 €) - neither Duffel nor Amadeus has rail data | Add an ONCF/rail timetable API behind a similar interface |
-| Natural language understanding | Rule-based keyword/regex parser (`NluService`) | A multilingual LLM fine-tuned/prompted for Darija, ideally with RAG over live fare data |
+| Natural language understanding (intent extraction) | Rule-based keyword/regex parser (`NluService`) | A multilingual LLM fine-tuned/prompted for Darija, ideally with RAG over live fare data |
+| Conversational replies | Real LLM (Llama 3.1 8B, free tier) when `DUFFEL_PROXY_URL` is set, via Workers AI - see `llm_chat_service.dart`; template fallback otherwise | Larger/better-tuned model, streaming responses, native Darija fine-tune |
 | Speech | On-device OS speech engines (`speech_to_text`, `flutter_tts`) | Cloud STT/TTS (e.g. Whisper-family STT, ElevenLabs TTS) for much better Darija quality |
 | Push notifications | `NotificationService` fails safe with no Firebase project configured | Run `flutterfire configure` against a real Firebase project, wire `DefaultFirebaseOptions` into `main.dart` |
 | Personal recommendations | Local `shared_preferences` only | Sync to Firestore per user account so it follows the user across devices |
@@ -84,7 +92,7 @@ promising this to users.
 | Booking commissions | Real, working outbound links via `AffiliateService`, but earn nothing until you set a real `AFFILIATE_MARKER` (no fake placeholder revenue) | Join a flight affiliate program (e.g. via Travelpayouts) and configure the marker - see "Booking commissions" below |
 
 **Verified against a real Flutter SDK** (Flutter 3.44.8): `flutter analyze`
-reports 0 issues, `flutter test` passes all 29 tests (unit tests plus an
+reports 0 issues, `flutter test` passes all 53 tests (unit tests plus an
 app-boot widget smoke test), and `flutter build web --release` succeeds.
 Android and Web platform projects are committed in this repo
 (`android/`, `web/`); iOS still needs `flutter create --platforms=ios .`
@@ -175,6 +183,17 @@ Duffel key server-side (as a Cloudflare secret, never in git, never
 shipped to the browser) and exposes the same `/air/offer_requests`
 shape Duffel does. The Flutter app talks to the proxy instead of Duffel
 directly, so a public web build never embeds a real key.
+
+The same Worker also serves `POST /ai/chat`, which runs a free,
+open-source LLM (Llama 3.1 8B Instruct) via **Cloudflare Workers AI**
+(the `[ai]` binding in `wrangler.toml`) to phrase the AI chat's replies
+conversationally - see `lib/services/llm_chat_service.dart`. This needs
+**no separate signup or API key**: it uses the same Cloudflare account
+already deploying the Worker, and Workers AI's free tier (10,000
+"neurons"/day as of this writing) is enabled by default on new accounts.
+If you ever see `ai_not_configured` from `/ai/chat`, enable Workers AI
+for your account once in the Cloudflare dashboard (**Workers & Pages →
+AI**) - no code change needed.
 
 Setup (self-serve, no credit card required for Cloudflare's free tier):
 
@@ -312,8 +331,9 @@ lib/
                   companion, alerts, profile, settings
   widgets/        shared UI (big buttons, airport picker, chat bubble, ...)
 
-cloudflare-worker/  Server-side Duffel proxy so public web builds never
-                    embed a real API key - see "Public deployments" above
+cloudflare-worker/  Server-side Duffel proxy + free Workers AI chat
+                    endpoint, so public web builds never embed a real API
+                    key - see "Public deployments" above
 .github/workflows/  CI: deploys the Cloudflare Worker proxy on push
 ```
 
@@ -329,9 +349,11 @@ Advisor (chat), Companion, Alerts, Settings.
    `FlightPriceSource`) for real production flight prices, and add an
    ONCF/rail timetable API behind a similar interface for real train
    pricing.
-3. Replace `NluService`/`AiAssistantService` with a hosted multilingual LLM
-   (with strong Darija support) behind the same `TravelIntent`/
-   `AssistantTurn` contracts, grounded with RAG over live fare/schedule data.
+3. Reply phrasing already runs on a real (free) LLM via `LlmChatService` -
+   next, move intent extraction (currently `NluService`, rule-based) onto
+   an LLM too (with strong Darija support, ideally via function calling)
+   behind the same `TravelIntent`/`AssistantTurn` contracts, grounded with
+   RAG over live fare/schedule data.
 4. Add authentication and per-user cloud sync for preferences and bookings.
 5. Join a real affiliate program and set `AFFILIATE_MARKER` for production
    (see "Booking commissions" above); consider adding hotel/car-rental

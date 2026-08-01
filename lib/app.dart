@@ -18,6 +18,7 @@ import 'services/amadeus_flight_price_source.dart';
 import 'services/duffel_flight_price_source.dart';
 import 'services/flight_price_source.dart';
 import 'services/flight_search_service.dart';
+import 'services/llm_chat_service.dart';
 import 'services/mock_flight_price_source.dart';
 
 /// Set via
@@ -27,6 +28,9 @@ import 'services/mock_flight_price_source.dart';
 /// gets deployed publicly (e.g. GitHub Pages), since a key passed directly
 /// via [_duffelApiKey] would ship in plain text inside the compiled web
 /// bundle. Checked first, ahead of a direct key.
+///
+/// The same Worker also serves `/ai/chat` (a free LLM via Cloudflare
+/// Workers AI, see [LlmChatService]), so this one URL powers both.
 const _duffelProxyUrl = String.fromEnvironment('DUFFEL_PROXY_URL');
 
 /// Set via `flutter run --dart-define=DUFFEL_API_KEY=duffel_test_...` (get a
@@ -95,6 +99,7 @@ class _MarocFlyAppState extends State<MarocFlyApp> {
         ? AffiliateService.defaultUrlTemplate
         : _affiliateUrlTemplateOverride,
   );
+  late final LlmChatService _llmChatService = LlmChatService(proxyBaseUrl: _duffelProxyUrl);
   bool _loaded = false;
 
   @override
@@ -133,7 +138,10 @@ class _MarocFlyAppState extends State<MarocFlyApp> {
         ),
         ChangeNotifierProvider(
           create: (_) => ChatProvider(
-            assistantService: AiAssistantService(flightSearchService: _flightSearchService),
+            assistantService: AiAssistantService(
+              flightSearchService: _flightSearchService,
+              llmChatService: _llmChatService,
+            ),
           ),
         ),
         ChangeNotifierProvider(create: (_) => PriceAlertsProvider()),
