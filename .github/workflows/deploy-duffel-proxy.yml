@@ -37,18 +37,26 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
-      # Diagnostic only - GitHub's runner has real network access (unlike
-      # the dev sandbox this Worker is usually edited from), so this is how
-      # we find out whether Workers AI is actually reachable/enabled on the
-      # account, without needing anyone to test from the live app first.
       # Kept permanently (not just diagnostic) - catches a broken AI chat
       # backend (e.g. a deprecated model) right at deploy time, in the
       # Actions log, instead of only being discovered by a user seeing a
-      # silent fallback to template replies in the live app.
+      # silent fallback to template replies in the live app. GitHub's
+      # runner also has real network access, unlike the dev sandbox this
+      # Worker is normally edited from.
       - name: Smoke-test the /ai/chat endpoint
         run: |
           curl -sS -X POST https://marocfly-duffel-proxy.bakr1100.workers.dev/ai/chat \
             -H "Content-Type: application/json" \
             -d '{"messages":[{"role":"system","content":"Reply with exactly: OK"},{"role":"user","content":"ping"}]}' \
             -w "\nHTTP_STATUS:%{http_code}\n"
+        continue-on-error: true
+
+      # Temporary, one-off diagnostic - the deploy token's scope doesn't
+      # include the Cloudflare account API's AI-models-list endpoint, so
+      # this scrapes Cloudflare's public model catalog page instead (no
+      # auth needed) to find a currently-valid model ID to replace a
+      # deprecated CHAT_MODEL in src/index.js.
+      - name: List current Workers AI chat model IDs from public docs
+        run: |
+          curl -sS "https://developers.cloudflare.com/workers-ai/models/" | grep -oE '@cf/[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+' | sort -u
         continue-on-error: true
