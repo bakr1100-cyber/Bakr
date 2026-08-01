@@ -21,13 +21,17 @@
 const DUFFEL_BASE_URL = 'https://api.duffel.com';
 const DUFFEL_VERSION = 'v2';
 
-// A capable-but-cheap instruction-tuned open model, to make good use of
-// Workers AI's free daily quota (10,000 "neurons"/day as of this writing).
-// Cloudflare periodically deprecates older model IDs (the plain
-// llama-3.1-8b-instruct was retired 2026-05-30) - if /ai/chat starts
-// failing with "This model was deprecated", that's the fix: swap this for
-// a currently-listed model at https://developers.cloudflare.com/workers-ai/models/.
-const CHAT_MODEL = '@cf/meta/llama-3.1-8b-instruct-fast';
+// Cloudflare's fast/fp8-quantized flagship Llama - picked for genuinely
+// good multilingual (incl. Darija) conversational quality, at the cost of
+// a smaller free-tier request budget than a tiny model would give. If the
+// free daily quota (10,000 "neurons"/day as of this writing) becomes a
+// real constraint, @cf/meta/llama-3.2-3b-instruct is a cheap/fast fallback
+// with weaker language nuance. Cloudflare periodically deprecates model
+// IDs (the plain llama-3.1-8b-instruct was retired 2026-05-30, even
+// though it stayed listed in the docs) - if /ai/chat starts failing with
+// "This model was deprecated", check the *actually callable* catalog by
+// hitting the endpoint directly, not just the docs page.
+const CHAT_MODEL = '@cf/meta/llama-3.3-70b-instruct-fp8-fast';
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',

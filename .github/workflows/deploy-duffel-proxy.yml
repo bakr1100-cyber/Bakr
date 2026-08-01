@@ -50,13 +50,3 @@ jobs:
             -d '{"messages":[{"role":"system","content":"Reply with exactly: OK"},{"role":"user","content":"ping"}]}' \
             -w "\nHTTP_STATUS:%{http_code}\n"
         continue-on-error: true
-
-      # Temporary, one-off diagnostic - the deploy token's scope doesn't
-      # include the Cloudflare account API's AI-models-list endpoint, so
-      # this scrapes Cloudflare's public model catalog page instead (no
-      # auth needed) to find a currently-valid model ID to replace a
-      # deprecated CHAT_MODEL in src/index.js.
-      - name: List current Workers AI chat model IDs from public docs
-        run: |
-          curl -sS "https://developers.cloudflare.com/workers-ai/models/" | grep -oE '@cf/[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+' | sort -u
-        continue-on-error: true
