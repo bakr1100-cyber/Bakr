@@ -104,7 +104,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
     final femaleVoice =
         context.read<PreferencesProvider>().preferences.preferredVoiceIsFemale;
     final reply = chat.messages.last.text;
-    unawaited(_voice.speak(reply, useFemaleVoice: femaleVoice));
+    unawaited(_voice.speak(reply, useFemaleVoice: femaleVoice, locale: language.speechLocale));
   }
 
   Future<void> _toggleListening() async {
@@ -114,14 +114,15 @@ class _AiChatScreenState extends State<AiChatScreen> {
       setState(() => _isListening = false);
       return;
     }
+    final language = context.read<LocaleProvider>().language;
     setState(() => _isListening = true);
     await _voice.startListening(
+      localeId: language.speechLocale,
       onResult: (text, isFinal) {
         _controller.text = text;
         if (isFinal) {
           setState(() => _isListening = false);
           final chat = context.read<ChatProvider>();
-          final language = context.read<LocaleProvider>().language;
           _controller.clear();
           chat.send(text, wasSpoken: true, language: language).then((_) {
             if (!mounted) return;
@@ -130,7 +131,11 @@ class _AiChatScreenState extends State<AiChatScreen> {
                 .read<PreferencesProvider>()
                 .preferences
                 .preferredVoiceIsFemale;
-            unawaited(_voice.speak(chat.messages.last.text, useFemaleVoice: femaleVoice));
+            unawaited(_voice.speak(
+              chat.messages.last.text,
+              useFemaleVoice: femaleVoice,
+              locale: language.speechLocale,
+            ));
           });
         }
       },

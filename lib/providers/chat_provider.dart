@@ -51,12 +51,26 @@ class ChatProvider extends ChangeNotifier {
     _isThinking = true;
     notifyListeners();
 
-    final turn = await _assistant.handleMessage(
-      text,
-      _intent,
-      history: _messages,
-      language: language,
-    );
+    // Without this, any exception anywhere in handleMessage() (NLU parsing,
+    // the flight search, the LLM call) would leave _isThinking stuck true
+    // forever with no reply ever added - the chat just silently hangs, with
+    // no visible error and no way to recover except restarting the app.
+    AssistantTurn turn;
+    try {
+      turn = await _assistant.handleMessage(
+        text,
+        _intent,
+        history: _messages,
+        language: language,
+      );
+    } catch (error) {
+      debugPrint('ChatProvider: handleMessage failed ($error).');
+      turn = AssistantTurn(
+        reply: 'Entschuldigung, da ist etwas schiefgelaufen. Kannst du es '
+            'nochmal versuchen?',
+        intent: _intent,
+      );
+    }
     _intent = turn.intent;
     _lastResults = turn.results ?? _lastResults;
 

@@ -50,6 +50,22 @@ extension AppLanguageCode on AppLanguage {
   /// so this only controls the fallback language for Flutter's built-in
   /// widget strings - Arabic is the closest Flutter actually supports.
   Locale get flutterLocale => this == AppLanguage.ary ? const Locale('ar') : locale;
+
+  /// BCP-47 locale for the on-device speech-to-text/text-to-speech engines
+  /// (`speech_to_text`/`flutter_tts`), which take a real regional locale
+  /// code, not our internal [code]. Without this, both plugins fall back to
+  /// whatever locale they were last configured with (or the OS default),
+  /// so recognizing/speaking anything other than that one language silently
+  /// fails or produces garbage. Darija has no dedicated OS speech locale,
+  /// so 'ar-MA' (Arabic - Morocco) is the closest standard tag; quality
+  /// depends entirely on the device's installed speech language packs.
+  String get speechLocale => switch (this) {
+        AppLanguage.ary => 'ar-MA',
+        AppLanguage.ar => 'ar-SA',
+        AppLanguage.de => 'de-DE',
+        AppLanguage.fr => 'fr-FR',
+        AppLanguage.en => 'en-US',
+      };
 }
 
 class AppLocalizations {

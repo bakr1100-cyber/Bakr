@@ -40,7 +40,13 @@ class VoiceService {
   /// [useFemaleVoice] toggles between the two voice options called for in
   /// the brief; concrete voice selection is platform/engine dependent, so
   /// this maps to pitch as a reasonable default across TTS engines.
-  Future<void> speak(String text, {bool useFemaleVoice = true}) async {
+  ///
+  /// [locale] (e.g. `'ar-MA'`, `'de-DE'` - see [AppLanguageCode.speechLocale])
+  /// must be set explicitly, or the TTS engine keeps speaking in whatever
+  /// language it was last configured with (or its OS default) regardless
+  /// of the app's selected language.
+  Future<void> speak(String text, {bool useFemaleVoice = true, String? locale}) async {
+    if (locale != null) await _tts.setLanguage(locale);
     await _tts.setPitch(useFemaleVoice ? 1.05 : 0.85);
     await _tts.speak(text);
   }
