@@ -3,7 +3,19 @@ import '../models/itinerary.dart';
 import '../models/travel_intent.dart';
 import '../models/trip_leg.dart';
 import 'flight_price_source.dart';
+import 'geo.dart';
 import 'mock_flight_price_source.dart';
+
+/// How far from the requested departure airport we'll look for a genuinely
+/// nearby alternative (e.g. Düsseldorf/Cologne/Frankfurt are all realistic
+/// substitutes for each other for someone in the Rhineland/Ruhr area).
+const _nearbyDepartureRadiusKm = 220.0;
+
+/// How far from the requested Moroccan destination we'll look for a nearby
+/// alternative airport worth a ground transfer - tuned to comfortably
+/// catch Casablanca<->Rabat (~90 km) while excluding pairs that aren't a
+/// realistic swap (Fès is ~200 km from Casablanca).
+const _nearbyDestinationRadiusKm = 120.0;
 
 /// The "Smart Flight Engine": generates and prices normal flight
 /// connections (direct + a real layover via Casablanca - [ResultTier.
@@ -45,6 +57,8 @@ class FlightSearchService {
       _standardConnection(origin, destination, date, passengers),
       _alternativeDeparture(origin, destination, date, passengers, directTotal, directDuration),
       _alternativeDestinationWithTrain(
+          origin, destination, date, passengers, directTotal, directDuration),
+      _nearbyDestinationAirport(
           origin, destination, date, passengers, directTotal, directDuration),
       _stopover(origin, destination, date, passengers, directTotal, directDuration),
       _multimodal(origin, destination, date, passengers, directTotal, directDuration),
@@ -166,9 +180,11 @@ class FlightSearchService {
     double directTotal,
     Duration directDuration,
   ) async {
-    final nearby = europeanAirports
-        .where((a) => a.country == origin.country && a.code != origin.code)
-        .take(2);
+    // Real nearby-airport search instead of a "same country" guess - e.g.
+    // for someone departing from Frankfurt, Düsseldorf/Cologne/Dortmund are
+    // genuine regional alternatives (~150-220 km), while Madrid (also
+    // "Europe") obviously isn't.
+    final nearby = nearbyAirports(origin, europeanAirports, radiusKm: _nearbyDepartureRadiusKm);
 
     final itineraries = <Itinerary>[];
     for (final alt in nearby) {
@@ -180,6 +196,7 @@ class FlightSearchService {
       if (total >= directTotal) continue;
 
       final duration = quote.arrival.difference(quote.departure);
+      final km = distanceKm(origin, alt);
       itineraries.add(
         Itinerary(
           id: 'altdep-${alt.code}-${destination.code}',
@@ -197,8 +214,8 @@ class FlightSearchService {
               carrier: quote.carrier,
             ),
           ],
-          explanation: 'Ab ${alt.city} statt ${origin.city} sparst du '
-              '${(directTotal - total).toStringAsFixed(0)} €.',
+          explanation: 'Ab ${alt.city} (${km.round()} km von ${origin.city}) statt '
+              '${origin.city} sparst du ${(directTotal - total).toStringAsFixed(0)} €.',
         ),
       );
     }
@@ -264,6 +281,75 @@ class FlightSearchService {
     ];
   }
 
+  /// Nearby-airport swap on the *destination* side, using real distance
+  /// instead of a single hardcoded hub - fixes the gap where searching to
+  /// Rabat never suggested Casablanca (only ~90 km away) just because Rabat
+  /// itself was already the special-cased hub. Symmetric: also works the
+  /// other way (destination Casablanca -> suggests landing in Rabat).
+  Future<List<Itinerary>> _nearbyDestinationAirport(
+    Airport origin,
+    Airport destination,
+    DateTime date,
+    int pax,
+    double directTotal,
+    Duration directDuration,
+  ) async {
+    final nearby =
+        nearbyAirports(destination, moroccanAirports, radiusKm: _nearbyDestinationRadiusKm);
+
+    final itineraries = <Itinerary>[];
+    for (final alt in nearby) {
+      final quote = await _priceSource.quoteDirect(origin: origin, destination: alt, date: date);
+      if (quote == null) continue;
+
+      final flightPrice = quote.priceEur * pax;
+      final km = distanceKm(alt, destination);
+      final transferPrice = groundTransferPriceEur(km) * pax;
+      final transferDuration = groundTransferDuration(km);
+      final total = flightPrice + transferPrice;
+      if (total >= directTotal) continue;
+
+      final transferDeparture = quote.arrival.add(const Duration(minutes: 30));
+      final transferArrival = transferDeparture.add(transferDuration);
+      final duration = transferArrival.difference(quote.departure);
+      final saved = directTotal - total;
+
+      itineraries.add(
+        Itinerary(
+          id: 'altdest-${alt.code}-${destination.code}',
+          tier: ResultTier.alternative,
+          savingsEur: saved,
+          extraTravelTime: duration > directDuration ? duration - directDuration : Duration.zero,
+          legs: [
+            TripLeg(
+              mode: LegMode.flight,
+              from: origin,
+              to: alt,
+              departure: quote.departure,
+              arrival: quote.arrival,
+              priceEur: flightPrice,
+              carrier: quote.carrier,
+            ),
+            TripLeg(
+              mode: LegMode.taxi,
+              from: alt,
+              to: destination,
+              departure: transferDeparture,
+              arrival: transferArrival,
+              priceEur: transferPrice,
+              carrier: 'Transfer',
+            ),
+          ],
+          explanation: 'Flug nach ${alt.city} (nur ${km.round()} km von ${destination.city} '
+              'entfernt) statt direkt nach ${destination.city}, mit Transfer weiter. '
+              'Dadurch sparst du ${saved.toStringAsFixed(0)} €.',
+          riskLevel: RiskLevel.medium,
+        ),
+      );
+    }
+    return itineraries;
+  }
+
   Future<List<Itinerary>> _stopover(
     Airport origin,
     Airport destination,
@@ -272,21 +358,25 @@ class FlightSearchService {
     double directTotal,
     Duration directDuration,
   ) async {
-    // Creative alternative-airport routing via a major European hub -
-    // Casablanca is handled separately as the standard-tier connection
-    // (see [_standardConnection]), so these are genuinely "other airport"
-    // suggestions like the product brief's Málaga/Valencia examples.
-    const stopoverCities = [
-      Airport(code: 'MAD', city: 'Madrid', country: 'Spanien'),
-      Airport(code: 'BCN', city: 'Barcelona', country: 'Spanien'),
-      Airport(code: 'CDG', city: 'Paris', country: 'Frankreich'),
-      Airport(code: 'LIS', city: 'Lissabon', country: 'Portugal'),
-    ];
+    // Creative alternative-airport routing - Casablanca is handled
+    // separately as the standard-tier connection (see
+    // [_standardConnection]), so this picks a genuinely sensible "other
+    // airport" stopover: whichever European airport lies most directly on
+    // the way from origin to destination (smallest detour vs. flying
+    // direct), e.g. Málaga for many Germany->Morocco routes since it sits
+    // right by the Gibraltar strait crossing.
+    final candidates = europeanAirports
+        .where((a) => a.code != origin.code && a.code != destination.code)
+        .toList();
+    if (candidates.isEmpty) return [];
 
-    final via = stopoverCities.firstWhere(
-      (a) => a.code != origin.code && a.code != destination.code,
-      orElse: () => stopoverCities.first,
-    );
+    final directKm = distanceKm(origin, destination);
+    candidates.sort((a, b) {
+      final detourA = distanceKm(origin, a) + distanceKm(a, destination) - directKm;
+      final detourB = distanceKm(origin, b) + distanceKm(b, destination) - directKm;
+      return detourA.compareTo(detourB);
+    });
+    final via = candidates.first;
 
     final leg1Quote = await _priceSource.quoteDirect(origin: origin, destination: via, date: date);
     if (leg1Quote == null) return [];

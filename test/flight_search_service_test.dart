@@ -4,6 +4,7 @@ import 'package:marocfly_ai/models/itinerary.dart';
 import 'package:marocfly_ai/models/travel_intent.dart';
 import 'package:marocfly_ai/services/flight_price_source.dart';
 import 'package:marocfly_ai/services/flight_search_service.dart';
+import 'package:marocfly_ai/services/geo.dart';
 import 'package:marocfly_ai/services/mock_flight_price_source.dart';
 
 /// A fully controllable [FlightPriceSource] for tests: returns a fixed
@@ -132,6 +133,70 @@ void main() {
     test('reliably surfaces the hub+train alternative for a non-hub destination', () async {
       final results = await service.search(intentFor(1));
       expect(results.any((i) => i.id.startsWith('althub-')), isTrue);
+    });
+  });
+
+  group('nearby-airport geography', () {
+    const fra = Airport(code: 'FRA', city: 'Frankfurt', country: 'Deutschland', lat: 50.0379, lon: 8.5622);
+    const rba = Airport(code: 'RBA', city: 'Rabat', country: 'Marokko', lat: 34.0515, lon: -6.7515);
+
+    // Regression test: searching to Rabat used to never suggest Casablanca
+    // (only ~90 km away) because the old hub+train mechanic special-cased
+    // Rabat as *only* ever the alternative, never the requested
+    // destination. The nearby-destination-airport search is symmetric.
+    test('searching to Rabat also offers nearby Casablanca as a swap', () async {
+      final service = FlightSearchService(
+        priceSource: FakeFlightPriceSource({
+          'FRA-RBA': 300,
+          'FRA-CMN': 100,
+        }),
+      );
+
+      final results = await service.search(TravelIntent(
+        origin: fra,
+        destination: rba,
+        departureDate: departureDate,
+        passengerCount: 1,
+      ));
+
+      final swap = results.where((i) => i.id.startsWith('altdest-')).toList();
+      expect(swap, hasLength(1));
+      expect(swap.single.id, 'altdest-CMN-RBA');
+      expect(swap.single.tier, ResultTier.alternative);
+      expect(swap.single.totalPriceEur, lessThan(300));
+      expect(swap.single.savingsEur, isNotNull);
+    });
+
+    test('does not suggest a nearby-airport swap when it is not actually cheaper', () async {
+      final service = FlightSearchService(
+        priceSource: FakeFlightPriceSource({
+          'FRA-RBA': 100,
+          'FRA-CMN': 100, // + transfer cost makes this more expensive than direct
+        }),
+      );
+
+      final results = await service.search(TravelIntent(
+        origin: fra,
+        destination: rba,
+        departureDate: departureDate,
+        passengerCount: 1,
+      ));
+
+      expect(results.any((i) => i.id.startsWith('altdest-')), isFalse);
+    });
+
+    test('alternative departure airports are picked by real distance, not list order', () async {
+      final service = FlightSearchService();
+      final results = await service.search(intentFor(1));
+      final altDepartures = results.where((i) => i.id.startsWith('altdep-'));
+      for (final itinerary in altDepartures) {
+        final departureAirport = itinerary.legs.first.from;
+        expect(
+          distanceKm(dus, departureAirport),
+          lessThanOrEqualTo(220),
+          reason: '${departureAirport.city} should be within the nearby-departure radius of Düsseldorf',
+        );
+      }
     });
   });
 
