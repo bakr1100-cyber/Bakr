@@ -4,7 +4,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 class ThemeProvider extends ChangeNotifier {
   static const _prefsKey = 'theme_mode';
 
-  ThemeMode _mode = ThemeMode.system;
+  // Defaults to light (cream), not system: silently following the device's
+  // OS-level dark/light setting made the app look "randomly" dark for
+  // users whose device happens to be in dark mode, even though they never
+  // chose dark in the app itself. Light/dark here are explicit user
+  // choices in Settings, not a mirror of the OS.
+  ThemeMode _mode = ThemeMode.light;
   ThemeMode get mode => _mode;
 
   Future<void> load() async {
@@ -13,7 +18,7 @@ class ThemeProvider extends ChangeNotifier {
     if (stored != null) {
       _mode = ThemeMode.values.firstWhere(
         (m) => m.name == stored,
-        orElse: () => ThemeMode.system,
+        orElse: () => ThemeMode.light,
       );
       notifyListeners();
     }
