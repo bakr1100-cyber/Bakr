@@ -33,13 +33,18 @@ class AppTheme {
       primary: AppColors.moroccoGreen,
       onPrimary: AppColors.moroccoWhite,
       primaryContainer: AppColors.greenDark,
-      onPrimaryContainer: AppColors.lightOnSurface,
+      // primaryContainer/tertiary are fixed dark-green/gold fills in both
+      // themes, so their "on" text always needs to be light - reuse
+      // darkOnSurface (near-white) rather than lightOnSurface, which is
+      // now a dark charcoal meant for text on the light theme's own
+      // (cream) surfaces, not for text on top of a colored fill.
+      onPrimaryContainer: AppColors.darkOnSurface,
       secondary: AppColors.moroccoRed,
       onSecondary: AppColors.moroccoWhite,
       secondaryContainer: AppColors.redDark,
       onSecondaryContainer: AppColors.moroccoWhite,
       tertiary: AppColors.moroccoGold,
-      onTertiary: AppColors.lightOnSurface,
+      onTertiary: AppColors.darkOnSurface,
       error: AppColors.danger,
       onError: AppColors.moroccoWhite,
       surface: surface,
