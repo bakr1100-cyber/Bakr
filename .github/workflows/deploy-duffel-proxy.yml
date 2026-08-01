@@ -48,3 +48,17 @@ jobs:
             -d '{"messages":[{"role":"system","content":"Reply with exactly: OK"},{"role":"user","content":"ping"}]}' \
             -w "\nHTTP_STATUS:%{http_code}\n"
         continue-on-error: true
+
+      # Temporary, one-off diagnostic - not needed once CHAT_MODEL in
+      # src/index.js is confirmed working again. Lists currently-available
+      # (non-deprecated) Workers AI text-generation models directly from
+      # Cloudflare's API, since the deploy sandbox this Worker is normally
+      # edited from has no network access to check this any other way.
+      - name: List available Workers AI text-generation models
+        run: |
+          curl -sS "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/ai/models/search?task=Text%20Generation&per_page=100" \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" | python3 -m json.tool
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        continue-on-error: true
