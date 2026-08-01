@@ -37,6 +37,21 @@ class VoiceService {
 
   Future<void> stopListening() => _speechToText.stop();
 
+  /// Web browsers (notably Safari on iOS/iPadOS) only allow speech
+  /// synthesis to actually produce sound when `speak()` is called
+  /// synchronously inside a user gesture (a tap) - any `speak()` call made
+  /// after an `await` (e.g. waiting for the AI's reply over the network,
+  /// which is every reply in this app) gets silently swallowed, with no
+  /// error. Call this synchronously as the very first line of a button's
+  /// tap handler, before any `await`, to unlock speech synthesis for the
+  /// rest of that handler - even once it goes async afterwards.
+  void unlockSpeechForThisGesture() {
+    // Fire-and-forget on purpose: an empty utterance makes no sound, this
+    // exists only to happen inside the synchronous gesture call stack.
+    // ignore: discarded_futures
+    _tts.speak(' ');
+  }
+
   /// [useFemaleVoice] toggles between the two voice options called for in
   /// the brief; concrete voice selection is platform/engine dependent, so
   /// this maps to pitch as a reasonable default across TTS engines.

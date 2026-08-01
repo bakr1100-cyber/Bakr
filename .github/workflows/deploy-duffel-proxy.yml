@@ -36,3 +36,15 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      # Diagnostic only - GitHub's runner has real network access (unlike
+      # the dev sandbox this Worker is usually edited from), so this is how
+      # we find out whether Workers AI is actually reachable/enabled on the
+      # account, without needing anyone to test from the live app first.
+      - name: Smoke-test the /ai/chat endpoint
+        run: |
+          curl -sS -X POST https://marocfly-duffel-proxy.bakr1100.workers.dev/ai/chat \
+            -H "Content-Type: application/json" \
+            -d '{"messages":[{"role":"system","content":"Reply with exactly: OK"},{"role":"user","content":"ping"}]}' \
+            -w "\nHTTP_STATUS:%{http_code}\n"
+        continue-on-error: true

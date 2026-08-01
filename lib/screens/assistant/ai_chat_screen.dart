@@ -94,6 +94,10 @@ class _AiChatScreenState extends State<AiChatScreen> {
   Future<void> _sendText([String? textOverride]) async {
     final text = textOverride ?? _controller.text;
     if (text.trim().isEmpty) return;
+    // Must happen synchronously, before any `await` below, or the browser
+    // no longer considers the eventual speak() call part of this tap and
+    // silently blocks it (see VoiceService.unlockSpeechForThisGesture).
+    _voice.unlockSpeechForThisGesture();
     _controller.clear();
     final chat = context.read<ChatProvider>();
     final language = context.read<LocaleProvider>().language;
@@ -109,6 +113,10 @@ class _AiChatScreenState extends State<AiChatScreen> {
 
   Future<void> _toggleListening() async {
     if (!_voiceReady) return;
+    // Same reasoning as in _sendText: unlock synchronously now, so the
+    // reply spoken later (after listening + the network round-trip) isn't
+    // silently blocked by the browser.
+    _voice.unlockSpeechForThisGesture();
     if (_isListening) {
       await _voice.stopListening();
       setState(() => _isListening = false);
