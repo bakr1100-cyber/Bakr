@@ -21,17 +21,19 @@
 const DUFFEL_BASE_URL = 'https://api.duffel.com';
 const DUFFEL_VERSION = 'v2';
 
-// Cloudflare's fast/fp8-quantized flagship Llama - picked for genuinely
-// good multilingual (incl. Darija) conversational quality, at the cost of
-// a smaller free-tier request budget than a tiny model would give. If the
-// free daily quota (10,000 "neurons"/day as of this writing) becomes a
-// real constraint, @cf/meta/llama-3.2-3b-instruct is a cheap/fast fallback
-// with weaker language nuance. Cloudflare periodically deprecates model
+// Picked for speed, not raw quality: a live smoke test showed the 70B
+// fp8-fast flagship taking far longer per reply than this app's own
+// client-side timeout (12s, see llm_chat_service.dart) tolerates - a
+// smarter model that regularly times out just means every reply silently
+// falls back to the German template anyway, which is strictly worse than
+// a quicker, slightly less eloquent one that actually replies. This 3B
+// model is Cloudflare's small/fast tier, still genuinely conversational
+// for a travel-chat use case. Cloudflare periodically deprecates model
 // IDs (the plain llama-3.1-8b-instruct was retired 2026-05-30, even
 // though it stayed listed in the docs) - if /ai/chat starts failing with
 // "This model was deprecated", check the *actually callable* catalog by
 // hitting the endpoint directly, not just the docs page.
-const CHAT_MODEL = '@cf/meta/llama-3.3-70b-instruct-fp8-fast';
+const CHAT_MODEL = '@cf/meta/llama-3.2-3b-instruct';
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',

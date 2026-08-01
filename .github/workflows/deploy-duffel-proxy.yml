@@ -48,5 +48,6 @@ jobs:
           curl -sS -X POST https://marocfly-duffel-proxy.bakr1100.workers.dev/ai/chat \
             -H "Content-Type: application/json" \
             -d '{"messages":[{"role":"system","content":"Reply with exactly: OK"},{"role":"user","content":"ping"}]}' \
-            -w "\nHTTP_STATUS:%{http_code}\n"
+            -w "\nHTTP_STATUS:%{http_code}\nTOTAL_TIME:%{time_total}s\n" \
+            --max-time 20
         continue-on-error: true
