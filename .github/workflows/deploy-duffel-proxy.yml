@@ -41,24 +41,14 @@ jobs:
       # the dev sandbox this Worker is usually edited from), so this is how
       # we find out whether Workers AI is actually reachable/enabled on the
       # account, without needing anyone to test from the live app first.
+      # Kept permanently (not just diagnostic) - catches a broken AI chat
+      # backend (e.g. a deprecated model) right at deploy time, in the
+      # Actions log, instead of only being discovered by a user seeing a
+      # silent fallback to template replies in the live app.
       - name: Smoke-test the /ai/chat endpoint
         run: |
           curl -sS -X POST https://marocfly-duffel-proxy.bakr1100.workers.dev/ai/chat \
             -H "Content-Type: application/json" \
             -d '{"messages":[{"role":"system","content":"Reply with exactly: OK"},{"role":"user","content":"ping"}]}' \
             -w "\nHTTP_STATUS:%{http_code}\n"
-        continue-on-error: true
-
-      # Temporary, one-off diagnostic - not needed once CHAT_MODEL in
-      # src/index.js is confirmed working again. Lists currently-available
-      # (non-deprecated) Workers AI text-generation models directly from
-      # Cloudflare's API, since the deploy sandbox this Worker is normally
-      # edited from has no network access to check this any other way.
-      - name: List available Workers AI text-generation models
-        run: |
-          curl -sS "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/ai/models/search?task=Text%20Generation&per_page=100" \
-            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" | python3 -m json.tool
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         continue-on-error: true
