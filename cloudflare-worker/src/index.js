@@ -117,7 +117,11 @@ async function handleAiChat(request, env) {
     });
     return jsonResponse({ reply: result?.response ?? '' }, 200);
   } catch (error) {
-    return jsonResponse({ error: 'ai_request_failed' }, 502);
+    // The underlying message (e.g. "this account needs to enable Workers
+    // AI", a model-availability error, etc.) is genuinely useful for
+    // diagnosing a broken deploy and carries no secret - unlike the Duffel
+    // route, there is no API key involved in this call at all.
+    return jsonResponse({ error: 'ai_request_failed', detail: String(error?.message ?? error) }, 502);
   }
 }
 
