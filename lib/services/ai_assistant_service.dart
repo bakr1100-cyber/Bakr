@@ -46,8 +46,8 @@ class AiAssistantService {
     final merged = conversationState.mergedWith(parsed);
 
     if (parsed.isLowConfidence && parsed.origin != null && parsed.destination != null) {
-      final fallback = 'Ich bin mir nicht ganz sicher. Meintest du '
-          '${parsed.origin!.city} nach ${parsed.destination!.city}?';
+      final fallback =
+          _confirmRouteFallback(language, parsed.origin!.city, parsed.destination!.city);
       final reply = await _phrase(
         history: history,
         language: language,
@@ -66,7 +66,7 @@ class AiAssistantService {
         history: history,
         language: language,
         situation: _clarifyingSituation(missing, merged),
-        fallback: _clarifyingQuestion(missing),
+        fallback: _clarifyingQuestion(missing, language),
       );
       return AssistantTurn(reply: reply, intent: merged);
     }
@@ -80,8 +80,7 @@ class AiAssistantService {
             '${merged.origin?.city} -> ${merged.destination?.city} on the '
             'requested date. Tell the user warmly, and suggest trying another '
             'date or destination.',
-        fallback: 'Ich habe für diese Route noch keine Verbindung gefunden. '
-            'Magst du ein anderes Datum oder Ziel versuchen?',
+        fallback: _noFlightsFoundFallback(language),
       );
       return AssistantTurn(reply: reply, intent: merged);
     }
@@ -90,15 +89,14 @@ class AiAssistantService {
     final prediction = _prices.predict(
       currentPriceEur: best.totalPriceEur,
       departureDate: best.departureTime,
+      language: language,
     );
 
     final buffer = StringBuffer();
     if (results.length > 1) {
-      buffer.writeln('Ich habe günstigere Alternativen gefunden.');
+      buffer.writeln(_foundCheaperAlternativesFallback(language));
     }
-    buffer.writeln(
-      '${best.explanation} Gesamtpreis: ${best.totalPriceEur.toStringAsFixed(0)} €.',
-    );
+    buffer.writeln(_totalPriceFallback(language, best.explanation, best.totalPriceEur));
     buffer.write(prediction.message);
 
     final reply = await _phrase(
@@ -268,17 +266,84 @@ class AiAssistantService {
     return 'but takes about $text longer';
   }
 
-  String _clarifyingQuestion(String missingField) {
+  String _clarifyingQuestion(String missingField, AppLanguage language) {
     switch (missingField) {
       case 'destination':
-        return 'Wohin möchtest du reisen? Zum Beispiel nach Casablanca oder Fès?';
+        return switch (language) {
+          AppLanguage.de => 'Wohin möchtest du reisen? Zum Beispiel nach Casablanca oder Fès?',
+          AppLanguage.fr => 'Où veux-tu voyager ? Par exemple à Casablanca ou Fès ?',
+          AppLanguage.en => 'Where do you want to travel to? For example Casablanca or Fès?',
+          AppLanguage.ar => 'إلى أين تريد السفر؟ على سبيل المثال الدار البيضاء أو فاس؟',
+          AppLanguage.ary => 'فين بغيتي تسافر؟ مثلا الدار البيضاء ولا فاس؟',
+        };
       case 'origin':
-        return 'Von wo aus möchtest du losfliegen?';
+        return switch (language) {
+          AppLanguage.de => 'Von wo aus möchtest du losfliegen?',
+          AppLanguage.fr => "D'où veux-tu partir ?",
+          AppLanguage.en => 'Where do you want to fly from?',
+          AppLanguage.ar => 'من أين تريد الإقلاع؟',
+          AppLanguage.ary => 'منين بغيتي تطير؟',
+        };
       case 'date':
-        return 'Wann möchtest du reisen?';
+        return switch (language) {
+          AppLanguage.de => 'Wann möchtest du reisen?',
+          AppLanguage.fr => 'Quand veux-tu voyager ?',
+          AppLanguage.en => 'When do you want to travel?',
+          AppLanguage.ar => 'متى تريد السفر؟',
+          AppLanguage.ary => 'إمتى بغيتي تسافر؟',
+        };
       default:
-        return 'Erzähl mir noch etwas mehr über deine Reise.';
+        return switch (language) {
+          AppLanguage.de => 'Erzähl mir noch etwas mehr über deine Reise.',
+          AppLanguage.fr => 'Raconte-moi un peu plus sur ton voyage.',
+          AppLanguage.en => 'Tell me a bit more about your trip.',
+          AppLanguage.ar => 'أخبرني بمزيد من التفاصيل عن رحلتك.',
+          AppLanguage.ary => 'قوليا شوية كثر على السفرة ديالك.',
+        };
     }
+  }
+
+  String _confirmRouteFallback(AppLanguage language, String origin, String destination) =>
+      switch (language) {
+        AppLanguage.de => 'Ich bin mir nicht ganz sicher. Meintest du $origin nach $destination?',
+        AppLanguage.fr => 'Je ne suis pas totalement sûr. Tu voulais dire $origin vers $destination ?',
+        AppLanguage.en => "I'm not entirely sure. Did you mean $origin to $destination?",
+        AppLanguage.ar => 'لست متأكدًا تمامًا. هل تقصد من $origin إلى $destination؟',
+        AppLanguage.ary => 'ماشي متأكد بزاف. واش قصدك من $origin ل $destination؟',
+      };
+
+  String _noFlightsFoundFallback(AppLanguage language) => switch (language) {
+        AppLanguage.de =>
+          'Ich habe für diese Route noch keine Verbindung gefunden. Magst du ein anderes Datum '
+              'oder Ziel versuchen?',
+        AppLanguage.fr =>
+          "Je n'ai pas encore trouvé de connexion pour cet itinéraire. Veux-tu essayer une autre "
+              'date ou destination ?',
+        AppLanguage.en =>
+          "I haven't found a connection for this route yet. Want to try another date or "
+              'destination?',
+        AppLanguage.ar =>
+          'لم أجد رحلة لهذا المسار بعد. هل تريد تجربة تاريخ أو وجهة أخرى؟',
+        AppLanguage.ary => 'مالقيتش رحلة لهاد المسار حتى دابا. بغيتي تجرب تاريخ ولا وجهة أخرى؟',
+      };
+
+  String _foundCheaperAlternativesFallback(AppLanguage language) => switch (language) {
+        AppLanguage.de => 'Ich habe günstigere Alternativen gefunden.',
+        AppLanguage.fr => "J'ai trouvé des alternatives moins chères.",
+        AppLanguage.en => 'I found cheaper alternatives.',
+        AppLanguage.ar => 'وجدت بدائل أرخص.',
+        AppLanguage.ary => 'لقيت بدائل أرخص.',
+      };
+
+  String _totalPriceFallback(AppLanguage language, String explanation, double totalPriceEur) {
+    final price = totalPriceEur.toStringAsFixed(0);
+    return switch (language) {
+      AppLanguage.de => '$explanation Gesamtpreis: $price €.',
+      AppLanguage.fr => '$explanation Prix total : $price €.',
+      AppLanguage.en => '$explanation Total price: €$price.',
+      AppLanguage.ar => '$explanation السعر الإجمالي: $price €.',
+      AppLanguage.ary => '$explanation الثمن الكامل: $price €.',
+    };
   }
 }
 

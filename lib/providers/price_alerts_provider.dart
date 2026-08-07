@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 
+import '../core/localization/app_localizations.dart';
 import '../models/airport.dart';
 import '../models/price_alert.dart';
 import '../services/notification_service.dart';
@@ -39,18 +40,34 @@ class PriceAlertsProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> checkForDrops() async {
+  Future<void> checkForDrops({required AppLanguage language}) async {
     for (final alert in _alerts) {
       final dropChance = _random.nextDouble();
       if (dropChance < 0.4) {
         final drop = 10 + _random.nextInt(60);
         alert.currentPriceEur = alert.watchedPriceEur - drop;
         await _notifications.showLocalNotification(
-          title: 'Preisalarm: ${alert.destination.city}',
-          body: 'Dein Flug ist heute $drop € günstiger.',
+          title: _alertTitle(language, alert.destination.city),
+          body: _alertBody(language, drop),
         );
       }
     }
     notifyListeners();
   }
+
+  String _alertTitle(AppLanguage language, String destinationCity) => switch (language) {
+        AppLanguage.de => 'Preisalarm: $destinationCity',
+        AppLanguage.fr => 'Alerte prix : $destinationCity',
+        AppLanguage.en => 'Price alert: $destinationCity',
+        AppLanguage.ar => 'تنبيه السعر: $destinationCity',
+        AppLanguage.ary => 'تنبيه الثمن: $destinationCity',
+      };
+
+  String _alertBody(AppLanguage language, int drop) => switch (language) {
+        AppLanguage.de => 'Dein Flug ist heute $drop € günstiger.',
+        AppLanguage.fr => "Ton vol est moins cher de $drop € aujourd'hui.",
+        AppLanguage.en => 'Your flight is €$drop cheaper today.',
+        AppLanguage.ar => 'رحلتك أرخص بـ $drop € اليوم.',
+        AppLanguage.ary => 'الطيران ديالك رخص ب $drop € اليوم.',
+      };
 }

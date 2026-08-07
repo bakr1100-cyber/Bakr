@@ -68,7 +68,8 @@ class TravelCompanionScreen extends StatelessWidget {
       );
     }
 
-    final events = _service.buildTimeline(itinerary!);
+    final events =
+        _service.buildTimeline(itinerary!, language: AppLocalizations.of(context).language);
     final grouped = <CompanionStage, List<CompanionEvent>>{};
     for (final event in events) {
       grouped.putIfAbsent(event.stage, () => []).add(event);

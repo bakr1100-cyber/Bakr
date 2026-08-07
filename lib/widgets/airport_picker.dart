@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/localization/app_localizations.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_spacing.dart';
 import '../models/airport.dart';
@@ -42,7 +43,7 @@ class AirportPicker extends StatelessWidget {
           ),
           child: selected == null
               ? Text(
-                  'Auswählen',
+                  AppLocalizations.of(context).t('selectPlaceholder'),
                   style: theme.textTheme.titleMedium,
                   overflow: TextOverflow.ellipsis,
                 )
@@ -154,9 +155,9 @@ class _AirportSheetState extends State<_AirportSheet> {
                     controller: _queryController,
                     autofocus: false,
                     onChanged: (v) => setState(() => _query = v),
-                    decoration: const InputDecoration(
-                      hintText: 'Stadt oder Flughafencode suchen…',
-                      prefixIcon: Icon(Icons.search_rounded),
+                    decoration: InputDecoration(
+                      hintText: AppLocalizations.of(context).t('airportSearchHint'),
+                      prefixIcon: const Icon(Icons.search_rounded),
                     ),
                   ),
                 ],
@@ -167,7 +168,7 @@ class _AirportSheetState extends State<_AirportSheet> {
                   ? Padding(
                       padding: const EdgeInsets.all(AppSpacing.xxl),
                       child: Text(
-                        'Kein Treffer für "$_query".',
+                        _noMatchMessage(AppLocalizations.of(context).language, _query),
                         style: theme.textTheme.bodyMedium,
                       ),
                     )
@@ -197,7 +198,7 @@ class _AirportSheetState extends State<_AirportSheet> {
                               fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
                             ),
                           ),
-                          subtitle: Text(airport.country),
+                          subtitle: Text(_countryLabel(context, airport.country)),
                           trailing: isSelected
                               ? Icon(Icons.check_circle_rounded, color: theme.colorScheme.primary)
                               : _CodeBadge(code: airport.code),
@@ -242,3 +243,30 @@ class _CodeBadge extends StatelessWidget {
     );
   }
 }
+
+/// [Airport.country] is stored as a fixed German string internally (it also
+/// doubles as an identifier elsewhere, e.g. `origin.country != 'Deutschland'`
+/// in [FlightSearchService]) - this maps it to the localized display label
+/// instead of showing that raw German value regardless of app language.
+String _countryLabel(BuildContext context, String rawCountry) {
+  final t = AppLocalizations.of(context).t;
+  return switch (rawCountry) {
+    'Deutschland' => t('countryGermany'),
+    'Niederlande' => t('countryNetherlands'),
+    'Belgien' => t('countryBelgium'),
+    'Frankreich' => t('countryFrance'),
+    'Spanien' => t('countrySpain'),
+    'Portugal' => t('countryPortugal'),
+    'Italien' => t('countryItaly'),
+    'Marokko' => t('countryMorocco'),
+    _ => rawCountry,
+  };
+}
+
+String _noMatchMessage(AppLanguage language, String query) => switch (language) {
+      AppLanguage.de => 'Kein Treffer für "$query".',
+      AppLanguage.fr => 'Aucun résultat pour « $query ».',
+      AppLanguage.en => 'No match for "$query".',
+      AppLanguage.ar => 'لا توجد نتائج لـ "$query".',
+      AppLanguage.ary => 'مالقيتش والو ب "$query".',
+    };

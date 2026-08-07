@@ -280,13 +280,14 @@ class _AiChatScreenState extends State<AiChatScreen> {
                           controller: _controller,
                           textInputAction: TextInputAction.send,
                           onSubmitted: (_) => _sendText(),
-                          decoration: const InputDecoration(
-                            hintText: 'Bghit arkhass vol… / Schreib mir…',
+                          decoration: InputDecoration(
+                            hintText: t('chatInputHint'),
                             filled: false,
                             border: InputBorder.none,
                             enabledBorder: InputBorder.none,
                             focusedBorder: InputBorder.none,
-                            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                            contentPadding:
+                                const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
                           ),
                         ),
                       ),

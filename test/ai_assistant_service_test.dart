@@ -18,7 +18,11 @@ void main() {
   group('without an LLM configured', () {
     test('falls back to the fixed clarifying-question template', () async {
       final service = AiAssistantService();
-      final turn = await service.handleMessage('Ich will verreisen', const TravelIntent());
+      final turn = await service.handleMessage(
+        'Ich will verreisen',
+        const TravelIntent(),
+        language: AppLanguage.de,
+      );
       expect(turn.reply, 'Wohin möchtest du reisen? Zum Beispiel nach Casablanca oder Fès?');
     });
 
@@ -26,11 +30,26 @@ void main() {
       final service = AiAssistantService();
       final intent = TravelIntent(origin: dus, destination: fez, departureDate: departureDate);
 
-      final turn = await service.handleMessage('Nochmal bitte', intent);
+      final turn =
+          await service.handleMessage('Nochmal bitte', intent, language: AppLanguage.de);
 
       expect(turn.results, isNotNull);
       expect(turn.results, isNotEmpty);
       expect(turn.reply, contains('Gesamtpreis:'));
+    });
+
+    // Regression test: the fixed (non-LLM) fallback templates used to be
+    // hardcoded German text regardless of [language] - confirmed live via a
+    // screenshot where a French-language chat still fell back to German.
+    test('phrases the fixed clarifying-question template in the requested language', () async {
+      final service = AiAssistantService();
+      final turn = await service.handleMessage(
+        'Je veux voyager',
+        const TravelIntent(),
+        language: AppLanguage.fr,
+      );
+      expect(turn.reply, contains('voyager'));
+      expect(turn.reply, isNot(contains('reisen')));
     });
   });
 
@@ -57,7 +76,11 @@ void main() {
       final llm = LlmChatService(proxyBaseUrl: 'https://worker.example', client: client);
       final service = AiAssistantService(llmChatService: llm);
 
-      final turn = await service.handleMessage('Ich will verreisen', const TravelIntent());
+      final turn = await service.handleMessage(
+        'Ich will verreisen',
+        const TravelIntent(),
+        language: AppLanguage.de,
+      );
 
       expect(turn.reply, 'Wohin möchtest du reisen? Zum Beispiel nach Casablanca oder Fès?');
     });

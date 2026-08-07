@@ -23,7 +23,8 @@ class PriceAlertsScreen extends StatelessWidget {
           IconButton(
             tooltip: t('checkForPriceDrops'),
             icon: const Icon(Icons.refresh_rounded),
-            onPressed: provider.checkForDrops,
+            onPressed: () =>
+                provider.checkForDrops(language: AppLocalizations.of(context).language),
           ),
         ],
       ),

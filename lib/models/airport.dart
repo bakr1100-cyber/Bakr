@@ -61,7 +61,7 @@ const moroccanAirports = <Airport>[
   Airport(code: 'TNG', city: 'Tanger', country: 'Marokko', lat: 35.7269, lon: -5.9168),
   Airport(code: 'NDR', city: 'Nador', country: 'Marokko', lat: 34.9888, lon: -3.0289),
   Airport(code: 'OUD', city: 'Oujda', country: 'Marokko', lat: 34.7867, lon: -1.9236),
-  Airport(code: 'RAK', city: 'Marrakesch', country: 'Marokko', lat: 31.6069, lon: -8.0363),
+  Airport(code: 'RAK', city: 'Marrakech', country: 'Marokko', lat: 31.6069, lon: -8.0363),
 ];
 
 Airport? findAirportByCity(String query) {
