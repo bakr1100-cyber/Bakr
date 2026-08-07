@@ -40,12 +40,20 @@ class PriceAlertsProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> checkForDrops({required AppLanguage language}) async {
+  /// Returns how many alerts got a (simulated) price drop this run, so the
+  /// caller can confirm the check in-app - system notifications alone
+  /// aren't reliable feedback: they're a no-op on web (see
+  /// [NotificationService]) and even on a platform that supports them, the
+  /// user might not see one land while they're already looking at this
+  /// screen.
+  Future<int> checkForDrops({required AppLanguage language}) async {
+    var dropsFound = 0;
     for (final alert in _alerts) {
       final dropChance = _random.nextDouble();
       if (dropChance < 0.4) {
         final drop = 10 + _random.nextInt(60);
         alert.currentPriceEur = alert.watchedPriceEur - drop;
+        dropsFound++;
         await _notifications.showLocalNotification(
           title: _alertTitle(language, alert.destination.city),
           body: _alertBody(language, drop),
@@ -53,6 +61,7 @@ class PriceAlertsProvider extends ChangeNotifier {
       }
     }
     notifyListeners();
+    return dropsFound;
   }
 
   String _alertTitle(AppLanguage language, String destinationCity) => switch (language) {

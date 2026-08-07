@@ -12,8 +12,16 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 /// push; to enable real push notifications, run `flutterfire configure`
 /// against a real Firebase project and pass the generated
 /// `DefaultFirebaseOptions.currentPlatform` into `Firebase.initializeApp`
-/// below. Local notifications (used for the in-app price-alert simulation)
-/// work regardless of Firebase.
+/// below.
+///
+/// Local notifications (used for the in-app price-alert simulation) work on
+/// Android/iOS regardless of Firebase - but NOT on web: the pinned
+/// `flutter_local_notifications` version (17.2.4) has no web platform
+/// implementation at all (web support landed in a later major version), so
+/// [showLocalNotification] is a guaranteed no-op on the deployed web build.
+/// [showLocalNotification] returns whether it could actually show anything,
+/// so callers on web can fall back to an in-app confirmation instead of
+/// silently assuming the user saw something.
 class NotificationService {
   final _localNotifications = FlutterLocalNotificationsPlugin();
   bool _firebaseReady = false;
@@ -48,10 +56,13 @@ class NotificationService {
 
   bool get isPushEnabled => _firebaseReady;
 
-  Future<void> showLocalNotification({
+  /// Returns true if a real local notification could be shown, false if the
+  /// current platform can't show one (currently: web, see class doc).
+  Future<bool> showLocalNotification({
     required String title,
     required String body,
   }) async {
+    if (kIsWeb) return false;
     await _localNotifications.show(
       DateTime.now().millisecondsSinceEpoch ~/ 1000,
       title,
@@ -66,5 +77,6 @@ class NotificationService {
         iOS: DarwinNotificationDetails(),
       ),
     );
+    return true;
   }
 }

@@ -23,8 +23,14 @@ class PriceAlertsScreen extends StatelessWidget {
           IconButton(
             tooltip: t('checkForPriceDrops'),
             icon: const Icon(Icons.refresh_rounded),
-            onPressed: () =>
-                provider.checkForDrops(language: AppLocalizations.of(context).language),
+            onPressed: () async {
+              final language = AppLocalizations.of(context).language;
+              final messenger = ScaffoldMessenger.of(context);
+              final dropsFound = await provider.checkForDrops(language: language);
+              messenger.showSnackBar(
+                SnackBar(content: Text(_checkResultMessage(language, dropsFound))),
+              );
+            },
           ),
         ],
       ),
@@ -108,4 +114,29 @@ class PriceAlertsScreen extends StatelessWidget {
       ),
     );
   }
+}
+
+/// System notifications can't be relied on to reach the user (no-op on web,
+/// see [NotificationService]) - this is the message shown directly in-app
+/// right after a manual price check, so the result is always visible
+/// regardless of platform/notification permission.
+String _checkResultMessage(AppLanguage language, int dropsFound) {
+  if (dropsFound == 0) {
+    return switch (language) {
+      AppLanguage.de => 'Keine Preisänderung gefunden.',
+      AppLanguage.fr => 'Aucun changement de prix trouvé.',
+      AppLanguage.en => 'No price change found.',
+      AppLanguage.ar => 'لم يتم العثور على تغيير في السعر.',
+      AppLanguage.ary => 'مالقيتش تبديل فالثمن.',
+    };
+  }
+  return switch (language) {
+    AppLanguage.de =>
+      dropsFound == 1 ? '1 Preis ist gefallen!' : '$dropsFound Preise sind gefallen!',
+    AppLanguage.fr =>
+      dropsFound == 1 ? '1 prix a baissé !' : '$dropsFound prix ont baissé !',
+    AppLanguage.en => dropsFound == 1 ? '1 price dropped!' : '$dropsFound prices dropped!',
+    AppLanguage.ar => 'انخفض سعر $dropsFound رحلة!',
+    AppLanguage.ary => 'هبط الثمن ديال $dropsFound طيارة!',
+  };
 }
