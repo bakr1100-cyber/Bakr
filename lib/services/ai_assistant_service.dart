@@ -2,6 +2,7 @@ import '../core/localization/app_localizations.dart';
 import '../models/chat_message.dart';
 import '../models/itinerary.dart';
 import '../models/travel_intent.dart';
+import '../models/trip_leg.dart';
 import 'flight_search_service.dart';
 import 'llm_chat_service.dart';
 import 'nlu_service.dart';
@@ -160,7 +161,16 @@ class AiAssistantService {
       'and common nouns; never leave an English word in the reply. City names '
       '(Casablanca, Fès, etc.) may stay as-is since those are proper nouns '
       'used the same way in every language. Keep replies short (1-3 '
-      'sentences) unless you are summarizing flight options.';
+      'sentences) unless you are summarizing flight options.\n\n'
+      'CRITICAL: only ever state an airline name, flight number, price, '
+      'website or booking link that is literally written in the facts below. '
+      'If a detail (e.g. the airline, a flight number, or a direct booking '
+      'link/URL) is not in the facts, say you do not have that exact detail '
+      'rather than inventing one - never invent an airline name, never '
+      'invent or guess a website/URL, never make up a flight number. To '
+      'book, tell the user to open the flight card shown in the app and tap '
+      'the booking button there - that is the only real booking link that '
+      'exists; you cannot generate one yourself.';
 
   String _countryNameIn(AppLanguage language) => switch (language) {
         AppLanguage.ary || AppLanguage.ar => 'المغرب',
@@ -210,6 +220,7 @@ class AiAssistantService {
         '${best.totalPriceEur.toStringAsFixed(0)} EUR, '
         '${stops == 0 ? "a direct flight" : "$stops stop(s)"}.',
       )
+      ..writeln('Legs: ${best.legs.map(_legFact).join(' Then ')}')
       ..writeln('Price outlook: $priceOutlook');
 
     final alternatives = results.where((i) => i.tier == ResultTier.alternative).toList();
@@ -229,6 +240,22 @@ class AiAssistantService {
     }
 
     return buffer.toString();
+  }
+
+  /// The one true source for airline/flight-number facts handed to the LLM -
+  /// without this, the model had nothing concrete to answer "which airline?"
+  /// with and started inventing a plausible-sounding one instead (observed
+  /// live: it invented "TUI Fly" as the carrier, plus a fake booking URL).
+  String _legFact(TripLeg leg) {
+    final carrier = leg.carrier;
+    final flightNumber = leg.flightNumber;
+    final identity = switch ((carrier, flightNumber)) {
+      (null, null) => 'carrier unknown',
+      (final c?, null) => c,
+      (null, final f?) => f,
+      (final c?, final f?) => '$c $f',
+    };
+    return '${leg.mode.label} ${leg.from.city}->${leg.to.city} ($identity).';
   }
 
   String _extraTimeClause(Duration? extra) {
