@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/localization/app_localizations.dart';
+import '../../providers/chat_provider.dart';
 import '../../providers/locale_provider.dart';
 import '../../providers/preferences_provider.dart';
 import '../../providers/theme_provider.dart';
@@ -50,7 +51,9 @@ class SettingsScreen extends StatelessWidget {
               child: RadioGroup<AppLanguage>(
                 groupValue: localeProvider.language,
                 onChanged: (value) {
-                  if (value != null) localeProvider.setLanguage(value);
+                  if (value == null) return;
+                  localeProvider.setLanguage(value);
+                  context.read<ChatProvider>().setLanguage(value);
                 },
                 child: Column(
                   children: [

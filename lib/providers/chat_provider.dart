@@ -8,17 +8,9 @@ import '../models/travel_intent.dart';
 import '../services/ai_assistant_service.dart';
 
 class ChatProvider extends ChangeNotifier {
-  ChatProvider({AiAssistantService? assistantService})
+  ChatProvider({AiAssistantService? assistantService, AppLanguage language = AppLanguage.ary})
       : _assistant = assistantService ?? AiAssistantService() {
-    _messages.add(
-      ChatMessage(
-        id: _uuid.v4(),
-        sender: ChatSender.assistant,
-        text: 'Marhba! Wohin möchtest du reisen? Du kannst mir schreiben oder '
-            'sprechen - auf Darija, Arabisch, Deutsch, Französisch oder Englisch.',
-        timestamp: DateTime.now(),
-      ),
-    );
+    _messages.add(_greeting(language));
   }
 
   final AiAssistantService _assistant;
@@ -26,6 +18,25 @@ class ChatProvider extends ChangeNotifier {
 
   final List<ChatMessage> _messages = [];
   List<ChatMessage> get messages => List.unmodifiable(_messages);
+
+  ChatMessage _greeting(AppLanguage language) => ChatMessage(
+        id: _uuid.v4(),
+        sender: ChatSender.assistant,
+        text: AppLocalizations(language).t('aiChatGreeting'),
+        timestamp: DateTime.now(),
+      );
+
+  /// Re-greets in [language] if the conversation hasn't really started yet
+  /// (still just the opening greeting) - called when the user picks/changes
+  /// their language, since [ChatProvider] is created once for the app's
+  /// whole lifetime, before any language may have been chosen yet.
+  void setLanguage(AppLanguage language) {
+    if (_messages.length > 1) return;
+    _messages
+      ..clear()
+      ..add(_greeting(language));
+    notifyListeners();
+  }
 
   TravelIntent _intent = const TravelIntent();
   TravelIntent get intent => _intent;
@@ -36,7 +47,7 @@ class ChatProvider extends ChangeNotifier {
   bool _isThinking = false;
   bool get isThinking => _isThinking;
 
-  Future<void> send(String text, {bool wasSpoken = false, AppLanguage language = AppLanguage.de}) async {
+  Future<void> send(String text, {bool wasSpoken = false, AppLanguage language = AppLanguage.ary}) async {
     if (text.trim().isEmpty) return;
 
     _messages.add(
@@ -66,8 +77,7 @@ class ChatProvider extends ChangeNotifier {
     } catch (error) {
       debugPrint('ChatProvider: handleMessage failed ($error).');
       turn = AssistantTurn(
-        reply: 'Entschuldigung, da ist etwas schiefgelaufen. Kannst du es '
-            'nochmal versuchen?',
+        reply: AppLocalizations(language).t('genericErrorRetry'),
         intent: _intent,
       );
     }

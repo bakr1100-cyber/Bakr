@@ -214,11 +214,11 @@ class _AiChatScreenState extends State<AiChatScreen> {
                         spacing: 8,
                         runSpacing: 8,
                         children: [
-                          for (final suggestion in const [
-                            'Nach Casablanca',
-                            'Nach Fès',
-                            'Günstigste Option',
-                            'Ich reise mit meiner Familie',
+                          for (final suggestion in [
+                            t('suggestionCasablanca'),
+                            t('suggestionFes'),
+                            t('suggestionCheapest'),
+                            t('suggestionFamily'),
                           ])
                             ActionChip(
                               avatar: const Icon(Icons.bolt_rounded, size: 16),

@@ -48,5 +48,41 @@ void main() {
       expect(chat.messages.length, messageCountBefore);
       expect(chat.isThinking, isFalse);
     });
+
+    // Regression test: the opening greeting used to be hardcoded German
+    // text regardless of the selected language.
+    test('opening greeting is in the language passed to the constructor', () {
+      final chat = ChatProvider(
+        assistantService: _ThrowingAssistantService(),
+        language: AppLanguage.fr,
+      );
+
+      expect(chat.messages.single.text, AppLocalizations(AppLanguage.fr).t('aiChatGreeting'));
+    });
+
+    test('setLanguage re-greets in the new language before the conversation starts', () {
+      final chat = ChatProvider(
+        assistantService: _ThrowingAssistantService(),
+        language: AppLanguage.de,
+      );
+
+      chat.setLanguage(AppLanguage.ar);
+
+      expect(chat.messages, hasLength(1));
+      expect(chat.messages.single.text, AppLocalizations(AppLanguage.ar).t('aiChatGreeting'));
+    });
+
+    test('setLanguage does not touch the greeting once a real conversation has started', () async {
+      final chat = ChatProvider(
+        assistantService: _ThrowingAssistantService(),
+        language: AppLanguage.de,
+      );
+      await chat.send('Hallo');
+      final greetingBefore = chat.messages.first.text;
+
+      chat.setLanguage(AppLanguage.ar);
+
+      expect(chat.messages.first.text, greetingBefore);
+    });
   });
 }

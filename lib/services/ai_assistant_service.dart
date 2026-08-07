@@ -39,7 +39,7 @@ class AiAssistantService {
     String userText,
     TravelIntent conversationState, {
     List<ChatMessage> history = const [],
-    AppLanguage language = AppLanguage.de,
+    AppLanguage language = AppLanguage.ary,
   }) async {
     final parsed = _nlu.parse(userText);
     final merged = conversationState.mergedWith(parsed);
@@ -155,8 +155,19 @@ class AiAssistantService {
       'concise and conversational - like a knowledgeable friend, not a form. '
       'You help people find flights to Morocco, including creative cheaper '
       'alternatives (other airports nearby, layovers, flight+train combos). '
-      'Reply in ${_languageInstruction(language)}. Keep replies short (1-3 '
+      'Reply ENTIRELY in ${_languageInstruction(language)} - translate every '
+      'word, including country names ("Morocco" -> ${_countryNameIn(language)}) '
+      'and common nouns; never leave an English word in the reply. City names '
+      '(Casablanca, Fès, etc.) may stay as-is since those are proper nouns '
+      'used the same way in every language. Keep replies short (1-3 '
       'sentences) unless you are summarizing flight options.';
+
+  String _countryNameIn(AppLanguage language) => switch (language) {
+        AppLanguage.ary || AppLanguage.ar => 'المغرب',
+        AppLanguage.de => 'Marokko',
+        AppLanguage.fr => 'le Maroc',
+        AppLanguage.en => 'Morocco',
+      };
 
   String _languageInstruction(AppLanguage language) => switch (language) {
         AppLanguage.ary => 'Moroccan Darija, written in Arabic script',

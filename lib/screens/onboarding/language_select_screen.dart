@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../core/localization/app_localizations.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../providers/chat_provider.dart';
 import '../../providers/locale_provider.dart';
 import '../home/home_screen.dart';
 
@@ -89,6 +90,7 @@ class LanguageSelectScreen extends StatelessWidget {
 
   void _select(BuildContext context, AppLanguage language) {
     context.read<LocaleProvider>().setLanguage(language);
+    context.read<ChatProvider>().setLanguage(language);
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (_) => const HomeScreen()),
     );

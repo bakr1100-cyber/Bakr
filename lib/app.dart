@@ -142,6 +142,7 @@ class _MarocFlyAppState extends State<MarocFlyApp> {
               flightSearchService: _flightSearchService,
               llmChatService: _llmChatService,
             ),
+            language: _localeProvider.language,
           ),
         ),
         ChangeNotifierProvider(create: (_) => PriceAlertsProvider()),

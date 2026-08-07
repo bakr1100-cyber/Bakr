@@ -475,6 +475,52 @@ class AppLocalizations {
       AppLanguage.fr: 'Connaît les vols directs, les combinaisons train/bus, et parle darija',
       AppLanguage.en: 'Knows direct flights, train & bus combos, and speaks Darija',
     },
+    'aiChatGreeting': {
+      AppLanguage.ary: 'مرحبا! فين بغيتي تسافر؟ تقدر تكتب ليا ولا تهضر معايا - بالدارجة، العربية، الألمانية، الفرنسية ولا الإنجليزية.',
+      AppLanguage.ar: 'مرحباً! إلى أين تريد السفر؟ يمكنك الكتابة لي أو التحدث معي - بالدارجة أو العربية الفصحى أو الألمانية أو الفرنسية أو الإنجليزية.',
+      AppLanguage.de: 'Marhba! Wohin möchtest du reisen? Du kannst mir schreiben oder sprechen - auf Darija, Arabisch, Deutsch, Französisch oder Englisch.',
+      AppLanguage.fr: 'Marhba ! Où veux-tu voyager ? Tu peux m\'écrire ou me parler - en darija, arabe, allemand, français ou anglais.',
+      AppLanguage.en: 'Marhba! Where would you like to travel? You can write to me or speak - in Darija, Arabic, German, French or English.',
+    },
+    // Quick-suggestion chips on the AI chat's empty state. Each translation
+    // is checked to still contain the exact NLU keyword/city-alias
+    // substring it needs to (see NluService._cityAliases/_cheapestKeywords/
+    // _familyKeywords) so tapping one is guaranteed to parse correctly.
+    'suggestionCasablanca': {
+      AppLanguage.ary: 'إلى الدار البيضاء',
+      AppLanguage.ar: 'إلى الدار البيضاء',
+      AppLanguage.de: 'Nach Casablanca',
+      AppLanguage.fr: 'Vers Casablanca',
+      AppLanguage.en: 'To Casablanca',
+    },
+    'suggestionFes': {
+      AppLanguage.ary: 'إلى فاس',
+      AppLanguage.ar: 'إلى فاس',
+      AppLanguage.de: 'Nach Fès',
+      AppLanguage.fr: 'Vers Fès',
+      AppLanguage.en: 'To Fez',
+    },
+    'suggestionCheapest': {
+      AppLanguage.ary: 'أرخص خيار',
+      AppLanguage.ar: 'أرخص خيار',
+      AppLanguage.de: 'Günstigste Option',
+      AppLanguage.fr: 'Le moins cher',
+      AppLanguage.en: 'Cheapest option',
+    },
+    'suggestionFamily': {
+      AppLanguage.ary: 'كنسافر مع العائلة',
+      AppLanguage.ar: 'أسافر مع العائلة',
+      AppLanguage.de: 'Ich reise mit meiner Familie',
+      AppLanguage.fr: 'Je voyage en famille',
+      AppLanguage.en: 'Traveling with family',
+    },
+    'genericErrorRetry': {
+      AppLanguage.ary: 'سمح ليا، كاين شي مشكل. جرب مرة أخرى؟',
+      AppLanguage.ar: 'عذراً، حدث خطأ ما. هل يمكنك المحاولة مرة أخرى؟',
+      AppLanguage.de: 'Entschuldigung, da ist etwas schiefgelaufen. Kannst du es nochmal versuchen?',
+      AppLanguage.fr: "Désolé, quelque chose s'est mal passé. Peux-tu réessayer ?",
+      AppLanguage.en: 'Sorry, something went wrong. Can you try again?',
+    },
     'chatInputHint': {
       AppLanguage.ary: 'بغيت رخاص ديال الطيارة... / كتب لي...',
       AppLanguage.ar: 'Bghit arkhass vol… / اكتب لي…',
