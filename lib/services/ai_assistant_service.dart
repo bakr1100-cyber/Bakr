@@ -71,7 +71,7 @@ class AiAssistantService {
       return AssistantTurn(reply: reply, intent: merged);
     }
 
-    final results = await _flights.search(merged);
+    final results = await _flights.search(merged, language: language);
     if (results.isEmpty) {
       final reply = await _phrase(
         history: history,
@@ -255,7 +255,7 @@ class AiAssistantService {
       (null, final f?) => f,
       (final c?, final f?) => '$c $f',
     };
-    return '${leg.mode.label} ${leg.from.city}->${leg.to.city} ($identity).';
+    return '${leg.mode.name} ${leg.from.city}->${leg.to.city} ($identity).';
   }
 
   String _extraTimeClause(Duration? extra) {

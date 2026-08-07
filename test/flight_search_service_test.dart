@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:marocfly_ai/core/localization/app_localizations.dart';
 import 'package:marocfly_ai/models/airport.dart';
 import 'package:marocfly_ai/models/itinerary.dart';
 import 'package:marocfly_ai/models/travel_intent.dart';
@@ -54,6 +55,19 @@ void main() {
       final results = await service.search(intentFor(1));
       expect(results, isNotEmpty);
       expect(results.any((i) => i.isDirect), isTrue);
+    });
+
+    // Regression test: itinerary explanations used to be hardcoded German
+    // text regardless of the app's selected language - confirmed live via a
+    // screenshot of a French-language session still showing "Direktflug
+    // von ... nach ...".
+    test('explanation text is in the language passed to search(), not hardcoded German',
+        () async {
+      final results = await service.search(intentFor(1), language: AppLanguage.fr);
+      final direct = results.firstWhere((i) => i.isDirect);
+
+      expect(direct.explanation, contains('Vol direct'));
+      expect(direct.explanation, isNot(contains('Direktflug')));
     });
 
     test('results are sorted ascending by total price', () async {

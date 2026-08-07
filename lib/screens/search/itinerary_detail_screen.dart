@@ -81,7 +81,11 @@ class ItineraryDetailScreen extends StatelessWidget {
                       ),
                       const SizedBox(width: 6),
                       Text(
-                        itinerary.riskLevel.label,
+                        t(switch (itinerary.riskLevel) {
+                          RiskLevel.low => 'riskLow',
+                          RiskLevel.medium => 'riskMedium',
+                          RiskLevel.high => 'riskHigh',
+                        }),
                         style: theme.textTheme.bodySmall?.copyWith(color: Colors.white70),
                       ),
                     ],

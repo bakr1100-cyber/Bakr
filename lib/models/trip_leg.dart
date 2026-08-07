@@ -2,15 +2,6 @@ import 'airport.dart';
 
 enum LegMode { flight, train, bus, taxi }
 
-extension LegModeLabel on LegMode {
-  String get label => switch (this) {
-        LegMode.flight => 'Flug',
-        LegMode.train => 'Zug',
-        LegMode.bus => 'Bus',
-        LegMode.taxi => 'Taxi',
-      };
-}
-
 /// One segment of a journey - a single flight, a train ride (ICE/TGV/ONCF),
 /// a bus, or a taxi transfer. An [Itinerary] is a chain of these.
 class TripLeg {

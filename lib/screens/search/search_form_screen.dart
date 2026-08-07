@@ -135,7 +135,7 @@ class SearchFormScreen extends StatelessWidget {
               icon: Icons.search_rounded,
               onPressed: search.canSearch
                   ? () async {
-                      await search.search();
+                      await search.search(language: AppLocalizations.of(context).language);
                       if (context.mounted) {
                         Navigator.of(context).push(
                           MaterialPageRoute(

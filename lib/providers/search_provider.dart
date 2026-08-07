@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import '../core/localization/app_localizations.dart';
 import '../models/airport.dart';
 import '../models/itinerary.dart';
 import '../models/travel_intent.dart';
@@ -98,7 +99,7 @@ class SearchProvider extends ChangeNotifier {
       (tripType == TripType.oneWay ||
           (returnDate != null && !returnDate!.isBefore(date)));
 
-  Future<void> search() async {
+  Future<void> search({AppLanguage language = AppLanguage.de}) async {
     if (!canSearch) return;
     isLoading = true;
     notifyListeners();
@@ -110,7 +111,7 @@ class SearchProvider extends ChangeNotifier {
       passengerCount: passengers,
       maxBudgetEur: maxBudgetEur,
     );
-    results = await _service.search(intent);
+    results = await _service.search(intent, language: language);
 
     if (tripType == TripType.roundTrip && returnDate != null) {
       final returnIntent = TravelIntent(
@@ -120,7 +121,7 @@ class SearchProvider extends ChangeNotifier {
         passengerCount: passengers,
         maxBudgetEur: maxBudgetEur,
       );
-      returnResults = await _service.search(returnIntent);
+      returnResults = await _service.search(returnIntent, language: language);
     } else {
       returnResults = [];
     }

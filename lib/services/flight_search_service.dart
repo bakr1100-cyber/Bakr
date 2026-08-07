@@ -1,3 +1,4 @@
+import '../core/localization/app_localizations.dart';
 import '../models/airport.dart';
 import '../models/itinerary.dart';
 import '../models/travel_intent.dart';
@@ -37,7 +38,10 @@ class FlightSearchService {
 
   final FlightPriceSource _priceSource;
 
-  Future<List<Itinerary>> search(TravelIntent intent) async {
+  Future<List<Itinerary>> search(
+    TravelIntent intent, {
+    AppLanguage language = AppLanguage.de,
+  }) async {
     final origin = intent.origin;
     final destination = intent.destination;
     if (origin == null || destination == null) return [];
@@ -50,18 +54,20 @@ class FlightSearchService {
     if (directQuote == null) return [];
 
     final directTotal = directQuote.priceEur * passengers;
-    final directItinerary = _toDirectItinerary(origin, destination, directQuote, passengers);
+    final directItinerary =
+        _toDirectItinerary(origin, destination, directQuote, passengers, language);
     final directDuration = directItinerary.totalDuration;
 
     final results = await Future.wait([
-      _standardConnection(origin, destination, date, passengers),
-      _alternativeDeparture(origin, destination, date, passengers, directTotal, directDuration),
+      _standardConnection(origin, destination, date, passengers, language),
+      _alternativeDeparture(
+          origin, destination, date, passengers, directTotal, directDuration, language),
       _alternativeDestinationWithTrain(
-          origin, destination, date, passengers, directTotal, directDuration),
+          origin, destination, date, passengers, directTotal, directDuration, language),
       _nearbyDestinationAirport(
-          origin, destination, date, passengers, directTotal, directDuration),
-      _stopover(origin, destination, date, passengers, directTotal, directDuration),
-      _multimodal(origin, destination, date, passengers, directTotal, directDuration),
+          origin, destination, date, passengers, directTotal, directDuration, language),
+      _stopover(origin, destination, date, passengers, directTotal, directDuration, language),
+      _multimodal(origin, destination, date, passengers, directTotal, directDuration, language),
     ]);
 
     final candidates = <Itinerary>[
@@ -94,6 +100,7 @@ class FlightSearchService {
     Airport destination,
     FlightQuote quote,
     int pax,
+    AppLanguage language,
   ) {
     return Itinerary(
       id: 'direct-${origin.code}-${destination.code}',
@@ -108,7 +115,7 @@ class FlightSearchService {
           carrier: quote.carrier,
         ),
       ],
-      explanation: 'Direktflug von ${origin.city} nach ${destination.city}.',
+      explanation: _explainDirect(language, origin.city, destination.city),
       tier: ResultTier.standard,
     );
   }
@@ -124,6 +131,7 @@ class FlightSearchService {
     Airport destination,
     DateTime date,
     int pax,
+    AppLanguage language,
   ) async {
     const casablanca = Airport(code: 'CMN', city: 'Casablanca', country: 'Marokko');
     if (origin.code == casablanca.code || destination.code == casablanca.code) {
@@ -166,7 +174,7 @@ class FlightSearchService {
             carrier: leg2Quote.carrier,
           ),
         ],
-        explanation: 'Verbindung über ${casablanca.city} (1 Umstieg).',
+        explanation: _explainConnection(language, casablanca.city),
         riskLevel: RiskLevel.medium,
       ),
     ];
@@ -179,6 +187,7 @@ class FlightSearchService {
     int pax,
     double directTotal,
     Duration directDuration,
+    AppLanguage language,
   ) async {
     // Real nearby-airport search instead of a "same country" guess - e.g.
     // for someone departing from Frankfurt, Düsseldorf/Cologne/Dortmund are
@@ -214,8 +223,8 @@ class FlightSearchService {
               carrier: quote.carrier,
             ),
           ],
-          explanation: 'Ab ${alt.city} (${km.round()} km von ${origin.city}) statt '
-              '${origin.city} sparst du ${(directTotal - total).toStringAsFixed(0)} €.',
+          explanation: _explainAlternativeDeparture(
+              language, alt.city, km.round(), origin.city, directTotal - total),
         ),
       );
     }
@@ -229,6 +238,7 @@ class FlightSearchService {
     int pax,
     double directTotal,
     Duration directDuration,
+    AppLanguage language,
   ) async {
     if (destination.code == 'CMN' || destination.code == 'RBA') return [];
 
@@ -274,9 +284,7 @@ class FlightSearchService {
             carrier: 'ONCF',
           ),
         ],
-        explanation:
-            'Von ${hub.city} nach ${destination.city} fährt ein ONCF-Zug. '
-            'Dadurch sparst du ${saved.toStringAsFixed(0)} €.',
+        explanation: _explainAltDestinationTrain(language, hub.city, destination.city, saved),
       ),
     ];
   }
@@ -293,6 +301,7 @@ class FlightSearchService {
     int pax,
     double directTotal,
     Duration directDuration,
+    AppLanguage language,
   ) async {
     final nearby =
         nearbyAirports(destination, moroccanAirports, radiusKm: _nearbyDestinationRadiusKm);
@@ -340,9 +349,8 @@ class FlightSearchService {
               carrier: 'Transfer',
             ),
           ],
-          explanation: 'Flug nach ${alt.city} (nur ${km.round()} km von ${destination.city} '
-              'entfernt) statt direkt nach ${destination.city}, mit Transfer weiter. '
-              'Dadurch sparst du ${saved.toStringAsFixed(0)} €.',
+          explanation: _explainAltDestinationAirport(
+              language, alt.city, km.round(), destination.city, saved),
           riskLevel: RiskLevel.medium,
         ),
       );
@@ -357,6 +365,7 @@ class FlightSearchService {
     int pax,
     double directTotal,
     Duration directDuration,
+    AppLanguage language,
   ) async {
     // Creative alternative-airport routing - Casablanca is handled
     // separately as the standard-tier connection (see
@@ -419,8 +428,7 @@ class FlightSearchService {
             carrier: leg2Quote.carrier,
           ),
         ],
-        explanation: 'Mit einem Zwischenstopp in ${via.city} sparst du '
-            '${(directTotal - total).toStringAsFixed(0)} €.',
+        explanation: _explainStopover(language, via.city, directTotal - total),
         riskLevel: RiskLevel.medium,
       ),
     ];
@@ -433,6 +441,7 @@ class FlightSearchService {
     int pax,
     double directTotal,
     Duration directDuration,
+    AppLanguage language,
   ) async {
     if (origin.country != 'Deutschland') return [];
 
@@ -501,10 +510,134 @@ class FlightSearchService {
         savingsEur: directTotal - total,
         extraTravelTime: duration > directDuration ? duration - directDuration : Duration.zero,
         legs: legs,
-        explanation: 'ICE nach Frankfurt, Flug nach Rabat, Zug weiter nach '
-            '${destination.city}. Gesamtpreis ${total.toStringAsFixed(0)} €, '
-            'du sparst ${(directTotal - total).toStringAsFixed(0)} € gegenüber dem Direktflug.',
+        explanation:
+            _explainMultimodal(language, destination.city, total, directTotal - total),
       ),
     ];
+  }
+
+  static String _eur(double value) => value.toStringAsFixed(0);
+
+  String _explainDirect(AppLanguage language, String origin, String destination) =>
+      switch (language) {
+        AppLanguage.de => 'Direktflug von $origin nach $destination.',
+        AppLanguage.fr => 'Vol direct de $origin à $destination.',
+        AppLanguage.en => 'Direct flight from $origin to $destination.',
+        AppLanguage.ar => 'رحلة مباشرة من $origin إلى $destination.',
+        AppLanguage.ary => 'طيران مباشر من $origin ل$destination.',
+      };
+
+  String _explainConnection(AppLanguage language, String viaCity) => switch (language) {
+        AppLanguage.de => 'Verbindung über $viaCity (1 Umstieg).',
+        AppLanguage.fr => 'Correspondance via $viaCity (1 escale).',
+        AppLanguage.en => 'Connection via $viaCity (1 stop).',
+        AppLanguage.ar => 'رحلة عبر $viaCity (توقف واحد).',
+        AppLanguage.ary => 'طيران عبر $viaCity (وقفة وحدة).',
+      };
+
+  String _explainAlternativeDeparture(
+    AppLanguage language,
+    String altCity,
+    int km,
+    String originCity,
+    double saved,
+  ) {
+    final amount = _eur(saved);
+    return switch (language) {
+      AppLanguage.de =>
+        'Ab $altCity ($km km von $originCity) statt $originCity sparst du $amount €.',
+      AppLanguage.fr =>
+        'Au départ de $altCity ($km km de $originCity) au lieu de $originCity, tu économises $amount €.',
+      AppLanguage.en =>
+        'From $altCity ($km km from $originCity) instead of $originCity, you save €$amount.',
+      AppLanguage.ar =>
+        'من $altCity (على بعد $km كم من $originCity) بدلاً من $originCity، توفر $amount €.',
+      AppLanguage.ary =>
+        'من $altCity (كتبعد $km كم من $originCity) بدل $originCity، غادي توفر $amount €.',
+    };
+  }
+
+  String _explainAltDestinationTrain(
+    AppLanguage language,
+    String hubCity,
+    String destinationCity,
+    double saved,
+  ) {
+    final amount = _eur(saved);
+    return switch (language) {
+      AppLanguage.de =>
+        'Von $hubCity nach $destinationCity fährt ein ONCF-Zug. Dadurch sparst du $amount €.',
+      AppLanguage.fr =>
+        'Un train ONCF relie $hubCity à $destinationCity. Tu économises ainsi $amount €.',
+      AppLanguage.en =>
+        'An ONCF train runs from $hubCity to $destinationCity. This saves you €$amount.',
+      AppLanguage.ar => 'يوجد قطار ONCF من $hubCity إلى $destinationCity. بذلك توفر $amount €.',
+      AppLanguage.ary => 'كاين تران ONCF من $hubCity ل$destinationCity. بهاد الشي غادي توفر $amount €.',
+    };
+  }
+
+  String _explainAltDestinationAirport(
+    AppLanguage language,
+    String altCity,
+    int km,
+    String destinationCity,
+    double saved,
+  ) {
+    final amount = _eur(saved);
+    return switch (language) {
+      AppLanguage.de =>
+        'Flug nach $altCity (nur $km km von $destinationCity entfernt) statt direkt nach '
+            '$destinationCity, mit Transfer weiter. Dadurch sparst du $amount €.',
+      AppLanguage.fr =>
+        "Vol vers $altCity (à seulement $km km de $destinationCity) au lieu d'un vol direct vers "
+            '$destinationCity, avec transfert ensuite. Tu économises ainsi $amount €.',
+      AppLanguage.en =>
+        'Flight to $altCity (only $km km from $destinationCity) instead of direct to '
+            '$destinationCity, with a transfer onward. This saves you €$amount.',
+      AppLanguage.ar =>
+        'رحلة إلى $altCity (على بعد $km كم فقط من $destinationCity) بدلاً من رحلة مباشرة إلى '
+            '$destinationCity، مع انتقال بعد ذلك. بذلك توفر $amount €.',
+      AppLanguage.ary =>
+        'طيران ل$altCity (غير $km كم من $destinationCity) بدل الطيران المباشر ل$destinationCity، '
+            'وبعدها ترانسفير. غادي توفر $amount €.',
+    };
+  }
+
+  String _explainStopover(AppLanguage language, String viaCity, double saved) {
+    final amount = _eur(saved);
+    return switch (language) {
+      AppLanguage.de => 'Mit einem Zwischenstopp in $viaCity sparst du $amount €.',
+      AppLanguage.fr => 'Avec une escale à $viaCity, tu économises $amount €.',
+      AppLanguage.en => 'With a stopover in $viaCity, you save €$amount.',
+      AppLanguage.ar => 'بتوقف في $viaCity، توفر $amount €.',
+      AppLanguage.ary => 'بوقفة ف $viaCity، غادي توفر $amount €.',
+    };
+  }
+
+  String _explainMultimodal(
+    AppLanguage language,
+    String destinationCity,
+    double total,
+    double saved,
+  ) {
+    final totalStr = _eur(total);
+    final amount = _eur(saved);
+    return switch (language) {
+      AppLanguage.de =>
+        'ICE nach Frankfurt, Flug nach Rabat, Zug weiter nach $destinationCity. Gesamtpreis '
+            '$totalStr €, du sparst $amount € gegenüber dem Direktflug.',
+      AppLanguage.fr =>
+        "ICE jusqu'à Francfort, vol vers Rabat, puis train jusqu'à $destinationCity. Prix total "
+            '$totalStr €, tu économises $amount € par rapport au vol direct.',
+      AppLanguage.en =>
+        'ICE train to Frankfurt, flight to Rabat, then train onward to $destinationCity. Total '
+            'price €$totalStr, you save €$amount compared to the direct flight.',
+      AppLanguage.ar =>
+        'قطار ICE إلى فرانكفورت، رحلة إلى الرباط، ثم قطار إلى $destinationCity. السعر الإجمالي '
+            '$totalStr €، توفر $amount € مقارنة بالرحلة المباشرة.',
+      AppLanguage.ary =>
+        'تران ICE لفرانكفورت، طيران للرباط، من بعد تران ل$destinationCity. الثمن الكامل $totalStr '
+            '€، غادي توفر $amount € مقارنة بالطيران المباشر.',
+    };
   }
 }

@@ -410,6 +410,27 @@ class AppLocalizations {
       AppLanguage.fr: 'ÉTAPES',
       AppLanguage.en: 'LEGS',
     },
+    'riskLow': {
+      AppLanguage.ary: 'خطر قليل',
+      AppLanguage.ar: 'خطر منخفض',
+      AppLanguage.de: 'Geringes Risiko',
+      AppLanguage.fr: 'Risque faible',
+      AppLanguage.en: 'Low risk',
+    },
+    'riskMedium': {
+      AppLanguage.ary: 'خطر متوسط (بيليات منفصلين)',
+      AppLanguage.ar: 'خطر متوسط (تذاكر منفصلة)',
+      AppLanguage.de: 'Mittleres Risiko (getrennte Tickets)',
+      AppLanguage.fr: 'Risque moyen (billets séparés)',
+      AppLanguage.en: 'Medium risk (separate tickets)',
+    },
+    'riskHigh': {
+      AppLanguage.ary: 'خطر كبير (وقت قصير باش تبدل الطيارة)',
+      AppLanguage.ar: 'خطر مرتفع (وقت تحويل قصير)',
+      AppLanguage.de: 'Hohes Risiko (kurze Umsteigezeit)',
+      AppLanguage.fr: 'Risque élevé (correspondance courte)',
+      AppLanguage.en: 'High risk (short layover)',
+    },
     'activateCompanion': {
       AppLanguage.ary: 'شغل الرفيق ديال السفر',
       AppLanguage.ar: 'تفعيل رفيق السفر',

@@ -65,11 +65,3 @@ class Itinerary {
 enum ResultTier { standard, alternative }
 
 enum RiskLevel { low, medium, high }
-
-extension RiskLevelLabel on RiskLevel {
-  String get label => switch (this) {
-        RiskLevel.low => 'Geringes Risiko',
-        RiskLevel.medium => 'Mittleres Risiko (getrennte Tickets)',
-        RiskLevel.high => 'Hohes Risiko (kurze Umsteigezeit)',
-      };
-}
