@@ -20,6 +20,7 @@ void main() {
         'user-disabled',
         'too-many-requests',
         'network-request-failed',
+        'unauthorized-domain',
         'some-unrecognized-code',
       ];
 

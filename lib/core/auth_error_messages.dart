@@ -13,6 +13,7 @@ String authErrorMessage(String code, AppLanguage language) {
     'user-disabled' => 'authErrorUserDisabled',
     'too-many-requests' => 'authErrorTooManyRequests',
     'network-request-failed' => 'authErrorNetwork',
+    'unauthorized-domain' => 'authErrorUnauthorizedDomain',
     _ => 'authErrorGeneric',
   };
   return AppLocalizations(language).t(key);

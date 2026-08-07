@@ -812,6 +812,66 @@ class AppLocalizations {
       AppLanguage.fr: "Quelque chose s'est mal passé. Réessaie.",
       AppLanguage.en: 'Something went wrong. Please try again.',
     },
+    'authErrorUnauthorizedDomain': {
+      AppLanguage.ary: 'هاد الموقع ماشي مفعل بعد للتسجيل. (Firebase: domaine غير مرخص)',
+      AppLanguage.ar: 'هذا الموقع غير مصرح له بتسجيل الدخول بعد. (Firebase: نطاق غير مصرح)',
+      AppLanguage.de: 'Diese Website ist für die Anmeldung noch nicht freigeschaltet. '
+          '(Firebase: nicht autorisierte Domain)',
+      AppLanguage.fr: "Ce site n'est pas encore autorisé pour la connexion. "
+          '(Firebase : domaine non autorisé)',
+      AppLanguage.en: 'This website is not yet authorized for sign-in. '
+          '(Firebase: unauthorized domain)',
+    },
+    'authErrorPasswordMismatch': {
+      AppLanguage.ary: 'كلمتين السر ماشي بحال بحال.',
+      AppLanguage.ar: 'كلمتا المرور غير متطابقتين.',
+      AppLanguage.de: 'Die Passwörter stimmen nicht überein.',
+      AppLanguage.fr: 'Les mots de passe ne correspondent pas.',
+      AppLanguage.en: 'The passwords do not match.',
+    },
+    'authErrorEmailNotVerified': {
+      AppLanguage.ary: 'خاصك تأكد الإيمايل ديالك قبل ما تدخل. تحقق فصندوق الإيمايل ديالك (وشوف السبام).',
+      AppLanguage.ar: 'يجب تأكيد بريدك الإلكتروني قبل تسجيل الدخول. تحقق من بريدك (وملف الرسائل غير المرغوب فيها).',
+      AppLanguage.de: 'Bitte bestätige zuerst deine E-Mail-Adresse, bevor du dich anmeldest. '
+          'Schau in deinem Postfach nach (auch im Spam-Ordner).',
+      AppLanguage.fr: "Confirme d'abord ton adresse e-mail avant de te connecter. "
+          'Vérifie ta boîte de réception (et le dossier spam).',
+      AppLanguage.en: 'Please confirm your email address before logging in. '
+          'Check your inbox (and spam folder).',
+    },
+    'confirmPassword': {
+      AppLanguage.ary: 'عاود كتب كلمة السر',
+      AppLanguage.ar: 'تأكيد كلمة المرور',
+      AppLanguage.de: 'Passwort wiederholen',
+      AppLanguage.fr: 'Confirmer le mot de passe',
+      AppLanguage.en: 'Confirm password',
+    },
+    'registrationNeedsVerificationTitle': {
+      AppLanguage.ary: 'صافي! دابا أكد الإيمايل ديالك',
+      AppLanguage.ar: 'رائع! أكد بريدك الإلكتروني الآن',
+      AppLanguage.de: 'Fast geschafft! Bestätige deine E-Mail-Adresse',
+      AppLanguage.fr: 'Presque terminé ! Confirme ton adresse e-mail',
+      AppLanguage.en: 'Almost done! Confirm your email address',
+    },
+    'registrationNeedsVerificationBody': {
+      AppLanguage.ary: 'صيفطنا ليك رابط ديال التأكيد للإيمايل ديالك. سير حل الإيمايل وضغط على '
+          'الرابط، من بعد رجع هنا ودخل بحسابك.',
+      AppLanguage.ar: 'أرسلنا رابط تأكيد إلى بريدك الإلكتروني. افتح بريدك واضغط على الرابط، ثم '
+          'عد إلى هنا وسجل الدخول.',
+      AppLanguage.de: 'Wir haben dir einen Bestätigungslink an deine E-Mail-Adresse geschickt. '
+          'Öffne dein Postfach und tippe auf den Link, dann kannst du dich hier anmelden.',
+      AppLanguage.fr: 'Nous t\'avons envoyé un lien de confirmation par e-mail. Ouvre ta boîte '
+          'de réception et clique sur le lien, puis reviens ici pour te connecter.',
+      AppLanguage.en: 'We sent a confirmation link to your email address. Open your inbox and '
+          'tap the link, then come back here to log in.',
+    },
+    'ok': {
+      AppLanguage.ary: 'واخا',
+      AppLanguage.ar: 'حسنًا',
+      AppLanguage.de: 'OK',
+      AppLanguage.fr: "D'accord",
+      AppLanguage.en: 'OK',
+    },
 
     // --- Settings ------------------------------------------------------------
     'settings': {
