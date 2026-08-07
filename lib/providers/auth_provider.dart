@@ -47,6 +47,14 @@ class AuthFailure extends AuthAttemptResult {
 class AuthProvider extends ChangeNotifier {
   AuthProvider({FirebaseAuth? firebaseAuth}) : _auth = firebaseAuth ?? FirebaseAuth.instance {
     _subscription = _auth.authStateChanges().listen((_) => notifyListeners());
+    // Works around `auth/channel-error` (observed live, on both Safari and
+    // Chrome for iOS - both are WebKit under the hood): Firebase's default
+    // web persistence uses IndexedDB, which sets up a cross-origin iframe
+    // channel to the authDomain (maroc-fly-ia.firebaseapp.com) for
+    // multi-tab sync - iOS WebKit's cross-site-tracking prevention blocks
+    // that channel outright. Plain LOCAL (browser localStorage) persistence
+    // is same-origin and needs no such channel.
+    unawaited(_auth.setPersistence(Persistence.LOCAL));
   }
 
   final FirebaseAuth _auth;
