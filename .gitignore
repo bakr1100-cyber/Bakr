@@ -33,6 +33,11 @@ migrate_working_dir/
 # Generated files
 *.g.dart
 
+# graphify (dev-only codebase-navigation tool for Claude Code, see
+# https://github.com/Graphify-Labs/graphify) - regenerable local knowledge
+# graph, not part of the app; rebuilt per-session via the session-start hook.
+/graphify-out/
+
 # Firebase generated config (contains project-specific secrets - generate
 # your own with `flutterfire configure`, do not commit someone else's)
 lib/firebase_options.dart
