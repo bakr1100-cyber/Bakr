@@ -38,6 +38,13 @@ class _AiChatScreenState extends State<AiChatScreen> {
   bool _isListening = false;
   late final HomeNavigationProvider _navigation;
 
+  /// Set when the user manually taps send while a voice recording is still
+  /// active. Without this, stopping the recording still delivers one last
+  /// `onResult(isFinal: true)` callback for whatever was already sent
+  /// manually, which would otherwise send the exact same message a second
+  /// time - a race that was actually observed sending duplicate messages.
+  bool _suppressNextAutoSend = false;
+
   @override
   void initState() {
     super.initState();
@@ -98,6 +105,14 @@ class _AiChatScreenState extends State<AiChatScreen> {
     // no longer considers the eventual speak() call part of this tap and
     // silently blocks it (see VoiceService.unlockSpeechForThisGesture).
     _voice.unlockSpeechForThisGesture();
+    if (_isListening) {
+      // Stopping still delivers one last isFinal result - suppress it so
+      // this manual send isn't immediately duplicated by the voice path.
+      _suppressNextAutoSend = true;
+      await _voice.stopListening();
+      if (!mounted) return;
+      setState(() => _isListening = false);
+    }
     _controller.clear();
     final chat = context.read<ChatProvider>();
     final language = context.read<LocaleProvider>().language;
@@ -123,6 +138,11 @@ class _AiChatScreenState extends State<AiChatScreen> {
       return;
     }
     final language = context.read<LocaleProvider>().language;
+    // Guarantees a clean slate: without this, leftover text from the
+    // previous message (already sent) stayed in the field and got
+    // silently concatenated with this session's recognition result the
+    // moment the first onResult callback fired.
+    _controller.clear();
     setState(() => _isListening = true);
     await _voice.startListening(
       localeId: language.speechLocale,
@@ -130,6 +150,10 @@ class _AiChatScreenState extends State<AiChatScreen> {
         _controller.text = text;
         if (isFinal) {
           setState(() => _isListening = false);
+          if (_suppressNextAutoSend) {
+            _suppressNextAutoSend = false;
+            return;
+          }
           final chat = context.read<ChatProvider>();
           _controller.clear();
           chat.send(text, wasSpoken: true, language: language).then((_) {
