@@ -4,11 +4,13 @@ import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/localization/app_localizations.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/chat_provider.dart';
 import '../../providers/locale_provider.dart';
 import '../../providers/preferences_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../widgets/responsive_body.dart';
+import '../auth/login_screen.dart';
 import '../profile/profile_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -19,6 +21,7 @@ class SettingsScreen extends StatelessWidget {
     final localeProvider = context.watch<LocaleProvider>();
     final themeProvider = context.watch<ThemeProvider>();
     final prefsProvider = context.watch<PreferencesProvider>();
+    final authProvider = context.watch<AuthProvider>();
     final theme = Theme.of(context);
     final t = AppLocalizations.of(context).t;
 
@@ -28,6 +31,42 @@ class SettingsScreen extends StatelessWidget {
         child: ListView(
           padding: const EdgeInsets.all(AppSpacing.lg),
           children: [
+            _SectionLabel(t('accountSectionLabel')),
+            const SizedBox(height: AppSpacing.sm),
+            Card(
+              child: authProvider.isLoggedIn
+                  ? ListTile(
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.lg, vertical: AppSpacing.xs),
+                      leading: CircleAvatar(
+                        backgroundColor: AppColors.moroccoGreen.withValues(alpha: 0.18),
+                        foregroundColor: theme.colorScheme.primary,
+                        child: const Icon(Icons.account_circle_rounded),
+                      ),
+                      title: Text(t('loggedInAs')),
+                      subtitle: Text(authProvider.currentUser!.email ?? ''),
+                      trailing: TextButton(
+                        onPressed: () => authProvider.signOut(),
+                        child: Text(t('logout')),
+                      ),
+                    )
+                  : ListTile(
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.lg, vertical: AppSpacing.xs),
+                      leading: CircleAvatar(
+                        backgroundColor: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.14),
+                        foregroundColor: theme.colorScheme.onSurfaceVariant,
+                        child: const Icon(Icons.person_outline_rounded),
+                      ),
+                      title: Text(t('notLoggedIn')),
+                      subtitle: Text(t('loginOrRegister')),
+                      trailing: const Icon(Icons.chevron_right_rounded),
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const LoginScreen()),
+                      ),
+                    ),
+            ),
+            const SizedBox(height: AppSpacing.xxl),
             Card(
               child: ListTile(
                 contentPadding: const EdgeInsets.symmetric(

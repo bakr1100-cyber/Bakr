@@ -3,16 +3,18 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
+import '../firebase_options.dart';
+
 /// Push notifications for price alerts and travel-companion updates
-/// (gate changes, boarding calls, delays).
+/// (gate changes, boarding calls, delays), and the one place that actually
+/// calls `Firebase.initializeApp()` - [AuthProvider] depends on that having
+/// already happened (awaited in `main()` before `runApp()`) since
+/// `FirebaseAuth.instance` needs a default Firebase app to exist.
 ///
-/// IMPORTANT: this build has no real Firebase project wired up - there is
-/// no `firebase_options.dart` generated for this repository. [init] fails
-/// safe (catches and logs) so the rest of the app keeps working without
-/// push; to enable real push notifications, run `flutterfire configure`
-/// against a real Firebase project and pass the generated
-/// `DefaultFirebaseOptions.currentPlatform` into `Firebase.initializeApp`
-/// below.
+/// [init] fails safe (catches and logs) so the rest of the app keeps
+/// working even if Firebase is unreachable (blocked network, ad blocker) -
+/// but note that failure here would also silently break login, not just
+/// push notifications.
 ///
 /// Local notifications (used for the in-app price-alert simulation) work on
 /// Android/iOS regardless of Firebase - but NOT on web: the pinned
@@ -40,7 +42,8 @@ class NotificationService {
       // corporate proxy), the underlying JS interop promise can hang forever
       // without ever rejecting back to Dart - which would leave the whole
       // app stuck on a blank white screen before `runApp()` ever runs.
-      await Firebase.initializeApp().timeout(const Duration(seconds: 5));
+      await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform)
+          .timeout(const Duration(seconds: 5));
       await FirebaseMessaging.instance
           .requestPermission()
           .timeout(const Duration(seconds: 5));
