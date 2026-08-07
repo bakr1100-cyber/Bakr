@@ -343,7 +343,8 @@ class _DateField extends StatelessWidget {
             prefixIcon: const Icon(Icons.calendar_today_rounded),
           ),
           child: Text(
-            DateFormat.yMMMMd().format(date),
+            DateFormat.yMMMMd(AppLocalizations.of(context).language.flutterLocale.languageCode)
+                .format(date),
             style: Theme.of(context).textTheme.titleMedium,
           ),
         ),

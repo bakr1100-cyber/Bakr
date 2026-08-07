@@ -21,10 +21,11 @@ class ItineraryDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dateFormat = DateFormat.yMMMMd();
+    final t = AppLocalizations.of(context).t;
+    final dateFormat =
+        DateFormat.yMMMMd(AppLocalizations.of(context).language.flutterLocale.languageCode);
     final affiliate = context.read<AffiliateService>();
     final theme = Theme.of(context);
-    final t = AppLocalizations.of(context).t;
 
     return Scaffold(
       appBar: AppBar(title: Text(t('tripDetails'))),
