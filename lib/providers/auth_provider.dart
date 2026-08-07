@@ -67,9 +67,12 @@ class AuthProvider extends ChangeNotifier {
       await _auth.signOut();
       return const AuthNeedsVerification();
     } on FirebaseAuthException catch (error) {
-      return AuthFailure(authErrorMessage(error.code, language));
+      // TEMP DEBUG: append the raw code so the actual cause is visible on
+      // screen instead of always collapsing to the generic message -
+      // remove once the real error is diagnosed.
+      return AuthFailure('${authErrorMessage(error.code, language)} [${error.code}]');
     } catch (error) {
-      return AuthFailure(authErrorMessage('unknown', language));
+      return AuthFailure('${authErrorMessage('unknown', language)} [$error]');
     }
   }
 
@@ -93,9 +96,10 @@ class AuthProvider extends ChangeNotifier {
       }
       return const AuthSuccess();
     } on FirebaseAuthException catch (error) {
-      return AuthFailure(authErrorMessage(error.code, language));
+      // TEMP DEBUG: see the register() method for why.
+      return AuthFailure('${authErrorMessage(error.code, language)} [${error.code}]');
     } catch (error) {
-      return AuthFailure(authErrorMessage('unknown', language));
+      return AuthFailure('${authErrorMessage('unknown', language)} [$error]');
     }
   }
 
