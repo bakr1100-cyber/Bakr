@@ -55,8 +55,7 @@ class AuthFailure extends AuthAttemptResult {
 /// IndexedDB, no popup/redirect concept at all, so none of this applies.
 ///
 /// Scope is authentication only for now - preferences and price alerts
-/// stay local-only (see `todo/login-registrierung.md` for syncing them to
-/// the account later).
+/// stay local-only, not synced to the account.
 ///
 /// Registration requires email verification before the account can log in
 /// (the standard SaaS pattern: register -> verification email -> click
@@ -114,7 +113,7 @@ class AuthProvider extends ChangeNotifier {
         'returnSecureToken': true,
       });
       if (signUpResponse case _RestFailure(:final code)) {
-        return AuthFailure('${authErrorMessage(code, language)} [$code]');
+        return AuthFailure(authErrorMessage(code, language));
       }
       final idToken = (signUpResponse as _RestSuccess).body['idToken'] as String;
 
@@ -123,7 +122,7 @@ class AuthProvider extends ChangeNotifier {
         'idToken': idToken,
       });
       if (verifyResponse case _RestFailure(:final code)) {
-        return AuthFailure('${authErrorMessage(code, language)} [$code]');
+        return AuthFailure(authErrorMessage(code, language));
       }
       return const AuthNeedsVerification();
     } catch (error) {
@@ -143,14 +142,14 @@ class AuthProvider extends ChangeNotifier {
         'returnSecureToken': true,
       });
       if (signInResponse case _RestFailure(:final code)) {
-        return AuthFailure('${authErrorMessage(code, language)} [$code]');
+        return AuthFailure(authErrorMessage(code, language));
       }
       final body = (signInResponse as _RestSuccess).body;
       final idToken = body['idToken'] as String;
 
       final lookupResponse = await _post(_lookupUrl, {'idToken': idToken});
       if (lookupResponse case _RestFailure(:final code)) {
-        return AuthFailure('${authErrorMessage(code, language)} [$code]');
+        return AuthFailure(authErrorMessage(code, language));
       }
       final users = (lookupResponse as _RestSuccess).body['users'] as List;
       final emailVerified = users.isNotEmpty && users.first['emailVerified'] == true;
