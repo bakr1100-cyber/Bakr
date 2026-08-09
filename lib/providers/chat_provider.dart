@@ -48,7 +48,7 @@ class ChatProvider extends ChangeNotifier {
   bool get isThinking => _isThinking;
 
   Future<void> send(String text, {bool wasSpoken = false, AppLanguage language = AppLanguage.ary}) async {
-    if (text.trim().isEmpty) return;
+    if (text.trim().isEmpty || _isThinking) return;
 
     _messages.add(
       ChatMessage(

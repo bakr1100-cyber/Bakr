@@ -16,6 +16,7 @@ class BigButton extends StatefulWidget {
     required this.onPressed,
     this.icon,
     this.filled = false,
+    this.loading = false,
   });
 
   final String label;
@@ -27,6 +28,12 @@ class BigButton extends StatefulWidget {
   /// `true`: the deep-green gradient — used for the secondary emphasized
   /// action (e.g. "Reisebegleiter aktivieren").
   final bool filled;
+
+  /// Shows a spinner in place of the icon/label and blocks taps - use while
+  /// the action this button triggers is in flight, so a slow connection
+  /// can't be mistaken for a dead button and doesn't invite a double-tap
+  /// that fires the action twice.
+  final bool loading;
 
   @override
   State<BigButton> createState() => _BigButtonState();
@@ -42,7 +49,7 @@ class _BigButtonState extends State<BigButton> {
 
   @override
   Widget build(BuildContext context) {
-    final enabled = widget.onPressed != null;
+    final enabled = widget.onPressed != null && !widget.loading;
     final gradient = widget.filled ? AppGradients.primaryDeep : AppGradients.accent;
     final tint = widget.filled ? AppColors.moroccoGreen : AppColors.moroccoRed;
 
@@ -55,7 +62,7 @@ class _BigButtonState extends State<BigButton> {
         duration: AppMotion.fast,
         curve: AppMotion.curve,
         child: AnimatedOpacity(
-          opacity: enabled ? 1 : 0.45,
+          opacity: widget.onPressed == null && !widget.loading ? 0.45 : 1,
           duration: AppMotion.fast,
           child: Container(
             height: 64,
@@ -69,24 +76,35 @@ class _BigButtonState extends State<BigButton> {
               color: Colors.transparent,
               child: InkWell(
                 borderRadius: BorderRadius.circular(AppRadius.lg),
-                onTap: widget.onPressed,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    if (widget.icon != null) ...[
-                      Icon(widget.icon, size: 24, color: AppColors.moroccoWhite),
-                      const SizedBox(width: 12),
-                    ],
-                    Text(
-                      widget.label,
-                      style: const TextStyle(
-                        color: AppColors.moroccoWhite,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
+                onTap: enabled ? widget.onPressed : null,
+                child: widget.loading
+                    ? const Center(
+                        child: SizedBox(
+                          width: 26,
+                          height: 26,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            valueColor: AlwaysStoppedAnimation(AppColors.moroccoWhite),
+                          ),
+                        ),
+                      )
+                    : Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          if (widget.icon != null) ...[
+                            Icon(widget.icon, size: 24, color: AppColors.moroccoWhite),
+                            const SizedBox(width: 12),
+                          ],
+                          Text(
+                            widget.label,
+                            style: const TextStyle(
+                              color: AppColors.moroccoWhite,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                  ],
-                ),
               ),
             ),
           ),

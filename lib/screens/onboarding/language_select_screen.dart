@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../core/localization/app_localizations.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/theme/app_theme.dart';
 import '../../providers/chat_provider.dart';
 import '../../providers/locale_provider.dart';
 import '../home/home_screen.dart';
@@ -146,9 +147,17 @@ class _LanguageCardState extends State<_LanguageCard>
     ),
   ];
 
+  bool _startedAnimating = false;
+
   @override
-  void initState() {
-    super.initState();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_startedAnimating) return;
+    _startedAnimating = true;
+    if (AppMotion.reduced(context)) {
+      _controller.value = 1;
+      return;
+    }
     Future.delayed(widget.entranceDelay, () {
       if (mounted) _controller.forward();
     });

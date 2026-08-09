@@ -46,7 +46,14 @@ class PriceAlertsProvider extends ChangeNotifier {
     await _service.save(_alerts);
   }
 
-  void addAlert(Airport origin, Airport destination, double watchedPriceEur) {
+  /// Returns `false` without adding anything if this route is already being
+  /// watched - tapping "Preis beobachten" twice on the same itinerary (e.g.
+  /// because the confirmation wasn't noticed the first time) used to create
+  /// silently duplicate rows in Price Alerts.
+  bool addAlert(Airport origin, Airport destination, double watchedPriceEur) {
+    final alreadyWatched =
+        _alerts.any((a) => a.origin == origin && a.destination == destination);
+    if (alreadyWatched) return false;
     _alerts.add(
       PriceAlert(
         id: _uuid.v4(),
@@ -57,10 +64,21 @@ class PriceAlertsProvider extends ChangeNotifier {
     );
     notifyListeners();
     unawaited(_service.save(_alerts));
+    return true;
   }
 
   void removeAlert(String id) {
     _alerts.removeWhere((a) => a.id == id);
+    notifyListeners();
+    unawaited(_service.save(_alerts));
+  }
+
+  /// Re-inserts an alert at [index], e.g. to undo [removeAlert] - restores
+  /// the same object (including its `currentPriceEur`) rather than a fresh
+  /// one, and clamps the index so it still works if the list shrank further
+  /// in the meantime.
+  void restoreAlert(int index, PriceAlert alert) {
+    _alerts.insert(index.clamp(0, _alerts.length), alert);
     notifyListeners();
     unawaited(_service.save(_alerts));
   }

@@ -4,11 +4,51 @@ import 'package:provider/provider.dart';
 import '../../core/localization/app_localizations.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../models/price_alert.dart';
 import '../../providers/price_alerts_provider.dart';
 import '../../widgets/responsive_body.dart';
 
-class PriceAlertsScreen extends StatelessWidget {
+class PriceAlertsScreen extends StatefulWidget {
   const PriceAlertsScreen({super.key});
+
+  @override
+  State<PriceAlertsScreen> createState() => _PriceAlertsScreenState();
+}
+
+class _PriceAlertsScreenState extends State<PriceAlertsScreen> {
+  bool _checking = false;
+
+  Future<void> _checkForDrops(PriceAlertsProvider provider) async {
+    if (_checking) return;
+    setState(() => _checking = true);
+    final language = AppLocalizations.of(context).language;
+    final messenger = ScaffoldMessenger.of(context);
+    final t = AppLocalizations.of(context).t;
+    final dropsFound = await provider.checkForDrops(language: language);
+    if (!mounted) return;
+    setState(() => _checking = false);
+    final message = dropsFound == 0
+        ? t('noPriceChangeFound')
+        : dropsFound == 1
+            ? t('onePriceDropped')
+            : t('pricesDropped').replaceAll('{count}', '$dropsFound');
+    messenger.showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  void _deleteAlert(BuildContext context, PriceAlertsProvider provider, PriceAlert alert) {
+    final t = AppLocalizations.of(context).t;
+    final index = provider.alerts.indexOf(alert);
+    provider.removeAlert(alert.id);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(t('alertDeletedMessage')),
+        action: SnackBarAction(
+          label: t('undo'),
+          onPressed: () => provider.restoreAlert(index, alert),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -22,15 +62,14 @@ class PriceAlertsScreen extends StatelessWidget {
         actions: [
           IconButton(
             tooltip: t('checkForPriceDrops'),
-            icon: const Icon(Icons.refresh_rounded),
-            onPressed: () async {
-              final language = AppLocalizations.of(context).language;
-              final messenger = ScaffoldMessenger.of(context);
-              final dropsFound = await provider.checkForDrops(language: language);
-              messenger.showSnackBar(
-                SnackBar(content: Text(_checkResultMessage(language, dropsFound))),
-              );
-            },
+            icon: _checking
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.refresh_rounded),
+            onPressed: _checking ? null : () => _checkForDrops(provider),
           ),
         ],
       ),
@@ -106,7 +145,7 @@ class PriceAlertsScreen extends StatelessWidget {
                         trailing: IconButton(
                           tooltip: t('deleteAlert'),
                           icon: const Icon(Icons.delete_outline_rounded),
-                          onPressed: () => provider.removeAlert(alert.id),
+                          onPressed: () => _deleteAlert(context, provider, alert),
                         ),
                       ),
                     ),
@@ -115,29 +154,4 @@ class PriceAlertsScreen extends StatelessWidget {
       ),
     );
   }
-}
-
-/// System notifications can't be relied on to reach the user (no-op on web,
-/// see [NotificationService]) - this is the message shown directly in-app
-/// right after a manual price check, so the result is always visible
-/// regardless of platform/notification permission.
-String _checkResultMessage(AppLanguage language, int dropsFound) {
-  if (dropsFound == 0) {
-    return switch (language) {
-      AppLanguage.de => 'Keine Preisänderung gefunden.',
-      AppLanguage.fr => 'Aucun changement de prix trouvé.',
-      AppLanguage.en => 'No price change found.',
-      AppLanguage.ar => 'لم يتم العثور على تغيير في السعر.',
-      AppLanguage.ary => 'مالقيتش تبديل فالثمن.',
-    };
-  }
-  return switch (language) {
-    AppLanguage.de =>
-      dropsFound == 1 ? '1 Preis ist gefallen!' : '$dropsFound Preise sind gefallen!',
-    AppLanguage.fr =>
-      dropsFound == 1 ? '1 prix a baissé !' : '$dropsFound prix ont baissé !',
-    AppLanguage.en => dropsFound == 1 ? '1 price dropped!' : '$dropsFound prices dropped!',
-    AppLanguage.ar => 'انخفض سعر $dropsFound رحلة!',
-    AppLanguage.ary => 'هبط الثمن ديال $dropsFound طيارة!',
-  };
 }

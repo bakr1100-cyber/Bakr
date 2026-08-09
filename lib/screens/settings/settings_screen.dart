@@ -46,7 +46,7 @@ class SettingsScreen extends StatelessWidget {
                       title: Text(t('loggedInAs')),
                       subtitle: Text(authProvider.currentUserEmail ?? ''),
                       trailing: TextButton(
-                        onPressed: () => authProvider.signOut(),
+                        onPressed: () => _confirmSignOut(context, authProvider, t),
                         child: Text(t('logout')),
                       ),
                     )
@@ -156,6 +156,31 @@ class SettingsScreen extends StatelessWidget {
       ),
     );
   }
+}
+
+Future<void> _confirmSignOut(
+  BuildContext context,
+  AuthProvider authProvider,
+  String Function(String) t,
+) async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text(t('confirmSignOutTitle')),
+      content: Text(t('confirmSignOutBody')),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: Text(t('cancel')),
+        ),
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(true),
+          child: Text(t('logout')),
+        ),
+      ],
+    ),
+  );
+  if (confirmed == true) await authProvider.signOut();
 }
 
 class _SectionLabel extends StatelessWidget {

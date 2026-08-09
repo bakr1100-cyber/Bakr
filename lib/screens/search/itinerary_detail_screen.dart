@@ -14,6 +14,12 @@ import '../../widgets/big_button.dart';
 import '../../widgets/responsive_body.dart';
 import '../companion/travel_companion_screen.dart';
 
+/// `Colors.white70` (alpha 0.70) measures ~4.3:1 against the darker end of
+/// [AppGradients.primaryDeep] - just under the 4.5:1 AA minimum for body
+/// text. This is what the header's secondary text (date, risk label,
+/// multi-stop notice) uses instead.
+const _headerSubtleText = Color(0xD9FFFFFF); // white @ 85% alpha
+
 class ItineraryDetailScreen extends StatelessWidget {
   const ItineraryDetailScreen({super.key, required this.itinerary});
 
@@ -52,7 +58,7 @@ class ItineraryDetailScreen extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     dateFormat.format(itinerary.departureTime),
-                    style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white70),
+                    style: theme.textTheme.bodyMedium?.copyWith(color: _headerSubtleText),
                   ),
                   const SizedBox(height: AppSpacing.md),
                   Text(
@@ -66,7 +72,7 @@ class ItineraryDetailScreen extends StatelessWidget {
                     const SizedBox(height: AppSpacing.sm),
                     Text(
                       t('multiStopNotice'),
-                      style: theme.textTheme.bodySmall?.copyWith(color: Colors.white70),
+                      style: theme.textTheme.bodySmall?.copyWith(color: _headerSubtleText),
                     ),
                   ],
                   const SizedBox(height: AppSpacing.md),
@@ -78,7 +84,7 @@ class ItineraryDetailScreen extends StatelessWidget {
                             ? Icons.verified_rounded
                             : Icons.info_outline_rounded,
                         size: 16,
-                        color: Colors.white70,
+                        color: _headerSubtleText,
                       ),
                       const SizedBox(width: 6),
                       Text(
@@ -87,7 +93,7 @@ class ItineraryDetailScreen extends StatelessWidget {
                           RiskLevel.medium => 'riskMedium',
                           RiskLevel.high => 'riskHigh',
                         }),
-                        style: theme.textTheme.bodySmall?.copyWith(color: Colors.white70),
+                        style: theme.textTheme.bodySmall?.copyWith(color: _headerSubtleText),
                       ),
                     ],
                   ),
@@ -122,13 +128,16 @@ class ItineraryDetailScreen extends StatelessWidget {
               label: t('watchPrice'),
               icon: Icons.notifications_active_outlined,
               onPressed: () {
-                context.read<PriceAlertsProvider>().addAlert(
+                final added = context.read<PriceAlertsProvider>().addAlert(
                       itinerary.legs.first.from,
                       itinerary.legs.last.to,
                       itinerary.totalPriceEur,
                     );
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(t('priceAlertActivated'))),
+                  SnackBar(
+                    content:
+                        Text(t(added ? 'priceAlertActivated' : 'alreadyWatchingRoute')),
+                  ),
                 );
               },
             ),
@@ -143,12 +152,19 @@ class ItineraryDetailScreen extends StatelessWidget {
 /// One leg of the itinerary, with its own "book this" action: a
 /// commission-tracked affiliate link for flights, or a plain link to the
 /// operator's own site for trains (no rail affiliate program wired up).
-class _LegCard extends StatelessWidget {
+class _LegCard extends StatefulWidget {
   const _LegCard({required this.leg, required this.affiliate, required this.isLast});
 
   final TripLeg leg;
   final AffiliateService affiliate;
   final bool isLast;
+
+  @override
+  State<_LegCard> createState() => _LegCardState();
+}
+
+class _LegCardState extends State<_LegCard> {
+  bool _opening = false;
 
   IconData _iconFor(LegMode mode) => switch (mode) {
         LegMode.flight => Icons.flight_takeoff_rounded,
@@ -158,12 +174,17 @@ class _LegCard extends StatelessWidget {
       };
 
   Future<void> _openBookingLink(BuildContext context) async {
+    if (_opening) return;
+    setState(() => _opening = true);
+    final leg = widget.leg;
     final url = leg.mode == LegMode.flight
-        ? affiliate.affiliateBookingUrl(leg)
-        : affiliate.officialBookingUrl(leg);
+        ? widget.affiliate.affiliateBookingUrl(leg)
+        : widget.affiliate.officialBookingUrl(leg);
 
     final opened = await launchUrl(url, mode: LaunchMode.externalApplication);
-    if (!opened && context.mounted) {
+    if (!context.mounted) return;
+    setState(() => _opening = false);
+    if (!opened) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(AppLocalizations.of(context).t('bookingLinkFailed'))),
       );
@@ -172,6 +193,8 @@ class _LegCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final leg = widget.leg;
+    final isLast = widget.isLast;
     final theme = Theme.of(context);
     final t = AppLocalizations.of(context).t;
     final timeFormat = DateFormat.Hm();
@@ -240,14 +263,27 @@ class _LegCard extends StatelessWidget {
                         SizedBox(
                           width: double.infinity,
                           child: OutlinedButton.icon(
-                            onPressed: () => _openBookingLink(context),
-                            icon: const Icon(Icons.open_in_new_rounded, size: 18),
+                            onPressed: _opening ? null : () => _openBookingLink(context),
+                            icon: _opening
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                  )
+                                : const Icon(Icons.open_in_new_rounded, size: 18),
                             label: Text(
                               leg.mode == LegMode.flight
                                   ? t('bookFlight')
                                   : t('bookTrainTicket'),
                             ),
                           ),
+                        ),
+                      ] else ...[
+                        const SizedBox(height: AppSpacing.sm),
+                        Text(
+                          t('bookLocallyOnArrival'),
+                          style: theme.textTheme.bodySmall
+                              ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                         ),
                       ],
                     ],

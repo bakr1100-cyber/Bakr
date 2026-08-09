@@ -23,7 +23,11 @@ class SearchResultsScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('${search.origin?.city} → ${search.destination?.city}'),
+        title: Text(
+          '${search.origin?.city} → ${search.destination?.city}',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
       ),
       body: AnimatedSwitcher(
         duration: const Duration(milliseconds: 260),
@@ -130,12 +134,9 @@ class _ResultsSectionState extends State<_ResultsSection> {
         widget.itineraries.where((i) => i.tier == ResultTier.alternative).toList();
 
     if (standard.isEmpty && alternatives.isEmpty) {
-      return Text(
-        t('noRouteFoundTitle'),
-        style: Theme.of(context)
-            .textTheme
-            .bodyMedium
-            ?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
+        child: _EmptyStateContent(iconSize: 64, compact: true),
       );
     }
 
@@ -256,43 +257,60 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return const Center(
+      child: Padding(
+        padding: EdgeInsets.all(AppSpacing.xxl),
+        child: _EmptyStateContent(iconSize: 84),
+      ),
+    );
+  }
+}
+
+/// The icon+title+body "nothing found" treatment, shared between the
+/// full-screen empty state ([_EmptyState], both legs came back empty) and
+/// the smaller per-leg case inside [_ResultsSectionState] (only one leg of
+/// a round trip came back empty) - that used to just show a bare line of
+/// text with none of this polish.
+class _EmptyStateContent extends StatelessWidget {
+  const _EmptyStateContent({required this.iconSize, this.compact = false});
+
+  final double iconSize;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final t = AppLocalizations.of(context).t;
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.xxl),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 84,
-              height: 84,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.moroccoGreen.withValues(alpha: 0.16),
-              ),
-              child: Icon(
-                Icons.travel_explore_rounded,
-                size: 40,
-                color: theme.colorScheme.primary,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            Text(
-              t('noRouteFoundTitle'),
-              style: theme.textTheme.titleLarge,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              t('noRouteFoundBody'),
-              style: theme.textTheme.bodyMedium
-                  ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-              textAlign: TextAlign.center,
-            ),
-          ],
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: iconSize,
+          height: iconSize,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: AppColors.moroccoGreen.withValues(alpha: 0.16),
+          ),
+          child: Icon(
+            Icons.travel_explore_rounded,
+            size: iconSize * 0.48,
+            color: theme.colorScheme.primary,
+          ),
         ),
-      ),
+        SizedBox(height: compact ? AppSpacing.md : AppSpacing.xl),
+        Text(
+          t('noRouteFoundTitle'),
+          style: compact ? theme.textTheme.titleMedium : theme.textTheme.titleLarge,
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Text(
+          t('noRouteFoundBody'),
+          style: theme.textTheme.bodyMedium
+              ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+          textAlign: TextAlign.center,
+        ),
+      ],
     );
   }
 }

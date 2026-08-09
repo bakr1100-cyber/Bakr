@@ -28,6 +28,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final _confirmPasswordController = TextEditingController();
   bool _isRegisterMode = false;
   bool _isSubmitting = false;
+  bool _passwordVisible = false;
+  bool _confirmPasswordVisible = false;
   String? _errorMessage;
   String? _infoMessage;
 
@@ -124,24 +126,48 @@ class _LoginScreenState extends State<LoginScreen> {
                 controller: _emailController,
                 keyboardType: TextInputType.emailAddress,
                 autocorrect: false,
+                autofillHints: const [AutofillHints.email],
                 decoration: InputDecoration(labelText: t('email')),
               ),
               const SizedBox(height: AppSpacing.md),
               TextField(
                 controller: _passwordController,
-                obscureText: true,
+                obscureText: !_passwordVisible,
                 autocorrect: false,
+                autofillHints: [
+                  _isRegisterMode ? AutofillHints.newPassword : AutofillHints.password
+                ],
                 onSubmitted: _isRegisterMode ? null : (_) => _submit(),
-                decoration: InputDecoration(labelText: t('password')),
+                decoration: InputDecoration(
+                  labelText: t('password'),
+                  suffixIcon: IconButton(
+                    tooltip: t(_passwordVisible ? 'hidePassword' : 'showPassword'),
+                    icon: Icon(_passwordVisible
+                        ? Icons.visibility_off_rounded
+                        : Icons.visibility_rounded),
+                    onPressed: () => setState(() => _passwordVisible = !_passwordVisible),
+                  ),
+                ),
               ),
               if (_isRegisterMode) ...[
                 const SizedBox(height: AppSpacing.md),
                 TextField(
                   controller: _confirmPasswordController,
-                  obscureText: true,
+                  obscureText: !_confirmPasswordVisible,
                   autocorrect: false,
+                  autofillHints: const [AutofillHints.newPassword],
                   onSubmitted: (_) => _submit(),
-                  decoration: InputDecoration(labelText: t('confirmPassword')),
+                  decoration: InputDecoration(
+                    labelText: t('confirmPassword'),
+                    suffixIcon: IconButton(
+                      tooltip: t(_confirmPasswordVisible ? 'hidePassword' : 'showPassword'),
+                      icon: Icon(_confirmPasswordVisible
+                          ? Icons.visibility_off_rounded
+                          : Icons.visibility_rounded),
+                      onPressed: () =>
+                          setState(() => _confirmPasswordVisible = !_confirmPasswordVisible),
+                    ),
+                  ),
                 ),
               ],
               if (_errorMessage != null) ...[

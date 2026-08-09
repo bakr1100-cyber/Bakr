@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_spacing.dart';
+import '../core/theme/app_theme.dart';
 import '../models/chat_message.dart';
 
 class ChatBubble extends StatefulWidget {
@@ -17,13 +18,26 @@ class _ChatBubbleState extends State<ChatBubble> with SingleTickerProviderStateM
   late final AnimationController _controller = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 260),
-  )..forward();
+  );
   late final Animation<double> _fade =
       CurvedAnimation(parent: _controller, curve: Curves.easeOut);
   late final Animation<Offset> _slide = Tween<Offset>(
     begin: const Offset(0, 0.08),
     end: Offset.zero,
   ).animate(_fade);
+  bool _startedAnimating = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_startedAnimating) return;
+    _startedAnimating = true;
+    if (AppMotion.reduced(context)) {
+      _controller.value = 1;
+    } else {
+      _controller.forward();
+    }
+  }
 
   @override
   void dispose() {

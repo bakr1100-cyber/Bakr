@@ -168,7 +168,9 @@ class _AirportSheetState extends State<_AirportSheet> {
                   ? Padding(
                       padding: const EdgeInsets.all(AppSpacing.xxl),
                       child: Text(
-                        _noMatchMessage(AppLocalizations.of(context).language, _query),
+                        AppLocalizations.of(context)
+                            .t('noMatchForQuery')
+                            .replaceAll('{query}', _query),
                         style: theme.textTheme.bodyMedium,
                       ),
                     )
@@ -262,11 +264,3 @@ String _countryLabel(BuildContext context, String rawCountry) {
     _ => rawCountry,
   };
 }
-
-String _noMatchMessage(AppLanguage language, String query) => switch (language) {
-      AppLanguage.de => 'Kein Treffer für "$query".',
-      AppLanguage.fr => 'Aucun résultat pour « $query ».',
-      AppLanguage.en => 'No match for "$query".',
-      AppLanguage.ar => 'لا توجد نتائج لـ "$query".',
-      AppLanguage.ary => 'مالقيتش والو ب "$query".',
-    };

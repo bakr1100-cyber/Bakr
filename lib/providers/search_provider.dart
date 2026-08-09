@@ -100,7 +100,7 @@ class SearchProvider extends ChangeNotifier {
           (returnDate != null && !returnDate!.isBefore(date)));
 
   Future<void> search({AppLanguage language = AppLanguage.de}) async {
-    if (!canSearch) return;
+    if (!canSearch || isLoading) return;
     isLoading = true;
     notifyListeners();
 

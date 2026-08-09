@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/theme/app_colors.dart';
+import '../core/theme/app_theme.dart';
 
 /// Three softly bouncing dots inside an AI-styled bubble, shown while the
 /// assistant is "thinking" — reads as alive, unlike a plain spinner.
@@ -16,7 +17,16 @@ class _TypingIndicatorState extends State<TypingIndicator>
   late final AnimationController _controller = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 900),
-  )..repeat();
+  );
+  bool _startedAnimating = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_startedAnimating) return;
+    _startedAnimating = true;
+    if (!AppMotion.reduced(context)) _controller.repeat();
+  }
 
   @override
   void dispose() {

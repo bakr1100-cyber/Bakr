@@ -301,6 +301,7 @@ class _PremiumPageTransitionsBuilder extends PageTransitionsBuilder {
     Animation<double> secondaryAnimation,
     Widget child,
   ) {
+    if (AppMotion.reduced(context)) return child;
     final curved = CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
     return FadeTransition(
       opacity: curved,
@@ -322,4 +323,11 @@ class AppMotion {
   static const Duration medium = Duration(milliseconds: 240);
   static const Duration slow = Duration(milliseconds: 360);
   static const Curve curve = Curves.easeOutCubic;
+
+  /// True when the platform's "reduce motion" accessibility setting is on
+  /// (iOS Reduce Motion, Android "remove animations", or the equivalent
+  /// browser/OS setting on web) - decorative/looping animations (typing
+  /// dots, shimmer, entrance slides) should skip straight to their end
+  /// state instead of animating when this is true.
+  static bool reduced(BuildContext context) => MediaQuery.of(context).disableAnimations;
 }

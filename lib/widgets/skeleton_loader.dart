@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/theme/app_spacing.dart';
+import '../core/theme/app_theme.dart';
 
 /// A soft, looping shimmer sweep — wrap a stack of [SkeletonBlock]s in this
 /// so a loading list reads as "content is arriving", not just an inert grey
@@ -19,7 +20,16 @@ class _ShimmerLoaderState extends State<ShimmerLoader>
   late final AnimationController _controller = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 1400),
-  )..repeat();
+  );
+  bool _startedAnimating = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_startedAnimating) return;
+    _startedAnimating = true;
+    if (!AppMotion.reduced(context)) _controller.repeat();
+  }
 
   @override
   void dispose() {
@@ -29,6 +39,7 @@ class _ShimmerLoaderState extends State<ShimmerLoader>
 
   @override
   Widget build(BuildContext context) {
+    if (AppMotion.reduced(context)) return widget.child;
     final base = Theme.of(context).colorScheme.onSurfaceVariant;
     return AnimatedBuilder(
       animation: _controller,

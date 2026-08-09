@@ -40,8 +40,15 @@ void main() {
     test('checkForDrops reports exactly as many drops as it actually applied', () async {
       final notifications = _CountingNotificationService();
       final provider = PriceAlertsProvider(notificationService: notifications);
+      // 30 *distinct* routes - addAlert() now de-duplicates by
+      // origin/destination (see the "duplicate alert" test below), so
+      // repeating the same pair would only ever create one alert.
       for (var i = 0; i < 30; i++) {
-        provider.addAlert(dus, fez, 300);
+        provider.addAlert(
+          europeanAirports[i % europeanAirports.length],
+          moroccanAirports[i % moroccanAirports.length],
+          300,
+        );
       }
 
       final dropsFound = await provider.checkForDrops(language: AppLanguage.de);
@@ -65,6 +72,34 @@ void main() {
 
       expect(dropsFound, 0);
       expect(notifications.calls, 0);
+    });
+
+    test('addAlert does not create a duplicate for a route already being watched', () {
+      final provider = PriceAlertsProvider(notificationService: _CountingNotificationService());
+
+      final firstAdded = provider.addAlert(dus, fez, 300);
+      final secondAdded = provider.addAlert(dus, fez, 280);
+
+      expect(firstAdded, isTrue);
+      expect(secondAdded, isFalse);
+      expect(provider.alerts, hasLength(1));
+      expect(provider.alerts.single.watchedPriceEur, 300);
+    });
+
+    test('restoreAlert re-inserts a removed alert at the same position', () async {
+      final provider = PriceAlertsProvider(notificationService: _CountingNotificationService());
+      provider.addAlert(dus, fez, 300);
+      const rak = Airport(code: 'RAK', city: 'Marrakech', country: 'Marokko');
+      provider.addAlert(dus, rak, 250);
+      final removed = provider.alerts.first;
+
+      provider.removeAlert(removed.id);
+      expect(provider.alerts, hasLength(1));
+
+      provider.restoreAlert(0, removed);
+
+      expect(provider.alerts, hasLength(2));
+      expect(provider.alerts.first.id, removed.id);
     });
   });
 }

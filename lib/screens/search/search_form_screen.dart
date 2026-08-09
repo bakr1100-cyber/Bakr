@@ -133,7 +133,8 @@ class SearchFormScreen extends StatelessWidget {
             BigButton(
               label: t('searchFlights'),
               icon: Icons.search_rounded,
-              onPressed: search.canSearch
+              loading: search.isLoading,
+              onPressed: search.canSearch && !search.isLoading
                   ? () async {
                       await search.search(language: AppLocalizations.of(context).language);
                       if (context.mounted) {
@@ -146,6 +147,17 @@ class SearchFormScreen extends StatelessWidget {
                     }
                   : null,
             ),
+            if (!search.canSearch) ...[
+              const SizedBox(height: AppSpacing.sm),
+              Center(
+                child: Text(
+                  t('completeDetailsToSearch'),
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodySmall
+                      ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                ),
+              ),
+            ],
             const SizedBox(height: AppSpacing.lg),
           ],
         ),

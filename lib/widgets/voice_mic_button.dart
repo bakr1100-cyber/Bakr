@@ -11,36 +11,42 @@ class VoiceMicButton extends StatelessWidget {
   });
 
   final bool isListening;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return AnimatedContainer(
+    final enabled = onPressed != null;
+    return AnimatedOpacity(
       duration: AppMotion.fast,
-      curve: AppMotion.curve,
-      width: 64,
-      height: 64,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: isListening ? scheme.primary : scheme.secondary,
-        boxShadow: isListening
-            ? [
-                BoxShadow(
-                  color: scheme.primary.withValues(alpha: 0.35),
-                  blurRadius: 18,
-                  spreadRadius: 4,
-                ),
-              ]
-            : null,
-      ),
-      child: IconButton(
-        tooltip: AppLocalizations.of(context).t(isListening ? 'stopVoiceInput' : 'startVoiceInput'),
-        onPressed: onPressed,
-        icon: Icon(
-          isListening ? Icons.mic : Icons.mic_none_rounded,
-          color: Colors.white,
-          size: 28,
+      opacity: enabled ? 1 : 0.4,
+      child: AnimatedContainer(
+        duration: AppMotion.fast,
+        curve: AppMotion.curve,
+        width: 64,
+        height: 64,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: isListening ? scheme.primary : scheme.secondary,
+          boxShadow: isListening
+              ? [
+                  BoxShadow(
+                    color: scheme.primary.withValues(alpha: 0.35),
+                    blurRadius: 18,
+                    spreadRadius: 4,
+                  ),
+                ]
+              : null,
+        ),
+        child: IconButton(
+          tooltip:
+              AppLocalizations.of(context).t(isListening ? 'stopVoiceInput' : 'startVoiceInput'),
+          onPressed: onPressed,
+          icon: Icon(
+            isListening ? Icons.mic : Icons.mic_none_rounded,
+            color: Colors.white,
+            size: 28,
+          ),
         ),
       ),
     );

@@ -293,12 +293,12 @@ class _AiChatScreenState extends State<AiChatScreen> {
                       ),
                       VoiceMicButton(
                         isListening: _isListening,
-                        onPressed: _toggleListening,
+                        onPressed: chat.isThinking ? null : _toggleListening,
                       ),
                       const SizedBox(width: 4),
                       IconButton.filled(
                         tooltip: t('sendMessage'),
-                        onPressed: _sendText,
+                        onPressed: chat.isThinking ? null : _sendText,
                         icon: const Icon(Icons.send_rounded),
                       ),
                     ],
