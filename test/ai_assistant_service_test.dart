@@ -132,4 +132,129 @@ void main() {
       );
     });
   });
+
+  group('LLM-based intent extraction', () {
+    // Dispatches by system-prompt content, since one handleMessage() turn
+    // can make two different LLM calls (extract the intent, then phrase
+    // the reply) - a single fixed response wouldn't let a test control them
+    // independently.
+    http.Client dispatchingClient({required String extractionReply, String phrasingReply = 'ok'}) {
+      return MockClient((request) async {
+        final body = jsonDecode(request.body) as Map<String, dynamic>;
+        final systemContent = (body['messages'] as List).first['content'] as String;
+        final isExtractionCall = systemContent.contains('extract structured travel-search data');
+        return http.Response(
+          jsonEncode({'reply': isExtractionCall ? extractionReply : phrasingReply}),
+          200,
+        );
+      });
+    }
+
+    test('LLM-extracted intent takes priority over what the regex parser would have found',
+        () async {
+      final client = dispatchingClient(
+        extractionReply: jsonEncode({
+          'origin_code': 'DUS',
+          'destination_code': 'FEZ',
+          'date': departureDate.toIso8601String().split('T').first,
+          'passengers': null,
+          'budget_eur': null,
+          'family': null,
+          'avoid_layover': null,
+        }),
+      );
+      final llm = LlmChatService(proxyBaseUrl: 'https://worker.example', client: client);
+      final service = AiAssistantService(llmChatService: llm);
+
+      // The regex parser would resolve this to destination=Casablanca,
+      // origin=null - the assertions below only pass if the final route
+      // came from the LLM extraction instead.
+      final turn = await service.handleMessage(
+        'Ich will nach Casablanca',
+        const TravelIntent(),
+        language: AppLanguage.de,
+      );
+
+      expect(turn.intent.origin?.code, 'DUS');
+      expect(turn.intent.destination?.code, 'FEZ');
+      expect(turn.needsConfirmation, isFalse);
+    });
+
+    test('falls back to the regex parser when the extraction reply has no JSON in it', () async {
+      final client = dispatchingClient(extractionReply: 'sure, let me help with that!');
+      final llm = LlmChatService(proxyBaseUrl: 'https://worker.example', client: client);
+      final service = AiAssistantService(llmChatService: llm);
+
+      final turn = await service.handleMessage(
+        'Ich will nach Casablanca',
+        const TravelIntent(),
+        language: AppLanguage.de,
+      );
+
+      expect(turn.intent.destination?.code, 'CMN');
+    });
+
+    test('falls back to the regex parser when the extracted JSON is malformed', () async {
+      final client = dispatchingClient(extractionReply: '{origin_code: DUS, not valid json}');
+      final llm = LlmChatService(proxyBaseUrl: 'https://worker.example', client: client);
+      final service = AiAssistantService(llmChatService: llm);
+
+      final turn = await service.handleMessage(
+        'Ich will nach Casablanca',
+        const TravelIntent(),
+        language: AppLanguage.de,
+      );
+
+      expect(turn.intent.destination?.code, 'CMN');
+    });
+
+    test('falls back to the regex parser when the LLM extracts nothing useful', () async {
+      final client = dispatchingClient(
+        extractionReply: jsonEncode({
+          'origin_code': null,
+          'destination_code': null,
+          'date': null,
+          'passengers': null,
+          'budget_eur': null,
+          'family': null,
+          'avoid_layover': null,
+        }),
+      );
+      final llm = LlmChatService(proxyBaseUrl: 'https://worker.example', client: client);
+      final service = AiAssistantService(llmChatService: llm);
+
+      final turn = await service.handleMessage(
+        'Ich will nach Casablanca',
+        const TravelIntent(),
+        language: AppLanguage.de,
+      );
+
+      expect(turn.intent.destination?.code, 'CMN');
+    });
+
+    test('an unknown airport code from the LLM is ignored rather than crashing', () async {
+      final client = dispatchingClient(
+        extractionReply: jsonEncode({
+          'origin_code': 'XXX',
+          'destination_code': 'FEZ',
+          'date': departureDate.toIso8601String().split('T').first,
+          'passengers': null,
+          'budget_eur': null,
+          'family': null,
+          'avoid_layover': null,
+        }),
+      );
+      final llm = LlmChatService(proxyBaseUrl: 'https://worker.example', client: client);
+      final service = AiAssistantService(llmChatService: llm);
+
+      final turn = await service.handleMessage(
+        'Ich will nach Fès',
+        const TravelIntent(),
+        language: AppLanguage.de,
+      );
+
+      expect(turn.intent.origin, isNull);
+      expect(turn.intent.destination?.code, 'FEZ');
+    });
+  });
 }

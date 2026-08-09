@@ -1,4 +1,7 @@
+import 'dart:convert';
+
 import '../core/localization/app_localizations.dart';
+import '../models/airport.dart';
 import '../models/chat_message.dart';
 import '../models/itinerary.dart';
 import '../models/travel_intent.dart';
@@ -8,18 +11,25 @@ import 'llm_chat_service.dart';
 import 'nlu_service.dart';
 import 'price_prediction_service.dart';
 
-/// Orchestrates one turn of the conversation: parse the user's message,
-/// merge it into the running [TravelIntent], decide whether to ask a
-/// clarifying question or run the search - then phrase the actual reply.
+/// Orchestrates one turn of the conversation: understand the user's
+/// message, merge it into the running [TravelIntent], decide whether to
+/// ask a clarifying question or run the search - then phrase the actual
+/// reply.
 ///
-/// Understanding what the user wants and running the search stays fully
-/// deterministic (see [NluService]/[FlightSearchService]) - that's what
-/// guarantees a booking flow actually works. Only the *wording* of the
-/// reply is handed to a real conversational LLM (see [LlmChatService]),
-/// grounded in the concrete facts of this turn so it can't invent prices,
-/// cities, or dates. If the LLM is unavailable, fails, or times out, this
-/// falls back to the same fixed template replies used before it existed -
-/// the app never breaks because a free daily AI quota ran out.
+/// Understanding what the user wants is tried via the LLM first (see
+/// [_extractIntentViaLlm]) - a fixed keyword/regex matcher ([NluService])
+/// genuinely cannot follow open-ended phrasing, especially in Darija, and
+/// was the actual cause of the assistant "reacting wrong to search" and
+/// giving generic replies. [NluService] stays as the fallback for when the
+/// LLM is unavailable, fails, times out, or returns something unusable -
+/// running the search itself stays fully deterministic either way (see
+/// [FlightSearchService]), so a booking flow always works once an intent
+/// is resolved. The *wording* of the reply is a separate LLM call (see
+/// [LlmChatService]), grounded in the concrete facts of this turn so it
+/// can't invent prices, cities, or dates. If the LLM is unavailable, fails,
+/// or times out at any point, this falls back to the same fixed template
+/// replies used before it existed - the app never breaks because a free
+/// daily AI quota ran out.
 class AiAssistantService {
   AiAssistantService({
     NluService? nluService,
@@ -42,7 +52,7 @@ class AiAssistantService {
     List<ChatMessage> history = const [],
     AppLanguage language = AppLanguage.ary,
   }) async {
-    final parsed = _nlu.parse(userText);
+    final parsed = await _extractIntentViaLlm(userText, language) ?? _nlu.parse(userText);
     final merged = conversationState.mergedWith(parsed);
 
     if (parsed.isLowConfidence && parsed.origin != null && parsed.destination != null) {
@@ -107,6 +117,85 @@ class AiAssistantService {
     );
 
     return AssistantTurn(reply: reply, intent: merged, results: results);
+  }
+
+  static final List<Airport> _knownAirports = [...europeanAirports, ...moroccanAirports];
+
+  /// Asks the LLM to extract origin/destination/date/passengers/budget from
+  /// [userText] as strict JSON, constrained to real airport codes so it
+  /// can't invent a city that doesn't exist in the app. Returns `null` (so
+  /// the caller falls back to [NluService]) whenever the LLM is not
+  /// configured, the call fails/times out, the reply isn't valid JSON, or
+  /// nothing at all was extracted from it.
+  Future<TravelIntent?> _extractIntentViaLlm(String userText, AppLanguage language) async {
+    if (_llm == null || !_llm.isConfigured) return null;
+
+    final today = DateTime.now();
+    final airportList = _knownAirports.map((a) => '${a.code}=${a.city}').join(', ');
+    final messages = [
+      LlmMessage(
+        role: 'system',
+        content: 'You extract structured travel-search data from one user message for a '
+            'flight-search chatbot. Respond with ONLY a single JSON object and nothing '
+            'else - no markdown, no explanation - in exactly this shape:\n'
+            '{"origin_code": string|null, "destination_code": string|null, '
+            '"date": "YYYY-MM-DD"|null, "passengers": integer|null, '
+            '"budget_eur": number|null, "family": true|false|null, '
+            '"avoid_layover": true|false|null}\n'
+            'Only ever use an airport code from this exact list, never invent one: '
+            '$airportList\n'
+            "Today's date is ${today.toIso8601String().split('T').first}. Resolve relative "
+            'dates ("tomorrow", "next week", "غدا", "الأسبوع الجاي") to an actual date. '
+            'Leave a field null if the message does not mention it - do not guess. The '
+            'user may write in German, French, English, Modern Standard Arabic, or '
+            'Moroccan Darija (Arabic script or Latin transliteration).',
+      ),
+      LlmMessage(role: 'user', content: userText),
+    ];
+
+    final raw = await _llm.reply(messages);
+    if (raw == null) return null;
+
+    final start = raw.indexOf('{');
+    final end = raw.lastIndexOf('}');
+    if (start == -1 || end == -1 || end < start) return null;
+
+    try {
+      final json = jsonDecode(raw.substring(start, end + 1)) as Map<String, dynamic>;
+      final origin = findAirportByCode(json['origin_code'] as String?);
+      final destination = findAirportByCode(json['destination_code'] as String?);
+      final dateStr = json['date'] as String?;
+      final date = dateStr == null ? null : DateTime.tryParse(dateStr);
+      final passengers = (json['passengers'] as num?)?.toInt();
+      final budget = (json['budget_eur'] as num?)?.toDouble();
+      final family = json['family'] as bool?;
+      final avoidLayover = json['avoid_layover'] as bool?;
+
+      final nothingExtracted = origin == null &&
+          destination == null &&
+          date == null &&
+          passengers == null &&
+          budget == null &&
+          family == null &&
+          avoidLayover == null;
+      if (nothingExtracted) return null;
+
+      return TravelIntent(
+        origin: origin,
+        destination: destination,
+        departureDate: date,
+        passengerCount: passengers,
+        maxBudgetEur: budget,
+        avoidLongLayover: avoidLayover ?? false,
+        travelingWithFamily: family ?? false,
+        // A code that made it through is either a real match against
+        // _knownAirports or null - never a fuzzy guess - so this path
+        // never needs the "did you mean X to Y?" confirmation step.
+        isLowConfidence: false,
+      );
+    } catch (_) {
+      return null;
+    }
   }
 
   /// Calls the LLM to phrase a reply grounded in [situation], with recent
