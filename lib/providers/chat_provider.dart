@@ -47,9 +47,29 @@ class ChatProvider extends ChangeNotifier {
   bool _isThinking = false;
   bool get isThinking => _isThinking;
 
-  Future<void> send(String text, {bool wasSpoken = false, AppLanguage language = AppLanguage.ary}) async {
-    if (text.trim().isEmpty || _isThinking) return;
+  /// Serializes overlapping [send] calls instead of dropping one: a message
+  /// sent (typed or spoken) while a previous reply is still in flight used
+  /// to be silently ignored, which - now that a reply needs two sequential
+  /// LLM calls (understand, then phrase) instead of one - is a long enough
+  /// window that a user speaking again while the assistant is still
+  /// "thinking" would just be ignored with no feedback at all. Queuing
+  /// means nothing typed or said is ever silently lost; the UI no longer
+  /// needs to disable input while thinking either.
+  Future<void> _turnQueue = Future.value();
 
+  Future<void> send(String text, {bool wasSpoken = false, AppLanguage language = AppLanguage.ary}) {
+    if (text.trim().isEmpty) return Future.value();
+    final previous = _turnQueue;
+    final thisTurn = previous.then((_) => _sendNow(text, wasSpoken: wasSpoken, language: language));
+    _turnQueue = thisTurn;
+    return thisTurn;
+  }
+
+  Future<void> _sendNow(
+    String text, {
+    required bool wasSpoken,
+    required AppLanguage language,
+  }) async {
     _messages.add(
       ChatMessage(
         id: _uuid.v4(),
