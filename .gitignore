@@ -38,6 +38,12 @@ migrate_working_dir/
 # graph, not part of the app; rebuilt per-session via the session-start hook.
 /graphify-out/
 
+# ui-ux-pro-max (dev-only design-knowledge skill for Claude Code, see
+# https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) - vendored
+# reference data, not part of the app; reinstalled per-session via the
+# session-start hook.
+/.claude/skills/
+
 # Native Firebase config (Android/iOS) - not used by this web-only build,
 # and unlike the web config (lib/firebase_options.dart, which IS committed -
 # see that file's comment for why that one's safe to commit) these would
