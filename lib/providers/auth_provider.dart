@@ -114,7 +114,7 @@ class AuthProvider extends ChangeNotifier {
         'returnSecureToken': true,
       });
       if (signUpResponse case _RestFailure(:final code)) {
-        return AuthFailure(authErrorMessage(code, language));
+        return AuthFailure('${authErrorMessage(code, language)} [$code]');
       }
       final idToken = (signUpResponse as _RestSuccess).body['idToken'] as String;
 
@@ -123,7 +123,7 @@ class AuthProvider extends ChangeNotifier {
         'idToken': idToken,
       });
       if (verifyResponse case _RestFailure(:final code)) {
-        return AuthFailure(authErrorMessage(code, language));
+        return AuthFailure('${authErrorMessage(code, language)} [$code]');
       }
       return const AuthNeedsVerification();
     } catch (error) {
@@ -143,14 +143,14 @@ class AuthProvider extends ChangeNotifier {
         'returnSecureToken': true,
       });
       if (signInResponse case _RestFailure(:final code)) {
-        return AuthFailure(authErrorMessage(code, language));
+        return AuthFailure('${authErrorMessage(code, language)} [$code]');
       }
       final body = (signInResponse as _RestSuccess).body;
       final idToken = body['idToken'] as String;
 
       final lookupResponse = await _post(_lookupUrl, {'idToken': idToken});
       if (lookupResponse case _RestFailure(:final code)) {
-        return AuthFailure(authErrorMessage(code, language));
+        return AuthFailure('${authErrorMessage(code, language)} [$code]');
       }
       final users = (lookupResponse as _RestSuccess).body['users'] as List;
       final emailVerified = users.isNotEmpty && users.first['emailVerified'] == true;
@@ -189,9 +189,11 @@ class AuthProvider extends ChangeNotifier {
         .timeout(const Duration(seconds: 15));
     final decoded = jsonDecode(response.body) as Map<String, dynamic>;
     if (response.statusCode != 200) {
-      final code = ((decoded['error'] as Map<String, dynamic>?)?['message'] as String?) ??
-          'authErrorGeneric';
-      return _RestFailure(code);
+      final code = (decoded['error'] as Map<String, dynamic>?)?['message'] as String?;
+      // If the response doesn't have the shape we expect, show the raw
+      // status+body instead of a made-up placeholder code - that's what
+      // actually needs diagnosing when this happens.
+      return _RestFailure(code ?? 'HTTP ${response.statusCode}: ${response.body}');
     }
     return _RestSuccess(decoded);
   }

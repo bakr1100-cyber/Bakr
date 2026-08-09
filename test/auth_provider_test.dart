@@ -131,7 +131,8 @@ void main() {
       );
 
       expect(result, isA<AuthFailure>());
-      expect((result as AuthFailure).message, authErrorMessage('EMAIL_EXISTS', AppLanguage.de));
+      expect((result as AuthFailure).message,
+          '${authErrorMessage('EMAIL_EXISTS', AppLanguage.de)} [EMAIL_EXISTS]');
     });
 
     test('signIn() with an unverified email fails without logging in', () async {
@@ -230,7 +231,7 @@ void main() {
 
       expect(result, isA<AuthFailure>());
       expect((result as AuthFailure).message,
-          authErrorMessage('INVALID_LOGIN_CREDENTIALS', AppLanguage.fr));
+          '${authErrorMessage('INVALID_LOGIN_CREDENTIALS', AppLanguage.fr)} [INVALID_LOGIN_CREDENTIALS]');
       expect(auth.isLoggedIn, isFalse);
     });
 
