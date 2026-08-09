@@ -297,6 +297,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
                       ),
                       const SizedBox(width: 4),
                       IconButton.filled(
+                        tooltip: t('sendMessage'),
                         onPressed: _sendText,
                         icon: const Icon(Icons.send_rounded),
                       ),

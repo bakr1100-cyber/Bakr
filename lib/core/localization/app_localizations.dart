@@ -196,6 +196,20 @@ class AppLocalizations {
       AppLanguage.fr: 'Voyageurs',
       AppLanguage.en: 'Passengers',
     },
+    'increasePassengers': {
+      AppLanguage.ary: 'زيد راكب',
+      AppLanguage.ar: 'إضافة مسافر',
+      AppLanguage.de: 'Passagier hinzufügen',
+      AppLanguage.fr: 'Ajouter un passager',
+      AppLanguage.en: 'Add a passenger',
+    },
+    'decreasePassengers': {
+      AppLanguage.ary: 'نقص راكب',
+      AppLanguage.ar: 'إزالة مسافر',
+      AppLanguage.de: 'Passagier entfernen',
+      AppLanguage.fr: 'Retirer un passager',
+      AppLanguage.en: 'Remove a passenger',
+    },
     'searchFlights': {
       AppLanguage.ary: 'قلب على الطيارة',
       AppLanguage.ar: 'ابحث عن رحلات',
@@ -626,6 +640,27 @@ class AppLocalizations {
       AppLanguage.fr: 'réfléchit…',
       AppLanguage.en: 'thinking…',
     },
+    'sendMessage': {
+      AppLanguage.ary: 'صيفط',
+      AppLanguage.ar: 'إرسال',
+      AppLanguage.de: 'Nachricht senden',
+      AppLanguage.fr: 'Envoyer le message',
+      AppLanguage.en: 'Send message',
+    },
+    'startVoiceInput': {
+      AppLanguage.ary: 'بدا التسجيل بالصوت',
+      AppLanguage.ar: 'بدء التسجيل الصوتي',
+      AppLanguage.de: 'Spracheingabe starten',
+      AppLanguage.fr: 'Démarrer la saisie vocale',
+      AppLanguage.en: 'Start voice input',
+    },
+    'stopVoiceInput': {
+      AppLanguage.ary: 'وقف التسجيل بالصوت',
+      AppLanguage.ar: 'إيقاف التسجيل الصوتي',
+      AppLanguage.de: 'Spracheingabe stoppen',
+      AppLanguage.fr: 'Arrêter la saisie vocale',
+      AppLanguage.en: 'Stop voice input',
+    },
 
     // --- Price alerts -------------------------------------------------------
     'priceAlerts': {
@@ -641,6 +676,13 @@ class AppLocalizations {
       AppLanguage.de: 'Auf Preisänderungen prüfen',
       AppLanguage.fr: 'Vérifier les changements de prix',
       AppLanguage.en: 'Check for price changes',
+    },
+    'deleteAlert': {
+      AppLanguage.ary: 'حيد التنبيه',
+      AppLanguage.ar: 'حذف التنبيه',
+      AppLanguage.de: 'Preisalarm löschen',
+      AppLanguage.fr: "Supprimer l'alerte",
+      AppLanguage.en: 'Delete alert',
     },
     'noAlertsYetTitle': {
       AppLanguage.ary: 'مازال ماكاين تنبيهات',

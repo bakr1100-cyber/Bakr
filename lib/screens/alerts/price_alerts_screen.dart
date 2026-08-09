@@ -104,6 +104,7 @@ class PriceAlertsScreen extends StatelessWidget {
                           ),
                         ),
                         trailing: IconButton(
+                          tooltip: t('deleteAlert'),
                           icon: const Icon(Icons.delete_outline_rounded),
                           onPressed: () => provider.removeAlert(alert.id),
                         ),

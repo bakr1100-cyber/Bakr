@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/localization/app_localizations.dart';
 import '../core/theme/app_theme.dart';
 
 class VoiceMicButton extends StatelessWidget {
@@ -34,6 +35,7 @@ class VoiceMicButton extends StatelessWidget {
             : null,
       ),
       child: IconButton(
+        tooltip: AppLocalizations.of(context).t(isListening ? 'stopVoiceInput' : 'startVoiceInput'),
         onPressed: onPressed,
         icon: Icon(
           isListening ? Icons.mic : Icons.mic_none_rounded,
