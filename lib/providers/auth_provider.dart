@@ -54,8 +54,11 @@ class AuthFailure extends AuthAttemptResult {
 /// public Dart API to opt out of it. The REST API has no iframe, no
 /// IndexedDB, no popup/redirect concept at all, so none of this applies.
 ///
-/// Scope is authentication only for now - preferences and price alerts
-/// stay local-only, not synced to the account.
+/// Preferences and price alerts sync to the account via [AccountSyncService]
+/// once logged in (see that class + `CloudSyncService`), which needs a
+/// valid (non-expired) ID token for every Firestore call - [getValidIdToken]
+/// is what makes that safe across a session that outlives the ID token's
+/// 1-hour lifetime, by exchanging the refresh token for a new one on demand.
 ///
 /// Registration requires email verification before the account can log in
 /// (the standard SaaS pattern: register -> verification email -> click
@@ -71,34 +74,76 @@ class AuthProvider extends ChangeNotifier {
       'https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword';
   static const _lookupUrl = 'https://identitytoolkit.googleapis.com/v1/accounts:lookup';
   static const _sendOobCodeUrl = 'https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode';
+  static const _refreshTokenUrl = 'https://securetoken.googleapis.com/v1/token';
 
   static const _prefsEmailKey = 'auth_email';
   static const _prefsIdTokenKey = 'auth_id_token';
+  static const _prefsUidKey = 'auth_uid';
+  static const _prefsRefreshTokenKey = 'auth_refresh_token';
+  static const _prefsExpiresAtKey = 'auth_expires_at';
 
   final http.Client _client;
 
   String? _email;
   String? _idToken;
+  String? _uid;
+  String? _refreshToken;
+  DateTime? _tokenExpiresAt;
 
   String? get currentUserEmail => _email;
+  String? get currentUserUid => _uid;
   bool get isLoggedIn => _idToken != null;
 
   /// Restores a previously signed-in session from disk. Called once during
   /// app bootstrap (see `app.dart`), same pattern as
-  /// `PreferencesProvider.load()`. Deliberately doesn't validate the token
-  /// against the server (that would need the refresh-token exchange this
-  /// login-only scope doesn't implement yet) - it's only used for
-  /// "logged in as X" display and sign-out, not for authenticated API
-  /// calls, so a stale token is harmless here.
+  /// `PreferencesProvider.load()`.
   Future<void> load() async {
     final prefs = await SharedPreferences.getInstance();
     _email = prefs.getString(_prefsEmailKey);
     _idToken = prefs.getString(_prefsIdTokenKey);
+    _uid = prefs.getString(_prefsUidKey);
+    _refreshToken = prefs.getString(_prefsRefreshTokenKey);
+    final expiresAtRaw = prefs.getString(_prefsExpiresAtKey);
+    _tokenExpiresAt = expiresAtRaw == null ? null : DateTime.tryParse(expiresAtRaw);
     if (_email == null || _idToken == null) {
       _email = null;
       _idToken = null;
+      _uid = null;
+      _refreshToken = null;
+      _tokenExpiresAt = null;
     }
     notifyListeners();
+  }
+
+  /// A non-expired ID token for authenticated calls (e.g. Firestore via
+  /// [CloudSyncService]), refreshing it first if it's expired or close to
+  /// it. Returns `null` if not logged in, or if refreshing fails (e.g. the
+  /// device is offline) - callers should treat that as "sync unavailable
+  /// right now", not sign the user out.
+  Future<String?> getValidIdToken() async {
+    if (_idToken == null) return null;
+    final expiresSoon = _tokenExpiresAt == null ||
+        DateTime.now().isAfter(_tokenExpiresAt!.subtract(const Duration(minutes: 5)));
+    if (!expiresSoon) return _idToken;
+    if (_refreshToken == null) return _idToken;
+
+    try {
+      final response = await _client.post(
+        Uri.parse('$_refreshTokenUrl?key=$_apiKey'),
+        body: {'grant_type': 'refresh_token', 'refresh_token': _refreshToken!},
+      ).timeout(const Duration(seconds: 15));
+      if (response.statusCode != 200) return _idToken;
+
+      final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+      _idToken = decoded['id_token'] as String;
+      _refreshToken = decoded['refresh_token'] as String;
+      _tokenExpiresAt =
+          DateTime.now().add(Duration(seconds: int.parse(decoded['expires_in'] as String)));
+      await _persistSession();
+      return _idToken;
+    } catch (_) {
+      return _idToken;
+    }
   }
 
   Future<AuthAttemptResult> register({
@@ -159,9 +204,11 @@ class AuthProvider extends ChangeNotifier {
 
       _email = body['email'] as String;
       _idToken = idToken;
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_prefsEmailKey, _email!);
-      await prefs.setString(_prefsIdTokenKey, _idToken!);
+      _uid = body['localId'] as String;
+      _refreshToken = body['refreshToken'] as String;
+      _tokenExpiresAt =
+          DateTime.now().add(Duration(seconds: int.parse(body['expiresIn'] as String)));
+      await _persistSession();
       notifyListeners();
       return const AuthSuccess();
     } catch (error) {
@@ -172,10 +219,25 @@ class AuthProvider extends ChangeNotifier {
   Future<void> signOut() async {
     _email = null;
     _idToken = null;
+    _uid = null;
+    _refreshToken = null;
+    _tokenExpiresAt = null;
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_prefsEmailKey);
     await prefs.remove(_prefsIdTokenKey);
+    await prefs.remove(_prefsUidKey);
+    await prefs.remove(_prefsRefreshTokenKey);
+    await prefs.remove(_prefsExpiresAtKey);
     notifyListeners();
+  }
+
+  Future<void> _persistSession() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_prefsEmailKey, _email!);
+    await prefs.setString(_prefsIdTokenKey, _idToken!);
+    await prefs.setString(_prefsUidKey, _uid!);
+    await prefs.setString(_prefsRefreshTokenKey, _refreshToken!);
+    await prefs.setString(_prefsExpiresAtKey, _tokenExpiresAt!.toIso8601String());
   }
 
   Future<_RestResult> _post(String url, Map<String, dynamic> body) async {

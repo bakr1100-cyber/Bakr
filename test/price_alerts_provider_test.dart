@@ -3,6 +3,7 @@ import 'package:marocfly_ai/core/localization/app_localizations.dart';
 import 'package:marocfly_ai/models/airport.dart';
 import 'package:marocfly_ai/providers/price_alerts_provider.dart';
 import 'package:marocfly_ai/services/notification_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Counts calls instead of actually touching a platform channel, so this
 /// test never depends on `flutter_local_notifications`' (lack of) web
@@ -28,6 +29,10 @@ void main() {
   const fez = Airport(code: 'FEZ', city: 'Fès', country: 'Marokko');
 
   group('PriceAlertsProvider', () {
+    setUp(() {
+      SharedPreferences.setMockInitialValues({});
+    });
+
     // Regression test: checkForDrops() used to return void, so the UI had
     // no way to confirm the result in-app - the only feedback was a system
     // notification, which is a guaranteed no-op on the deployed web build

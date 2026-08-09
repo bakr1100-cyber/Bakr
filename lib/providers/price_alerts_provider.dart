@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
@@ -7,21 +8,43 @@ import '../core/localization/app_localizations.dart';
 import '../models/airport.dart';
 import '../models/price_alert.dart';
 import '../services/notification_service.dart';
+import '../services/price_alerts_service.dart';
 
 /// Tracked routes the user wants to be pinged about, e.g. "Dein Flug ist
 /// heute 52 € günstiger." Price movement is simulated locally - wire
 /// [checkForDrops] to a scheduled backend job (Cloud Function + fare cache)
 /// polling the real flight API for production.
 class PriceAlertsProvider extends ChangeNotifier {
-  PriceAlertsProvider({NotificationService? notificationService})
-      : _notifications = notificationService ?? NotificationService();
+  PriceAlertsProvider({NotificationService? notificationService, PriceAlertsService? service})
+      : _notifications = notificationService ?? NotificationService(),
+        _service = service ?? PriceAlertsService();
 
   final NotificationService _notifications;
+  final PriceAlertsService _service;
   final _uuid = const Uuid();
   final _random = Random();
 
   final List<PriceAlert> _alerts = [];
   List<PriceAlert> get alerts => List.unmodifiable(_alerts);
+
+  Future<void> load() async {
+    final stored = await _service.load();
+    _alerts
+      ..clear()
+      ..addAll(stored);
+    notifyListeners();
+  }
+
+  /// Overwrites the full list, e.g. with data pulled from the user's
+  /// account by [AccountSyncService] - doesn't re-push to the cloud itself
+  /// (the caller is the one that just fetched this from there).
+  Future<void> replaceAll(List<PriceAlert> alerts) async {
+    _alerts
+      ..clear()
+      ..addAll(alerts);
+    notifyListeners();
+    await _service.save(_alerts);
+  }
 
   void addAlert(Airport origin, Airport destination, double watchedPriceEur) {
     _alerts.add(
@@ -33,11 +56,13 @@ class PriceAlertsProvider extends ChangeNotifier {
       ),
     );
     notifyListeners();
+    unawaited(_service.save(_alerts));
   }
 
   void removeAlert(String id) {
     _alerts.removeWhere((a) => a.id == id);
     notifyListeners();
+    unawaited(_service.save(_alerts));
   }
 
   /// Returns how many alerts got a (simulated) price drop this run, so the
@@ -61,6 +86,7 @@ class PriceAlertsProvider extends ChangeNotifier {
       }
     }
     notifyListeners();
+    if (dropsFound > 0) unawaited(_service.save(_alerts));
     return dropsFound;
   }
 

@@ -13,6 +13,7 @@ import 'providers/price_alerts_provider.dart';
 import 'providers/search_provider.dart';
 import 'providers/theme_provider.dart';
 import 'screens/onboarding/language_select_screen.dart';
+import 'services/account_sync_service.dart';
 import 'services/affiliate_service.dart';
 import 'services/ai_assistant_service.dart';
 import 'services/amadeus_flight_price_source.dart';
@@ -69,6 +70,19 @@ class _MarocFlyAppState extends State<MarocFlyApp> {
   final _themeProvider = ThemeProvider();
   final _preferencesProvider = PreferencesProvider();
   final _authProvider = AuthProvider();
+  final _priceAlertsProvider = PriceAlertsProvider();
+  // `late` because the initializer references other instance fields (only
+  // allowed for `late` field initializers, which run lazily on first
+  // access rather than as part of the constructor's initializer list) -
+  // `initState` below forces that first access itself, before
+  // `_bootstrap()` calls `_authProvider.load()`, so its auth listener is
+  // guaranteed attached in time to catch the login-transition notification
+  // for an already-logged-in session restored from disk on cold boot.
+  late final _accountSync = AccountSyncService(
+    auth: _authProvider,
+    preferences: _preferencesProvider,
+    priceAlerts: _priceAlertsProvider,
+  );
   late final FlightSearchService _flightSearchService = FlightSearchService(
     priceSource: _resolvePriceSource(),
   );
@@ -107,6 +121,7 @@ class _MarocFlyAppState extends State<MarocFlyApp> {
   @override
   void initState() {
     super.initState();
+    _accountSync; // force construction now, before _bootstrap() below
     _bootstrap();
   }
 
@@ -115,9 +130,16 @@ class _MarocFlyAppState extends State<MarocFlyApp> {
       _localeProvider.load(),
       _themeProvider.load(),
       _preferencesProvider.load(),
+      _priceAlertsProvider.load(),
       _authProvider.load(),
     ]);
     setState(() => _loaded = true);
+  }
+
+  @override
+  void dispose() {
+    _accountSync.dispose();
+    super.dispose();
   }
 
   @override
@@ -148,7 +170,7 @@ class _MarocFlyAppState extends State<MarocFlyApp> {
             language: _localeProvider.language,
           ),
         ),
-        ChangeNotifierProvider(create: (_) => PriceAlertsProvider()),
+        ChangeNotifierProvider.value(value: _priceAlertsProvider),
         ChangeNotifierProvider(create: (_) => HomeNavigationProvider()),
         ChangeNotifierProvider.value(value: _authProvider),
         Provider<AffiliateService>.value(value: _affiliateService),

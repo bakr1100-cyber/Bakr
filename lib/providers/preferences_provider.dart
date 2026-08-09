@@ -21,4 +21,13 @@ class PreferencesProvider extends ChangeNotifier {
     notifyListeners();
     await _service.save(_preferences);
   }
+
+  /// Overwrites the preferences outright, e.g. with data pulled from the
+  /// user's account by [AccountSyncService] - doesn't re-push to the cloud
+  /// itself (the caller is the one that just fetched this from there).
+  Future<void> replaceAll(UserPreferences preferences) async {
+    _preferences = preferences;
+    notifyListeners();
+    await _service.save(_preferences);
+  }
 }

@@ -172,7 +172,13 @@ void main() {
       final client = MockClient((request) async {
         if (request.url.path.contains('signInWithPassword')) {
           return http.Response(
-            jsonEncode({'idToken': 'tok-789', 'email': 'verified@example.com'}),
+            jsonEncode({
+              'idToken': 'tok-789',
+              'email': 'verified@example.com',
+              'localId': 'uid-verified',
+              'refreshToken': 'refresh-789',
+              'expiresIn': '3600',
+            }),
             200,
           );
         }
@@ -201,6 +207,7 @@ void main() {
       expect(result, isA<AuthSuccess>());
       expect(auth.isLoggedIn, isTrue);
       expect(auth.currentUserEmail, 'verified@example.com');
+      expect(auth.currentUserUid, 'uid-verified');
       expect(notified, isTrue);
 
       // Persisted, so a fresh AuthProvider picks the session back up.
@@ -208,6 +215,7 @@ void main() {
       await restored.load();
       expect(restored.isLoggedIn, isTrue);
       expect(restored.currentUserEmail, 'verified@example.com');
+      expect(restored.currentUserUid, 'uid-verified');
     });
 
     test('signIn() with the wrong password returns a localized failure and does not log in',
@@ -237,7 +245,16 @@ void main() {
     test('signOut() clears both in-memory state and the persisted session', () async {
       final client = MockClient((request) async {
         if (request.url.path.contains('signInWithPassword')) {
-          return http.Response(jsonEncode({'idToken': 't', 'email': 'x@example.com'}), 200);
+          return http.Response(
+            jsonEncode({
+              'idToken': 't',
+              'email': 'x@example.com',
+              'localId': 'uid-x',
+              'refreshToken': 'refresh-x',
+              'expiresIn': '3600',
+            }),
+            200,
+          );
         }
         return http.Response(
           jsonEncode({
@@ -259,6 +276,103 @@ void main() {
       final restored = AuthProvider(client: client);
       await restored.load();
       expect(restored.isLoggedIn, isFalse);
+    });
+
+    group('getValidIdToken()', () {
+      // getValidIdToken() reuses AuthProvider's own `_client` for the
+      // refresh-token call too, so the mock must handle sign-in/lookup AND
+      // refresh requests in one client, dispatched by host.
+      Future<AuthProvider> signedInWith(
+        Future<http.Response> Function(http.Request) onRefresh, {
+        String expiresIn = '3600',
+      }) async {
+        final auth = AuthProvider(
+          client: MockClient((request) async {
+            if (request.url.host == 'securetoken.googleapis.com') {
+              return onRefresh(request);
+            }
+            if (request.url.path.contains('signInWithPassword')) {
+              return http.Response(
+                jsonEncode({
+                  'idToken': 'initial-tok',
+                  'email': 'x@example.com',
+                  'localId': 'uid-x',
+                  'refreshToken': 'initial-refresh',
+                  'expiresIn': expiresIn,
+                }),
+                200,
+              );
+            }
+            return http.Response(
+              jsonEncode({
+                'users': [
+                  {'email': 'x@example.com', 'emailVerified': true}
+                ]
+              }),
+              200,
+            );
+          }),
+        );
+        await auth.signIn(email: 'x@example.com', password: 'p', language: AppLanguage.en);
+        return auth;
+      }
+
+      test('returns the current token unchanged when it is nowhere near expiry', () async {
+        final auth = await signedInWith((_) async => http.Response('{}', 200));
+
+        final token = await auth.getValidIdToken();
+
+        expect(token, 'initial-tok');
+      });
+
+      test('refreshes an expired token via the refresh-token endpoint', () async {
+        var refreshCalled = false;
+        // expiresIn=1 means it's already within the 5-minute refresh window
+        // by the time getValidIdToken() checks it.
+        final auth = await signedInWith(
+          (request) async {
+            expect(request.body, contains('grant_type=refresh_token'));
+            expect(request.body, contains('refresh_token=initial-refresh'));
+            refreshCalled = true;
+            return http.Response(
+              jsonEncode({
+                'id_token': 'refreshed-tok',
+                'refresh_token': 'refreshed-refresh',
+                'expires_in': '3600',
+              }),
+              200,
+            );
+          },
+          expiresIn: '1',
+        );
+
+        final token = await auth.getValidIdToken();
+
+        expect(refreshCalled, isTrue);
+        expect(token, 'refreshed-tok');
+
+        // The refreshed token is persisted too.
+        final restored = AuthProvider(client: MockClient((_) async => http.Response('{}', 200)));
+        await restored.load();
+        expect(await restored.getValidIdToken(), 'refreshed-tok');
+      });
+
+      test('falls back to the stale token if the refresh call fails', () async {
+        final auth = await signedInWith(
+          (_) async => http.Response('server error', 500),
+          expiresIn: '1',
+        );
+
+        final token = await auth.getValidIdToken();
+
+        expect(token, 'initial-tok');
+      });
+
+      test('returns null when not logged in', () async {
+        final auth = AuthProvider(client: MockClient((_) async => http.Response('{}', 200)));
+
+        expect(await auth.getValidIdToken(), isNull);
+      });
     });
   });
 }
