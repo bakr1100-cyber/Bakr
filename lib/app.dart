@@ -68,6 +68,7 @@ class _MarocFlyAppState extends State<MarocFlyApp> {
   final _localeProvider = LocaleProvider();
   final _themeProvider = ThemeProvider();
   final _preferencesProvider = PreferencesProvider();
+  final _authProvider = AuthProvider();
   late final FlightSearchService _flightSearchService = FlightSearchService(
     priceSource: _resolvePriceSource(),
   );
@@ -114,6 +115,7 @@ class _MarocFlyAppState extends State<MarocFlyApp> {
       _localeProvider.load(),
       _themeProvider.load(),
       _preferencesProvider.load(),
+      _authProvider.load(),
     ]);
     setState(() => _loaded = true);
   }
@@ -148,7 +150,7 @@ class _MarocFlyAppState extends State<MarocFlyApp> {
         ),
         ChangeNotifierProvider(create: (_) => PriceAlertsProvider()),
         ChangeNotifierProvider(create: (_) => HomeNavigationProvider()),
-        ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider.value(value: _authProvider),
         Provider<AffiliateService>.value(value: _affiliateService),
       ],
       child: Consumer<ThemeProvider>(

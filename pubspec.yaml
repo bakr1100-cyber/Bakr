@@ -25,8 +25,10 @@ dependencies:
   firebase_messaging: ^15.0.4
   flutter_local_notifications: ^17.2.2
 
-  # Account login (email/password)
-  firebase_auth: ^5.3.0
+  # Account login (email/password) - talks to Firebase's Identity Toolkit
+  # REST API directly via `http` below, deliberately not the firebase_auth
+  # package (see AuthProvider's doc comment for why: that package hardcodes
+  # a popup/redirect resolver that breaks on iOS WebKit).
 
   # Voice assistant
   speech_to_text: ^7.0.0

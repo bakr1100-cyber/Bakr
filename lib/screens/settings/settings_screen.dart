@@ -44,7 +44,7 @@ class SettingsScreen extends StatelessWidget {
                         child: const Icon(Icons.account_circle_rounded),
                       ),
                       title: Text(t('loggedInAs')),
-                      subtitle: Text(authProvider.currentUser!.email ?? ''),
+                      subtitle: Text(authProvider.currentUserEmail ?? ''),
                       trailing: TextButton(
                         onPressed: () => authProvider.signOut(),
                         child: Text(t('logout')),
