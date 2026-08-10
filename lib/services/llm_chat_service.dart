@@ -36,7 +36,12 @@ class LlmChatService {
 
   bool get isConfigured => _baseUrl.isNotEmpty;
 
-  Future<String?> reply(List<LlmMessage> messages) async {
+  /// [jsonMode] asks the backend to guarantee a valid-JSON reply where the
+  /// underlying model supports it (currently only when the proxy is
+  /// configured to use Mistral - a no-op otherwise) - used by
+  /// [AiAssistantService]'s intent extraction, which needs to parse the
+  /// reply as structured data rather than display it as-is.
+  Future<String?> reply(List<LlmMessage> messages, {bool jsonMode = false}) async {
     if (!isConfigured) return null;
 
     try {
@@ -44,7 +49,10 @@ class LlmChatService {
           .post(
             Uri.parse('$_baseUrl/ai/chat'),
             headers: const {'Content-Type': 'application/json'},
-            body: jsonEncode({'messages': [for (final m in messages) m.toJson()]}),
+            body: jsonEncode({
+              'messages': [for (final m in messages) m.toJson()],
+              if (jsonMode) 'json_mode': true,
+            }),
           )
           .timeout(const Duration(seconds: 12));
 

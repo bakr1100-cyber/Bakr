@@ -153,7 +153,7 @@ class AiAssistantService {
       LlmMessage(role: 'user', content: userText),
     ];
 
-    final raw = await _llm.reply(messages);
+    final raw = await _llm.reply(messages, jsonMode: true);
     if (raw == null) return null;
 
     final start = raw.indexOf('{');

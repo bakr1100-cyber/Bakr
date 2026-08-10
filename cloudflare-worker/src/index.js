@@ -12,14 +12,27 @@
  *  - POST /air/offer_requests - Duffel flight search (mirrors Duffel's own
  *    "create an offer request" shape so the Dart-side DuffelFlightApi
  *    client barely changes).
- *  - POST /ai/chat - conversational replies via Cloudflare Workers AI (a
- *    free, open-source LLM running directly on Cloudflare's own
- *    infrastructure - the [ai] binding in wrangler.toml needs no separate
- *    API key/signup, it just uses this Worker's Cloudflare account).
+ *  - POST /ai/chat - conversational replies. Uses Mistral's API
+ *    (https://api.mistral.ai) when MISTRAL_API_KEY is configured as a
+ *    Cloudflare secret - noticeably better at open-ended phrasing and
+ *    Darija than the small Workers AI model below, which is why this was
+ *    added, but it needs its own account/API key and is not necessarily
+ *    free long-term. Falls back to Cloudflare Workers AI (a free,
+ *    open-source LLM running directly on Cloudflare's own infrastructure -
+ *    the [ai] binding in wrangler.toml needs no separate API key/signup)
+ *    whenever MISTRAL_API_KEY isn't set, or the Mistral call itself fails -
+ *    the chat should degrade, never go fully silent.
  */
 
 const DUFFEL_BASE_URL = 'https://api.duffel.com';
 const DUFFEL_VERSION = 'v2';
+
+const MISTRAL_CHAT_URL = 'https://api.mistral.ai/v1/chat/completions';
+// "Small" tier: a reasonable quality/latency/cost balance for a
+// conversational travel assistant. Mistral renames/retires model IDs over
+// time same as Cloudflare does - if requests start failing, check
+// https://docs.mistral.ai/getting-started/models/ for the current name.
+const MISTRAL_CHAT_MODEL = 'mistral-small-latest';
 
 // Picked for speed, not raw quality: a live smoke test showed the 70B
 // fp8-fast flagship taking far longer per reply than this app's own
@@ -96,10 +109,6 @@ async function handleFlightSearch(request, env, url) {
 }
 
 async function handleAiChat(request, env) {
-  if (!env.AI) {
-    return jsonResponse({ error: 'ai_not_configured' }, 500);
-  }
-
   let body;
   try {
     body = await request.json();
@@ -118,6 +127,28 @@ async function handleAiChat(request, env) {
   if (!isValid) {
     return jsonResponse({ error: 'messages_required' }, 400);
   }
+  // Set by AiAssistantService's intent-extraction call so Mistral can be
+  // asked to guarantee valid JSON output (response_format) - Workers AI
+  // has no equivalent, so this is a no-op on that fallback path.
+  const jsonMode = body?.json_mode === true;
+
+  if (env.MISTRAL_API_KEY) {
+    try {
+      const reply = await callMistral(messages, env.MISTRAL_API_KEY, jsonMode);
+      return jsonResponse({ reply }, 200);
+    } catch (error) {
+      // Don't fail the request over a Mistral-side issue (quota, outage,
+      // bad key) when a free fallback is available - fall through to
+      // Workers AI below instead. Logged server-side only: unlike the
+      // Workers AI path, an API key is involved here, so the error detail
+      // is not safe to hand back to the client.
+      console.error('Mistral call failed, falling back to Workers AI:', error);
+    }
+  }
+
+  if (!env.AI) {
+    return jsonResponse({ error: 'ai_not_configured' }, 500);
+  }
 
   try {
     const result = await env.AI.run(CHAT_MODEL, {
@@ -133,6 +164,28 @@ async function handleAiChat(request, env) {
     // route, there is no API key involved in this call at all.
     return jsonResponse({ error: 'ai_request_failed', detail: String(error?.message ?? error) }, 502);
   }
+}
+
+async function callMistral(messages, apiKey, jsonMode) {
+  const response = await fetch(MISTRAL_CHAT_URL, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: MISTRAL_CHAT_MODEL,
+      messages,
+      max_tokens: 400,
+      temperature: 0.6,
+      ...(jsonMode ? { response_format: { type: 'json_object' } } : {}),
+    }),
+  });
+  if (!response.ok) {
+    throw new Error(`Mistral request failed: HTTP ${response.status} ${await response.text()}`);
+  }
+  const data = await response.json();
+  return data?.choices?.[0]?.message?.content ?? '';
 }
 
 function jsonResponse(data, status) {

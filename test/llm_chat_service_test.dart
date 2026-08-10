@@ -52,6 +52,21 @@ void main() {
       expect(reply, 'Marhba! Wohin geht die Reise?');
     });
 
+    test('jsonMode: true adds json_mode to the request body; false omits it', () async {
+      late Map<String, dynamic> lastBody;
+      final client = MockClient((request) async {
+        lastBody = jsonDecode(request.body) as Map<String, dynamic>;
+        return http.Response(jsonEncode({'reply': 'ok'}), 200);
+      });
+      final service = LlmChatService(proxyBaseUrl: 'https://worker.example', client: client);
+
+      await service.reply(const [LlmMessage(role: 'user', content: 'hi')], jsonMode: true);
+      expect(lastBody['json_mode'], isTrue);
+
+      await service.reply(const [LlmMessage(role: 'user', content: 'hi')]);
+      expect(lastBody.containsKey('json_mode'), isFalse);
+    });
+
     test('returns null on a non-200 response', () async {
       final client = MockClient((request) async => http.Response('error', 500));
       final service = LlmChatService(proxyBaseUrl: 'https://worker.example', client: client);

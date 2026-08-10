@@ -31,6 +31,15 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
+      # Optional: /ai/chat falls back to Workers AI (below) when this
+      # secret doesn't exist yet - safe to run unconditionally, an empty
+      # value is treated the same as "not configured" by the Worker.
+      - name: Set Mistral API key as a Cloudflare secret
+        run: echo "${{ secrets.MISTRAL_API_KEY }}" | wrangler secret put MISTRAL_API_KEY
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
       - name: Deploy Worker
         run: wrangler deploy
         env:
