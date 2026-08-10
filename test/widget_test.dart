@@ -12,6 +12,8 @@ void main() {
     // Let the async bootstrap (loading locale/theme/preferences) settle.
     await tester.pumpAndSettle();
 
-    expect(find.text('MarocFly AI'), findsOneWidget);
+    // Default language is Darija (AppLanguage.ary), so the app name renders
+    // in Arabic script - see the 'appName' localization entry.
+    expect(find.text('طيارتي'), findsOneWidget);
   });
 }

@@ -105,6 +105,10 @@ class _AiChatScreenState extends State<AiChatScreen> {
     // no longer considers the eventual speak() call part of this tap and
     // silently blocks it (see VoiceService.unlockSpeechForThisGesture).
     _voice.unlockSpeechForThisGesture();
+    // Barge-in: sending a message (even typed) while the assistant is
+    // still reading its previous reply out loud should interrupt it, not
+    // let it keep talking over the new exchange.
+    unawaited(_voice.stopSpeaking());
     if (_isListening) {
       // Stopping still delivers one last isFinal result - suppress it so
       // this manual send isn't immediately duplicated by the voice path.
@@ -138,6 +142,11 @@ class _AiChatScreenState extends State<AiChatScreen> {
       return;
     }
     final language = context.read<LocaleProvider>().language;
+    // Barge-in: the assistant must stop talking the instant the user
+    // starts speaking, not keep reading its reply to the end while being
+    // talked over - explicit, repeated feedback that it used to just keep
+    // going regardless.
+    unawaited(_voice.stopSpeaking());
     // Guarantees a clean slate: without this, leftover text from the
     // previous message (already sent) stayed in the field and got
     // silently concatenated with this session's recognition result the

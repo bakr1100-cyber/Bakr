@@ -28,7 +28,7 @@ class SearchFormScreen extends StatelessWidget {
     final t = AppLocalizations.of(context).t;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('MarocFly AI')),
+      appBar: AppBar(title: Text(t('appName'))),
       body: ResponsiveBody(
         child: ListView(
           padding: const EdgeInsets.all(AppSpacing.lg),

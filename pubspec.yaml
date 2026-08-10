@@ -1,7 +1,10 @@
 name: marocfly_ai
 description: >
-  MarocFly AI - the intelligent travel advisor for the Moroccan diaspora.
-  Finds not just the cheapest flight, but the cheapest and smartest way home.
+  Tayarti (طيارتي) - the intelligent travel advisor for the Moroccan
+  diaspora. Finds not just the cheapest flight, but the cheapest and
+  smartest way home. (Dart package name kept as marocfly_ai - renaming it
+  would touch every import statement in the codebase for no user-visible
+  benefit.)
 publish_to: "none"
 version: 0.1.0+1
 

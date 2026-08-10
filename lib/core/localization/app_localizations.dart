@@ -81,11 +81,11 @@ class AppLocalizations {
   static const _strings = <String, Map<AppLanguage, String>>{
     // --- Brand / onboarding ---------------------------------------------
     'appName': {
-      AppLanguage.ary: 'ماروك فلاي',
-      AppLanguage.ar: 'ماروك فلاي',
-      AppLanguage.de: 'MarocFly AI',
-      AppLanguage.fr: 'MarocFly AI',
-      AppLanguage.en: 'MarocFly AI',
+      AppLanguage.ary: 'طيارتي',
+      AppLanguage.ar: 'طيارتي',
+      AppLanguage.de: 'Tayarti',
+      AppLanguage.fr: 'Tayarti',
+      AppLanguage.en: 'Tayarti',
     },
     'tagline': {
       AppLanguage.ary: 'ماشي غير أرخص طيارة، بلاصة أذكى طريق للبلاد.',
@@ -1110,11 +1110,11 @@ class AppLocalizations {
       AppLanguage.en: 'Sign out?',
     },
     'confirmSignOutBody': {
-      AppLanguage.ary: 'غادي تخرج من الحساب ديالك ديال MarocFly فهاد الجهاز.',
-      AppLanguage.ar: 'ستخرج من حسابك في MarocFly على هذا الجهاز.',
-      AppLanguage.de: 'Du wirst auf diesem Gerät von deinem MarocFly-Konto abgemeldet.',
-      AppLanguage.fr: 'Tu seras déconnecté de ton compte MarocFly sur cet appareil.',
-      AppLanguage.en: 'You will be signed out of your MarocFly account on this device.',
+      AppLanguage.ary: 'غادي تخرج من الحساب ديالك ديال طيارتي فهاد الجهاز.',
+      AppLanguage.ar: 'ستخرج من حسابك في طيارتي على هذا الجهاز.',
+      AppLanguage.de: 'Du wirst auf diesem Gerät von deinem Tayarti-Konto abgemeldet.',
+      AppLanguage.fr: 'Tu seras déconnecté de ton compte Tayarti sur cet appareil.',
+      AppLanguage.en: 'You will be signed out of your Tayarti account on this device.',
     },
     'cancel': {
       AppLanguage.ary: 'لا',

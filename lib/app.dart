@@ -180,7 +180,7 @@ class _MarocFlyAppState extends State<MarocFlyApp> {
           return Consumer<LocaleProvider>(
             builder: (context, localeProvider, _) {
               return MaterialApp(
-                title: 'MarocFly AI',
+                title: 'Tayarti',
                 debugShowCheckedModeBanner: false,
                 theme: AppTheme.light(),
                 darkTheme: AppTheme.dark(),
