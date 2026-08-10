@@ -1,11 +1,11 @@
 {
-    "name": "MarocFly AI",
-    "short_name": "MarocFly",
+    "name": "Tayarti",
+    "short_name": "Tayarti",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#F3F8F6",
     "theme_color": "#00A88C",
-    "description": "MarocFly AI — Flugsuche und Reisebegleiter für die marokkanische Diaspora.",
+    "description": "Tayarti (طيارتي) — Flugsuche und Reisebegleiter für die marokkanische Diaspora.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
