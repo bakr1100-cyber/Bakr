@@ -13,7 +13,44 @@ import 'package:marocfly_ai/services/llm_chat_service.dart';
 void main() {
   const dus = Airport(code: 'DUS', city: 'Düsseldorf', country: 'Deutschland');
   const fez = Airport(code: 'FEZ', city: 'Fès', country: 'Marokko');
+  const cmn = Airport(code: 'CMN', city: 'Casablanca', country: 'Marokko');
   final departureDate = DateTime.now().add(const Duration(days: 14));
+
+  // Regression test for the exact conversation reproduced live on video:
+  // destination gets set ("إلى الدار البيضاء" = "to Casablanca"), the
+  // assistant correctly asks "where from?", but every subsequent reply -
+  // including an unambiguous "بغيت نطير من فاس" ("I want to fly from
+  // Fès") - kept getting the identical clarifying question again, because
+  // the regex fallback had no way to tell a lone city mention apart from a
+  // new destination and silently overwrote Casablanca each time.
+  group('multi-turn conversation (regression: infinite "where from?" loop)', () {
+    test('an unambiguous "from Fès" reply fills the missing origin without touching the '
+        'already-known destination', () async {
+      final service = AiAssistantService();
+      const afterDestination = TravelIntent(destination: cmn);
+
+      final turn = await service.handleMessage(
+        'بغيت نطير من فاس',
+        afterDestination,
+        language: AppLanguage.ar,
+      );
+
+      expect(turn.intent.destination?.code, 'CMN');
+      expect(turn.intent.origin?.code, 'FEZ');
+      expect(turn.intent.nextMissingField, isNot('origin'));
+    });
+
+    test('a bare city name reply also fills the missing origin, not a new destination',
+        () async {
+      final service = AiAssistantService();
+      const afterDestination = TravelIntent(destination: cmn);
+
+      final turn = await service.handleMessage('فاس', afterDestination, language: AppLanguage.ar);
+
+      expect(turn.intent.destination?.code, 'CMN');
+      expect(turn.intent.origin?.code, 'FEZ');
+    });
+  });
 
   group('without an LLM configured', () {
     test('falls back to the fixed clarifying-question template', () async {

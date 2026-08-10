@@ -52,7 +52,8 @@ class AiAssistantService {
     List<ChatMessage> history = const [],
     AppLanguage language = AppLanguage.ary,
   }) async {
-    final parsed = await _extractIntentViaLlm(userText, language) ?? _nlu.parse(userText);
+    final parsed = await _extractIntentViaLlm(userText, conversationState, language) ??
+        _nlu.parse(userText, conversationState: conversationState);
     final merged = conversationState.mergedWith(parsed);
 
     if (parsed.isLowConfidence && parsed.origin != null && parsed.destination != null) {
@@ -127,11 +128,27 @@ class AiAssistantService {
   /// the caller falls back to [NluService]) whenever the LLM is not
   /// configured, the call fails/times out, the reply isn't valid JSON, or
   /// nothing at all was extracted from it.
-  Future<TravelIntent?> _extractIntentViaLlm(String userText, AppLanguage language) async {
+  ///
+  /// [conversationState] tells it what's already been established (e.g.
+  /// "destination is already Casablanca") - without this, a one-word reply
+  /// like a bare city name to "where from?" is genuinely ambiguous even to
+  /// an LLM with no other context to go on.
+  Future<TravelIntent?> _extractIntentViaLlm(
+    String userText,
+    TravelIntent conversationState,
+    AppLanguage language,
+  ) async {
     if (_llm == null || !_llm.isConfigured) return null;
 
     final today = DateTime.now();
     final airportList = _knownAirports.map((a) => '${a.code}=${a.city}').join(', ');
+    final knownSoFar = StringBuffer();
+    if (conversationState.origin != null) {
+      knownSoFar.write('origin=${conversationState.origin!.code} ');
+    }
+    if (conversationState.destination != null) {
+      knownSoFar.write('destination=${conversationState.destination!.code} ');
+    }
     final messages = [
       LlmMessage(
         role: 'system',
@@ -148,7 +165,11 @@ class AiAssistantService {
             'dates ("tomorrow", "next week", "غدا", "الأسبوع الجاي") to an actual date. '
             'Leave a field null if the message does not mention it - do not guess. The '
             'user may write in German, French, English, Modern Standard Arabic, or '
-            'Moroccan Darija (Arabic script or Latin transliteration).',
+            'Moroccan Darija (Arabic script or Latin transliteration).\n'
+            '${knownSoFar.isEmpty ? '' : 'Already established from earlier in this conversation: '
+                '$knownSoFar- if this message names exactly one more city with no '
+                'explicit "from"/"to" wording, it almost always fills in whichever of '
+                'origin/destination is still missing above, not the one already set.\n'}',
       ),
       LlmMessage(role: 'user', content: userText),
     ];

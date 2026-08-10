@@ -70,6 +70,26 @@ class NluService {
     RegExp(r'(?:إلى|لـ|ل)\s+([\p{L}\s]+?)(?:[.,!?]|$)', unicode: true),
   ];
 
+  /// Recognizes a bare "from X" (no accompanying "to Y") - needed for
+  /// exactly the case a fresh clarifying question produces: the user
+  /// answers "منين بغيتي تطير؟" ("where do you want to fly from?") with
+  /// just "بغيت نطير من فاس" ("I want to fly from Fès"). Without this, that
+  /// answer matched no pattern at all and fell through to the ambiguous
+  /// single-city fallback scan below, which - having no way to tell origin
+  /// from destination on its own - assigned it as the *destination*,
+  /// silently overwriting the one already established and leaving origin
+  /// stuck missing forever (observed live: the same clarifying question
+  /// repeating no matter what was said). French "de" is deliberately not
+  /// included here - unlike "von"/"from"/"من"/"mn", it's used constantly in
+  /// French for reasons that have nothing to do with an origin city, which
+  /// would create far more false positives than it would fix.
+  static final List<RegExp> _originOnlyPatterns = [
+    RegExp(r'\bvon\s+([\p{L}\s]+?)(?:[.,!?]|$)', unicode: true),
+    RegExp(r'\bfrom\s+([\p{L}\s]+?)(?:[.,!?]|$)', unicode: true),
+    RegExp(r'\bmn\s+([\p{L}\s]+?)(?:[.,!?]|$)', unicode: true),
+    RegExp(r'من\s+([\p{L}\s]+?)(?:[.,!?]|$)', unicode: true),
+  ];
+
   static final RegExp _budgetPattern = RegExp(
     r'(\d+)\s*(?:€|eur|euro|أورو|يورو)',
     caseSensitive: false,
@@ -94,7 +114,12 @@ class NluService {
     'من غير توقف',
   ];
 
-  TravelIntent parse(String rawText) {
+  /// [conversationState], when given, is the intent already built up from
+  /// earlier turns - used only to disambiguate the single-city fallback
+  /// scan below (is a lone city mention the still-missing origin, or a new
+  /// destination?), never to override anything this call itself resolves
+  /// with real confidence.
+  TravelIntent parse(String rawText, {TravelIntent? conversationState}) {
     final text = rawText.trim();
     final lower = text.toLowerCase();
     _lastResolveWasLowConfidence = false;
@@ -121,15 +146,45 @@ class NluService {
       }
     }
 
-    // Fallback: scan the whole message for any known city alias.
+    if (origin == null) {
+      for (final pattern in _originOnlyPatterns) {
+        final match = pattern.firstMatch(lower) ?? pattern.firstMatch(text);
+        if (match != null) {
+          origin = _resolveCity(match.group(1));
+          if (origin != null) break;
+        }
+      }
+    }
+
+    // Fallback: scan the whole message for any known city alias. With no
+    // explicit "from"/"to" wording at all (just a bare city name), there's
+    // no way to tell origin from destination from this message alone - so
+    // when exactly one *new* city is mentioned and the conversation so far
+    // already has a destination but is still missing the origin (the exact
+    // shape of a reply to "where from?"), treat it as the origin instead
+    // of blindly defaulting to "destination first" and overwriting the one
+    // already known.
     if (origin == null || destination == null) {
       final found = _scanAllCities(lower);
       found.removeWhere((a) => a == destination || a == origin);
-      if (destination == null && found.isNotEmpty) {
-        destination = found.removeAt(0);
+      if (conversationState != null) {
+        found.removeWhere(
+          (a) => a == conversationState.origin || a == conversationState.destination,
+        );
       }
-      if (origin == null && found.isNotEmpty) {
-        origin = found.removeAt(0);
+
+      final destinationAlreadyKnown = destination != null || conversationState?.destination != null;
+      final originAlreadyKnown = origin != null || conversationState?.origin != null;
+
+      if (found.length == 1 && destinationAlreadyKnown && !originAlreadyKnown) {
+        origin = found.first;
+      } else {
+        if (destination == null && found.isNotEmpty) {
+          destination = found.removeAt(0);
+        }
+        if (origin == null && found.isNotEmpty) {
+          origin = found.removeAt(0);
+        }
       }
     }
 
