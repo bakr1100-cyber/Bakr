@@ -1,5 +1,3 @@
-import 'dart:math';
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -9,7 +7,8 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_theme.dart';
 import '../../providers/chat_provider.dart';
 import '../../providers/locale_provider.dart';
-import '../home/home_screen.dart';
+import '../../widgets/app_logo.dart';
+import 'mode_select_screen.dart';
 
 class LanguageSelectScreen extends StatelessWidget {
   const LanguageSelectScreen({super.key});
@@ -35,7 +34,7 @@ class LanguageSelectScreen extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const _AppLogo(size: 84),
+                  const AppLogo(size: 84),
                   const SizedBox(height: AppSpacing.xl),
                   Text(
                     t('appName'),
@@ -85,7 +84,7 @@ class LanguageSelectScreen extends StatelessWidget {
     context.read<LocaleProvider>().setLanguage(language);
     context.read<ChatProvider>().setLanguage(language);
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const HomeScreen()),
+      MaterialPageRoute(builder: (_) => const ModeSelectScreen()),
     );
   }
 }
@@ -257,63 +256,3 @@ class _LanguageCardState extends State<_LanguageCard>
   }
 }
 
-/// The app's mark: a white airplane over a green five-pointed star, on the
-/// Moroccan flag's red field - "Tayarti" (طيارتي, "my flight"), a plane and
-/// the flag together, per explicit request. Matches `web/icons/` and
-/// `web/favicon.png` (generated from the same design) so the in-app brand
-/// moment and the browser/home-screen icon are the same mark.
-class _AppLogo extends StatelessWidget {
-  const _AppLogo({required this.size});
-
-  final double size;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: const BoxDecoration(
-        color: AppColors.moroccoRed,
-        shape: BoxShape.circle,
-      ),
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          CustomPaint(
-            size: Size(size * 0.68, size * 0.68),
-            painter: const _StarPainter(color: AppColors.flagGreen),
-          ),
-          Icon(Icons.flight_rounded, color: Colors.white, size: size * 0.42),
-        ],
-      ),
-    );
-  }
-}
-
-class _StarPainter extends CustomPainter {
-  const _StarPainter({required this.color});
-
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final outerRadius = size.width / 2;
-    final innerRadius = outerRadius * 0.4;
-    final path = Path();
-    for (var i = 0; i < 10; i++) {
-      final radius = i.isEven ? outerRadius : innerRadius;
-      final angle = (i * 36 - 90) * (pi / 180);
-      final point = Offset(
-        center.dx + radius * cos(angle),
-        center.dy + radius * sin(angle),
-      );
-      i == 0 ? path.moveTo(point.dx, point.dy) : path.lineTo(point.dx, point.dy);
-    }
-    path.close();
-    canvas.drawPath(path, Paint()..color = color);
-  }
-
-  @override
-  bool shouldRepaint(covariant _StarPainter oldDelegate) => oldDelegate.color != color;
-}

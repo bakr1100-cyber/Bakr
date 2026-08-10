@@ -113,6 +113,10 @@ class ItineraryDetailScreen extends StatelessWidget {
                 affiliate: affiliate,
                 isLast: i == itinerary.legs.length - 1,
               ),
+            if (_hasMixedModeConnection(itinerary)) ...[
+              const SizedBox(height: AppSpacing.sm),
+              _ConnectionDisclaimer(text: t('connectionDisclaimer')),
+            ],
             const SizedBox(height: AppSpacing.xxl),
             BigButton(
               label: t('activateCompanion'),
@@ -144,6 +148,54 @@ class ItineraryDetailScreen extends StatelessWidget {
             const SizedBox(height: AppSpacing.lg),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// True for a flight+train combo (any itinerary mixing both modes across
+/// more than one leg) - the case where a delay on one leg can cost the
+/// connection to the next, unlike a same-carrier flight-only itinerary
+/// where the airline itself is responsible for a missed connection.
+bool _hasMixedModeConnection(Itinerary itinerary) {
+  if (itinerary.legs.length < 2) return false;
+  final modes = itinerary.legs.map((l) => l.mode).toSet();
+  return modes.contains(LegMode.flight) &&
+      (modes.contains(LegMode.train) || modes.contains(LegMode.bus));
+}
+
+/// Fixed, always-shown text - deliberately not left to the AI chat to
+/// mention only sometimes, since this is safety/liability-relevant: per
+/// explicit request, connections between separately-booked legs (e.g. a
+/// flight into Rabat, then an ONCF train onward) are never guaranteed by
+/// this app, so the user should always see that plainly stated.
+class _ConnectionDisclaimer extends StatelessWidget {
+  const _ConnectionDisclaimer({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: AppColors.moroccoGold.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(AppRadius.md),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.info_outline_rounded, size: 18, color: theme.colorScheme.tertiary),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Text(
+              text,
+              style: theme.textTheme.bodySmall
+                  ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+            ),
+          ),
+        ],
       ),
     );
   }

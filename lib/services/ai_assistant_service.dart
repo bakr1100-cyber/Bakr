@@ -345,6 +345,18 @@ class AiAssistantService {
         'cheaper alternatives are available below, without listing exact '
         'prices for every one of them.',
       );
+      final cheapestModes = cheapest.legs.map((l) => l.mode).toSet();
+      if (cheapestModes.contains(LegMode.flight) &&
+          (cheapestModes.contains(LegMode.train) || cheapestModes.contains(LegMode.bus))) {
+        buffer.writeln(
+          'That cheapest alternative combines a flight with a separately '
+          'booked train/bus leg. If you mention it, add a brief, casual '
+          'note that the connection between them is not guaranteed and '
+          'the user should check the timing themselves - do not phrase it '
+          'as a formal legal disclaimer, the app already shows one; just a '
+          'friendly heads-up in passing.',
+        );
+      }
     }
 
     buffer.writeln(

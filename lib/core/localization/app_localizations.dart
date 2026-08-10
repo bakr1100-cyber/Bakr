@@ -1193,6 +1193,55 @@ class AppLocalizations {
       AppLanguage.fr: 'Masquer le mot de passe',
       AppLanguage.en: 'Hide password',
     },
+    'modeSelectTitle': {
+      AppLanguage.ary: 'كيفاش بغيتي تقلب؟',
+      AppLanguage.ar: 'كيف تريد البحث؟',
+      AppLanguage.de: 'Wie möchtest du suchen?',
+      AppLanguage.fr: 'Comment veux-tu chercher ?',
+      AppLanguage.en: 'How do you want to search?',
+    },
+    'modeSelectSubtitle': {
+      AppLanguage.ary: 'تقدر تبدل بينهم منين بغيتي من داخل التطبيق.',
+      AppLanguage.ar: 'يمكنك التبديل بينهما في أي وقت من داخل التطبيق.',
+      AppLanguage.de: 'Du kannst später jederzeit zwischen beiden wechseln.',
+      AppLanguage.fr: 'Tu pourras toujours basculer entre les deux plus tard.',
+      AppLanguage.en: 'You can switch between the two anytime later.',
+    },
+    'modeAiTitle': {
+      AppLanguage.ary: 'المستشار الذكي',
+      AppLanguage.ar: 'المستشار الذكي',
+      AppLanguage.de: 'KI-Assistent',
+      AppLanguage.fr: 'Assistant IA',
+      AppLanguage.en: 'AI assistant',
+    },
+    'modeAiSubtitle': {
+      AppLanguage.ary: 'قوليا فين بغيتي تسافر، وأنا نسولك على الباقي.',
+      AppLanguage.ar: 'أخبرني إلى أين تريد السفر، وسأسألك عن الباقي.',
+      AppLanguage.de: 'Erzähl mir einfach, wohin du willst - ich frage nach dem Rest.',
+      AppLanguage.fr: 'Dis-moi simplement où tu veux aller - je te pose le reste des questions.',
+      AppLanguage.en: 'Just tell me where you want to go - I\'ll ask for the rest.',
+    },
+    'modeClassicTitle': {
+      AppLanguage.ary: 'البحث العادي',
+      AppLanguage.ar: 'البحث العادي',
+      AppLanguage.de: 'Klassische Suche',
+      AppLanguage.fr: 'Recherche classique',
+      AppLanguage.en: 'Classic search',
+    },
+    'modeClassicSubtitle': {
+      AppLanguage.ary: 'ختار الوجهة، التاريخ، وعدد المسافرين بيدك.',
+      AppLanguage.ar: 'اختر الوجهة والتاريخ وعدد المسافرين بنفسك.',
+      AppLanguage.de: 'Ziel, Datum und Passagiere direkt selbst auswählen.',
+      AppLanguage.fr: 'Choisis directement la destination, la date et le nombre de passagers.',
+      AppLanguage.en: 'Pick the destination, date, and passengers yourself.',
+    },
+    'connectionDisclaimer': {
+      AppLanguage.ary: 'هاد السفرة فيها شي رحلة وشي طران اللي خاصهم يتلاقاو - فحالة تأخر، ما تقدرش تكون سبب فحق التعويض. تأكد من الوقت قبل ما تحجز.',
+      AppLanguage.ar: 'هذه الرحلة تجمع بين وسيلة نقل وأخرى يجب أن تتلاقيا - في حال حدوث تأخير، لا تتحمل هذه التطبيق أي مسؤولية عن فوات الارتباط. تحقق من التوقيت قبل الحجز.',
+      AppLanguage.de: 'Diese Reise kombiniert mehrere separat gebuchte Verbindungen. Bei Verspätungen übernehmen wir keine Verantwortung für einen verpassten Anschluss - prüfe die Zeiten vor der Buchung.',
+      AppLanguage.fr: "Cet itinéraire combine plusieurs connexions réservées séparément. En cas de retard, nous ne sommes pas responsables d'une correspondance manquée - vérifie les horaires avant de réserver.",
+      AppLanguage.en: 'This trip combines separately booked connections. In case of delays, we take no responsibility for a missed connection - check the timing before booking.',
+    },
   };
 
   String t(String key) => _strings[key]?[language] ?? key;
