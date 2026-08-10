@@ -103382,6 +103382,7 @@ s=s==null?null:B.d.ah(s,0)
 if(s==null)s="some"
 s=k+("There "+i+" also "+m+" creative, cheaper alternative route(s) shown below in the app (different airport, train/bus combo, etc.) - the cheapest saves about "+s+" EUR "+this.aeC(n.w)+". Briefly mention that cheaper alternatives are available below, without listing exact prices for every one of them.\n")
 m=s}else m=k
+m+='Phrase your reply as two short, genuinely different opinions on this route instead of one neutral summary - per explicit request, replies about search results should never sound like a neutral advice column. One voice cares mainly about saving money ("Sparfuchs"-type), the other mainly about comfort/time/convenience. Give each voice a short label translated into the reply\'s own language (e.g. German: "Sparfuchs:" / "Komfort:") and 1-2 sentences. Both voices must only use the facts given above - never invent numbers, airlines, or details beyond them just to make a voice sound more opinionated.\n'
 return m.charCodeAt(0)==0?m:m},
 akR(a){var s,r,q,p,o=a.r
 A:{s=null
