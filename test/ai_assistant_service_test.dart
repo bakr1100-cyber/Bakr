@@ -131,6 +131,29 @@ void main() {
         isTrue,
       );
     });
+
+    // Regression test for the explicit "no neutral summaries" request:
+    // search-result replies must ask the LLM for two differing opinions
+    // (a budget-focused voice and a comfort-focused voice), not one
+    // neutral-sounding summary.
+    test('asks for two differing opinions (not one neutral summary) when presenting results',
+        () async {
+      http.Request? captured;
+      final client = MockClient((request) async {
+        captured = request;
+        return http.Response(jsonEncode({'reply': 'ok'}), 200);
+      });
+      final llm = LlmChatService(proxyBaseUrl: 'https://worker.example', client: client);
+      final service = AiAssistantService(llmChatService: llm);
+      final intent = TravelIntent(origin: dus, destination: fez, departureDate: departureDate);
+
+      await service.handleMessage('Nochmal bitte', intent, language: AppLanguage.de);
+
+      final body = jsonDecode(captured!.body) as Map<String, dynamic>;
+      final systemContent = (body['messages'] as List).first['content'] as String;
+      expect(systemContent, contains('Sparfuchs'));
+      expect(systemContent, contains('two short, genuinely different opinions'));
+    });
   });
 
   group('LLM-based intent extraction', () {

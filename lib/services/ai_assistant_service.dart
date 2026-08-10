@@ -326,6 +326,18 @@ class AiAssistantService {
       );
     }
 
+    buffer.writeln(
+      'Phrase your reply as two short, genuinely different opinions on this '
+      'route instead of one neutral summary - per explicit request, replies '
+      'about search results should never sound like a neutral advice column. '
+      'One voice cares mainly about saving money ("Sparfuchs"-type), the '
+      'other mainly about comfort/time/convenience. Give each voice a short '
+      'label translated into the reply\'s own language (e.g. German: '
+      '"Sparfuchs:" / "Komfort:") and 1-2 sentences. Both voices must only '
+      'use the facts given above - never invent numbers, airlines, or '
+      'details beyond them just to make a voice sound more opinionated.',
+    );
+
     return buffer.toString();
   }
 
