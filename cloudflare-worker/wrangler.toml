@@ -2,12 +2,10 @@ name = "marocfly-duffel-proxy"
 main = "src/index.js"
 compatibility_date = "2026-01-01"
 
-# DUFFEL_API_KEY, MISTRAL_API_KEY, and QWEN_API_KEY are NOT set here -
-# they're secrets, pushed via `wrangler secret put <NAME>` (see the GitHub
-# Actions workflow), never committed to this file or to git.
-# MISTRAL_API_KEY/QWEN_API_KEY are both optional - /ai/chat tries Mistral,
-# then Qwen, then falls back to Workers AI below, skipping any step that's
-# unset.
+# DUFFEL_API_KEY and MISTRAL_API_KEY are NOT set here - they're secrets,
+# pushed via `wrangler secret put <NAME>` (see the GitHub Actions
+# workflow), never committed to this file or to git. MISTRAL_API_KEY is
+# optional - /ai/chat falls back to Workers AI below when it's unset.
 
 # Workers AI: runs open-source LLMs (Llama 3.1, etc.) directly on
 # Cloudflare's infrastructure. This binding needs no separate API key/

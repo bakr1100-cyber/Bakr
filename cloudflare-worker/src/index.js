@@ -14,17 +14,20 @@
  *    client barely changes).
  *  - POST /ai/chat - conversational replies, tried in this order:
  *    1. Mistral's API (https://api.mistral.ai) if MISTRAL_API_KEY is set.
- *    2. Qwen (Alibaba Cloud DashScope) if QWEN_API_KEY is set.
- *    3. Cloudflare Workers AI (free, open-source, runs directly on this
+ *    2. Cloudflare Workers AI (free, open-source, runs directly on this
  *       Worker's own Cloudflare account via the [ai] binding in
  *       wrangler.toml - no separate signup) - the guaranteed-always-on
  *       last resort.
- *    Steps 1-2 need their own account/API key and are not necessarily free
- *    long-term, but are noticeably better at open-ended phrasing and
- *    Darija than the small Workers AI model. Each step is skipped (not
- *    configured) or falls through to the next (configured but the call
+ *    Step 1 needs its own account/API key and is not necessarily free
+ *    long-term, but is noticeably better at open-ended phrasing and
+ *    Darija than the small Workers AI model. It's skipped entirely (not
+ *    configured) or falls through to step 2 (configured but the call
  *    itself failed - quota, outage, bad key) - the chat should degrade,
  *    never go fully silent.
+ *
+ *    (A third tier, Qwen/Alibaba Cloud, was tried and removed - the
+ *    signup required identity/payment verification that wasn't worth the
+ *    hassle for a hobby project. Mistral + Workers AI is plenty.)
  */
 
 const DUFFEL_BASE_URL = 'https://api.duffel.com';
@@ -36,16 +39,6 @@ const MISTRAL_CHAT_URL = 'https://api.mistral.ai/v1/chat/completions';
 // time same as Cloudflare does - if requests start failing, check
 // https://docs.mistral.ai/getting-started/models/ for the current name.
 const MISTRAL_CHAT_MODEL = 'mistral-small-latest';
-
-// DashScope's OpenAI-compatible endpoint - the "-intl" host serves
-// non-mainland-China accounts/traffic, which is what this app (Europe)
-// needs; the plain dashscope.aliyuncs.com host is mainland-China-only.
-const QWEN_CHAT_URL = 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions';
-// "Plus" tier: a reasonable quality/latency/cost balance, same reasoning
-// as the Mistral model choice above. Check
-// https://www.alibabacloud.com/help/en/model-studio/models for current
-// model IDs if requests start failing.
-const QWEN_CHAT_MODEL = 'qwen-plus';
 
 // Picked for speed, not raw quality: a live smoke test showed the 70B
 // fp8-fast flagship taking far longer per reply than this app's own
@@ -155,16 +148,7 @@ async function handleAiChat(request, env) {
       // next step instead. Logged server-side only: unlike the Workers AI
       // path, an API key is involved here, so the error detail is not
       // safe to hand back to the client.
-      console.error('Mistral call failed, trying Qwen next:', error);
-    }
-  }
-
-  if (env.QWEN_API_KEY) {
-    try {
-      const reply = await callQwen(messages, env.QWEN_API_KEY, jsonMode);
-      return jsonResponse({ reply }, 200);
-    } catch (error) {
-      console.error('Qwen call failed, falling back to Workers AI:', error);
+      console.error('Mistral call failed, falling back to Workers AI:', error);
     }
   }
 
@@ -205,28 +189,6 @@ async function callMistral(messages, apiKey, jsonMode) {
   });
   if (!response.ok) {
     throw new Error(`Mistral request failed: HTTP ${response.status} ${await response.text()}`);
-  }
-  const data = await response.json();
-  return data?.choices?.[0]?.message?.content ?? '';
-}
-
-async function callQwen(messages, apiKey, jsonMode) {
-  const response = await fetch(QWEN_CHAT_URL, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: QWEN_CHAT_MODEL,
-      messages,
-      max_tokens: 400,
-      temperature: 0.6,
-      ...(jsonMode ? { response_format: { type: 'json_object' } } : {}),
-    }),
-  });
-  if (!response.ok) {
-    throw new Error(`Qwen request failed: HTTP ${response.status} ${await response.text()}`);
   }
   const data = await response.json();
   return data?.choices?.[0]?.message?.content ?? '';
