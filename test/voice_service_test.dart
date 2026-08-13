@@ -17,7 +17,8 @@ void main() {
         requests.add(request);
         return http.Response('{"error":"no_audio"}', 502);
       });
-      final voice = VoiceService(proxyBaseUrl: 'https://proxy.example', client: client);
+      final voice = VoiceService(
+          proxyBaseUrl: 'https://proxy.example', client: client, enableCloudTts: true);
 
       await voice.speak('Bonjour', locale: 'fr-FR');
 
@@ -31,7 +32,8 @@ void main() {
         requests.add(request);
         return http.Response('{"error":"no_audio"}', 502);
       });
-      final voice = VoiceService(proxyBaseUrl: 'https://proxy.example', client: client);
+      final voice = VoiceService(
+          proxyBaseUrl: 'https://proxy.example', client: client, enableCloudTts: true);
 
       await voice.speak('Hello', locale: 'en-US');
 
@@ -44,7 +46,8 @@ void main() {
         requests.add(request);
         return http.Response('{"error":"no_audio"}', 502);
       });
-      final voice = VoiceService(proxyBaseUrl: 'https://proxy.example', client: client);
+      final voice = VoiceService(
+          proxyBaseUrl: 'https://proxy.example', client: client, enableCloudTts: true);
 
       await voice.speak('Hallo', locale: 'de-DE');
 
@@ -57,7 +60,8 @@ void main() {
         requests.add(request);
         return http.Response('{"error":"no_audio"}', 502);
       });
-      final voice = VoiceService(proxyBaseUrl: 'https://proxy.example', client: client);
+      final voice = VoiceService(
+          proxyBaseUrl: 'https://proxy.example', client: client, enableCloudTts: true);
 
       await voice.speak('مرحبا', locale: 'ar-MA');
 
@@ -70,7 +74,7 @@ void main() {
         requests.add(request);
         return http.Response('{}', 200);
       });
-      final voice = VoiceService(client: client);
+      final voice = VoiceService(client: client, enableCloudTts: true);
 
       await voice.speak('Bonjour', locale: 'fr-FR');
 
@@ -83,13 +87,29 @@ void main() {
         requests.add(request);
         return http.Response('{"error":"no_audio"}', 502);
       });
-      final voice = VoiceService(proxyBaseUrl: 'https://proxy.example', client: client);
+      final voice = VoiceService(
+          proxyBaseUrl: 'https://proxy.example', client: client, enableCloudTts: true);
 
       await voice.speak('Bonjour tout le monde', locale: 'fr-FR');
 
       final body = requests.single.body;
       expect(body, contains('"text":"Bonjour tout le monde"'));
       expect(body, contains('"lang":"fr"'));
+    });
+
+    test('is OFF by default - MeloTTS has never once returned audio, so the app must not '
+        'spend a doomed round-trip before falling back to the native voice', () async {
+      final requests = <http.Request>[];
+      final client = MockClient((request) async {
+        requests.add(request);
+        return http.Response('{"error":"no_audio"}', 502);
+      });
+      // Note: no enableCloudTts argument - this is what the real app builds.
+      final voice = VoiceService(proxyBaseUrl: 'https://proxy.example', client: client);
+
+      await voice.speak('Bonjour', locale: 'fr-FR');
+
+      expect(requests, isEmpty);
     });
   });
 

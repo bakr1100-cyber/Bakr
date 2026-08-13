@@ -11,20 +11,33 @@
   `test/voice_service_test.dart` (the HTTP routing logic - not actual
   audio output, which needs a real device/browser to verify).
 
-### Known issue: MeloTTS is currently returning "capacity exceeded"
-The deploy workflow's `/ai/tts` smoke test has hit Cloudflare's own
-`3040: Capacity temporarily exceeded` error on every deploy so far (3/3),
-not just an occasional blip - this looks like a persistent capacity limit
-on this specific beta model for this account, not something fixable from
-this repo. The request itself is confirmed correct (right model name,
-right shape - Cloudflare's API accepts and processes it, it just can't
-currently fulfil it). **Not a live-app problem**: `VoiceService.speak()`
-already falls back to the native voice on any cloud-TTS failure, so users
-just silently get the native French/English voice for now instead of
-MeloTTS, exactly like before this feature existed - no broken experience,
-just not the upgraded voice yet. Worth re-checking in a few weeks (Workers
-AI beta capacity generally improves over time); no code change needed
-unless it's still failing much later.
+### MeloTTS does not work at all right now - cloud voice is DISABLED
+Corrected finding. An earlier read of this was too optimistic ("transient
+capacity, request shape is fine"). Probing each language separately across
+four deploys shows it has **never once returned audio**, with three
+different errors:
+
+| attempt | lang | error |
+|---|---|---|
+| 1-3 | fr | `3040: Capacity temporarily exceeded` |
+| 4 | en | `3043: Internal server error` |
+| 4 | fr | `8002: Invalid input` |
+
+`8002` on a plain `fr` request is a known, undocumented per-language gap in
+Cloudflare's MeloTTS wrapper (cloudflare/cloudflare-docs#23308) - not
+something fixable from this repo.
+
+**So the cloud voice is now off by default** (`_cloudTtsEnabledByDefault`
+in `voice_service.dart`). Leaving it on was not harmless: every
+French/English reply would first spend a network round-trip failing before
+the native voice started speaking, i.e. the user waits longer to hear the
+exact same voice as before. With it off, French/English behave precisely as
+they did before this feature existed.
+
+The whole path stays wired up and tested behind that one flag. The deploy
+smoke test now probes `en` and `fr` separately on every deploy and prints
+`lang=xx OK` when it works - **flip the flag back to `true` when that
+appears**, nothing else needs changing.
 
 ## Speech-to-text (input): Whisper added as a fallback, native path untouched
 The primary voice-input experience is deliberately unchanged: native Web

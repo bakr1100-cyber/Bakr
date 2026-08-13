@@ -15,6 +15,23 @@ import 'package:speech_to_text/speech_to_text.dart';
 /// engine, no wasted network round-trip either.
 const _cloudTtsSupportedLangPrefixes = {'en', 'fr'};
 
+/// Whether to try the cloud voice at all.
+///
+/// Currently **off**: MeloTTS on Workers AI has failed on every single
+/// deploy smoke test so far, for both `en` and `fr`, with three different
+/// errors (`3040: Capacity temporarily exceeded`, `3043: Internal server
+/// error`, `8002: Invalid input` - the last one is a known, undocumented
+/// per-language gap, see cloudflare/cloudflare-docs#23308). It has never
+/// once returned audio.
+///
+/// Leaving it enabled isn't harmless: every French/English reply would
+/// first spend a network round-trip failing before the native voice starts
+/// speaking, so the user just waits longer for the same voice they already
+/// had. The whole path stays wired up and tested behind this flag - flip
+/// it back to `true` once the deploy smoke test starts reporting
+/// `lang=... OK`, no other change needed.
+const _cloudTtsEnabledByDefault = false;
+
 /// Thin wrapper around speech-to-text and text-to-speech so the whole app
 /// can be operated by voice.
 ///
@@ -38,11 +55,16 @@ const _cloudTtsSupportedLangPrefixes = {'en', 'fr'};
 /// never-worse-than-before degradation every other optional integration
 /// in this app follows.
 class VoiceService {
-  VoiceService({String? proxyBaseUrl, http.Client? client})
-      : _proxyBaseUrl = proxyBaseUrl,
-        _client = client ?? http.Client();
+  VoiceService({
+    String? proxyBaseUrl,
+    http.Client? client,
+    bool enableCloudTts = _cloudTtsEnabledByDefault,
+  })  : _proxyBaseUrl = proxyBaseUrl,
+        _client = client ?? http.Client(),
+        _cloudTtsEnabled = enableCloudTts;
 
   final String? _proxyBaseUrl;
+  final bool _cloudTtsEnabled;
   final http.Client _client;
   final SpeechToText _speechToText = SpeechToText();
   final FlutterTts _tts = FlutterTts();
@@ -201,6 +223,7 @@ class VoiceService {
   }
 
   String? _cloudTtsLang(String? locale) {
+    if (!_cloudTtsEnabled) return null;
     if (_proxyBaseUrl == null || _proxyBaseUrl.isEmpty || locale == null) return null;
     final prefix = locale.split('-').first.toLowerCase();
     return _cloudTtsSupportedLangPrefixes.contains(prefix) ? prefix : null;
