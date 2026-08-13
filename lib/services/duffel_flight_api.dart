@@ -110,12 +110,19 @@ class DuffelOffer {
     required this.totalAmount,
     required this.totalCurrency,
     required this.segments,
+    required this.isLiveMode,
   });
 
   final String id;
   final double totalAmount;
   final String totalCurrency;
   final List<DuffelSegment> segments;
+
+  /// Duffel's own `live_mode` flag: false means this offer came from the
+  /// test environment and its price is simulated, however real the rest of
+  /// the response looks. Defaults to false when absent - the safe
+  /// assumption is "not real money", never the other way around.
+  final bool isLiveMode;
 
   factory DuffelOffer.fromJson(Map<String, dynamic> json) {
     final slices = (json['slices'] as List?) ?? const [];
@@ -130,6 +137,7 @@ class DuffelOffer {
       totalAmount: double.parse(json['total_amount'] as String),
       totalCurrency: json['total_currency'] as String,
       segments: segments,
+      isLiveMode: json['live_mode'] as bool? ?? false,
     );
   }
 }

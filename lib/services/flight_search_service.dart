@@ -73,6 +73,12 @@ class FlightSearchService {
 
   final FlightPriceSource _priceSource;
 
+  /// What the prices in the most recent [search] actually were - real live
+  /// inventory, a test/sandbox environment, or synthetic mock data. Null
+  /// before the first search. Surfaced to the user on the results screen,
+  /// since a sandbox answer looks identical to a real one otherwise.
+  FlightDataMode? get lastDataMode => _priceSource.lastDataMode;
+
   Future<List<Itinerary>> search(
     TravelIntent intent, {
     AppLanguage language = AppLanguage.de,

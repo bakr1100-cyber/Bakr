@@ -96,8 +96,29 @@ jobs:
             -H "Content-Type: application/json" \
             -H "Duffel-Version: v2" \
             -d "{\"data\":{\"slices\":[{\"origin\":\"CDG\",\"destination\":\"CMN\",\"departure_date\":\"$departure_date\"}],\"passengers\":[{\"type\":\"adult\"}],\"cabin_class\":\"economy\"}}" \
+            -o duffel.json \
             -w "\nHTTP_STATUS:%{http_code}\nTOTAL_TIME:%{time_total}s\n" \
             --max-time 25
+          # THE thing worth checking here, and the reason the raw body is no
+          # longer dumped: a `duffel_test_` token returns a complete,
+          # realistic-looking response whose prices are simulated. Only
+          # `live_mode: true` means these are prices a traveller could
+          # actually pay. See todo/duffel-live-mode-real-prices.md.
+          python3 - <<'PY'
+          import json
+          d = json.load(open('duffel.json'))
+          offers = d.get('data', {}).get('offers', [])
+          if not offers:
+              print('NO OFFERS:', json.dumps(d)[:400]); raise SystemExit(0)
+          modes = {o.get('live_mode') for o in offers}
+          print(f'offers={len(offers)} live_mode={modes} '
+                f'currencies={ {o["total_currency"] for o in offers} }')
+          cheapest = min(offers, key=lambda o: float(o['total_amount']))
+          print('cheapest:', cheapest['total_amount'], cheapest['total_currency'],
+                '-', cheapest['owner']['name'])
+          print('*** REAL PRICES ***' if modes == {True}
+                else '*** TEST/SANDBOX PRICES - not real fares ***')
+          PY
         continue-on-error: true
 
       # Same rationale again: catches a wrong MeloTTS model name/input

@@ -5,6 +5,7 @@ import '../models/airport.dart';
 import '../models/itinerary.dart';
 import '../models/travel_intent.dart';
 import '../models/trip_type.dart';
+import '../services/flight_price_source.dart';
 import '../services/flight_search_service.dart';
 import 'preferences_provider.dart';
 
@@ -48,6 +49,10 @@ class SearchProvider extends ChangeNotifier {
   /// Populated alongside [results] only for round trips - the return leg's
   /// own itinerary options (destination back to origin, on [returnDate]).
   List<Itinerary> returnResults = [];
+
+  /// Whether the prices in [results] are real, sandbox, or mock data - see
+  /// [FlightDataMode]. Null until the first search has run.
+  FlightDataMode? get dataMode => _service.lastDataMode;
 
   void setOrigin(Airport airport) {
     origin = airport;

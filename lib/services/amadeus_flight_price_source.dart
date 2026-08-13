@@ -21,6 +21,16 @@ class AmadeusFlightPriceSource implements FlightPriceSource {
   final AmadeusFlightApi _api;
   final FlightPriceSource fallback;
 
+  FlightDataMode? _lastDataMode;
+
+  @override
+  FlightDataMode? get lastDataMode => _lastDataMode;
+
+  Future<FlightQuote?> _fallback(Airport origin, Airport destination, DateTime date) {
+    _lastDataMode = fallback.lastDataMode ?? FlightDataMode.mock;
+    return fallback.quoteDirect(origin: origin, destination: destination, date: date);
+  }
+
   @override
   Future<FlightQuote?> quoteDirect({
     required Airport origin,
@@ -33,11 +43,15 @@ class AmadeusFlightPriceSource implements FlightPriceSource {
         destinationIata: destination.code,
         departureDate: date,
       );
-      if (offers.isEmpty) {
-        return fallback.quoteDirect(origin: origin, destination: destination, date: date);
-      }
+      if (offers.isEmpty) return _fallback(origin, destination, date);
 
       final cheapest = offers.first;
+      // Amadeus splits test vs production by hostname, not a per-offer
+      // flag, so there is nothing to read back off the response: this path
+      // is only reachable with Enterprise credentials against the
+      // production host (the self-service sandbox was decommissioned - see
+      // README), so a successful answer here is live inventory.
+      _lastDataMode = FlightDataMode.live;
       return FlightQuote(
         priceEur: cheapest.totalPrice,
         departure: cheapest.departure,
@@ -46,7 +60,7 @@ class AmadeusFlightPriceSource implements FlightPriceSource {
       );
     } catch (error) {
       debugPrint('AmadeusFlightPriceSource: falling back to mock data ($error).');
-      return fallback.quoteDirect(origin: origin, destination: destination, date: date);
+      return _fallback(origin, destination, date);
     }
   }
 }

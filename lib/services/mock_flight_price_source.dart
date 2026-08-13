@@ -29,6 +29,9 @@ class MockFlightPriceSource implements FlightPriceSource {
   static const _majorMoroccanHubs = {'CMN', 'RBA'};
 
   @override
+  FlightDataMode? get lastDataMode => FlightDataMode.mock;
+
+  @override
   Future<FlightQuote?> quoteDirect({
     required Airport origin,
     required Airport destination,

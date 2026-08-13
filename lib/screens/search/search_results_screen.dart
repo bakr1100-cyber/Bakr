@@ -7,6 +7,7 @@ import '../../core/theme/app_spacing.dart';
 import '../../models/itinerary.dart';
 import '../../models/trip_type.dart';
 import '../../providers/search_provider.dart';
+import '../../services/flight_price_source.dart';
 import '../../widgets/alternative_itinerary_card.dart';
 import '../../widgets/itinerary_card.dart';
 import '../../widgets/skeleton_loader.dart';
@@ -59,13 +60,17 @@ class _ResultsList extends StatelessWidget {
     if (!isRoundTrip) {
       return ListView(
         padding: const EdgeInsets.all(AppSpacing.lg),
-        children: [_ResultsSection(itineraries: search.results)],
+        children: [
+          const _DataModeBanner(),
+          _ResultsSection(itineraries: search.results),
+        ],
       );
     }
 
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.lg),
       children: [
+        const _DataModeBanner(),
         _SectionHeader(icon: Icons.flight_takeoff_rounded, label: t('outboundFlight')),
         const SizedBox(height: AppSpacing.sm),
         _ResultsSection(itineraries: search.results),
@@ -74,6 +79,53 @@ class _ResultsList extends StatelessWidget {
         const SizedBox(height: AppSpacing.sm),
         _ResultsSection(itineraries: search.returnResults),
       ],
+    );
+  }
+}
+
+/// Shown above the results whenever the prices on screen aren't real (see
+/// [FlightDataMode]).
+///
+/// This exists because a Duffel *test* token produces an answer that is
+/// indistinguishable from a real one at a glance - correct airports, real
+/// airline names, plausible times - while the prices are invented. Without
+/// this banner the app quietly presents fiction as fact, which for a
+/// price-comparison app is the worst failure mode it has. Renders nothing
+/// at all once real live prices are flowing, so it disappears by itself
+/// the moment a live API key is configured - no code change needed.
+class _DataModeBanner extends StatelessWidget {
+  const _DataModeBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    final mode = context.watch<SearchProvider>().dataMode;
+    if (mode == null || mode == FlightDataMode.live) return const SizedBox.shrink();
+
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppSpacing.md),
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: scheme.tertiaryContainer,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(color: scheme.tertiary.withValues(alpha: 0.45)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.science_outlined, size: 20, color: scheme.onTertiaryContainer),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Text(
+              AppLocalizations.of(context).t('testPricesWarning'),
+              style: Theme.of(context)
+                  .textTheme
+                  .bodySmall
+                  ?.copyWith(color: scheme.onTertiaryContainer),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

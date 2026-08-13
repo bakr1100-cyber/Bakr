@@ -29,6 +29,18 @@ class DuffelFlightPriceSource implements FlightPriceSource {
   final DuffelFlightApi _api;
   final FlightPriceSource fallback;
 
+  FlightDataMode? _lastDataMode;
+
+  @override
+  FlightDataMode? get lastDataMode => _lastDataMode;
+
+  /// Falls back and records that mock data - not Duffel's - is what the
+  /// caller is actually getting, so the UI can be honest about it.
+  Future<FlightQuote?> _fallback(Airport origin, Airport destination, DateTime date) {
+    _lastDataMode = fallback.lastDataMode ?? FlightDataMode.mock;
+    return fallback.quoteDirect(origin: origin, destination: destination, date: date);
+  }
+
   @override
   Future<FlightQuote?> quoteDirect({
     required Airport origin,
@@ -41,20 +53,34 @@ class DuffelFlightPriceSource implements FlightPriceSource {
         destinationIata: destination.code,
         departureDate: date,
       );
-      if (offers.isEmpty) {
-        return fallback.quoteDirect(origin: origin, destination: destination, date: date);
+      if (offers.isEmpty) return _fallback(origin, destination, date);
+
+      // The whole app prices and displays in euros. Duffel returns
+      // whatever currency the airline/market priced in, so picking the
+      // numerically cheapest offer across mixed currencies would compare
+      // e.g. 90 GBP against 95 EUR and label the result "€90" - a wrong
+      // price, silently. Prefer genuine EUR offers; only if none exist at
+      // all does this fall back rather than mislabel a foreign amount.
+      final euroOffers = offers.where((o) => o.totalCurrency.toUpperCase() == 'EUR').toList();
+      if (euroOffers.isEmpty) {
+        debugPrint(
+          'DuffelFlightPriceSource: no EUR-priced offers for '
+          '${origin.code}->${destination.code} (got '
+          '${offers.map((o) => o.totalCurrency).toSet().join(", ")}) - '
+          'falling back rather than showing a foreign amount as euros.',
+        );
+        return _fallback(origin, destination, date);
       }
 
-      final cheapest = offers.first;
-      if (cheapest.segments.isEmpty) {
-        return fallback.quoteDirect(origin: origin, destination: destination, date: date);
-      }
+      final cheapest = euroOffers.first;
+      if (cheapest.segments.isEmpty) return _fallback(origin, destination, date);
 
-      // Duffel-priced amounts aren't guaranteed to be in EUR - the exact
-      // currency depends on the route/market. This build treats the
-      // numeric amount as EUR for display purposes; a production build
-      // should either request/convert to EUR explicitly or show the
-      // returned currency code in the UI instead of a hardcoded "€".
+      // The single most important bit of bookkeeping here: a *test* Duffel
+      // token returns a perfectly well-formed answer whose prices are
+      // invented. Record which we got, so the app can tell the user
+      // whether these are prices they can actually act on.
+      _lastDataMode = cheapest.isLiveMode ? FlightDataMode.live : FlightDataMode.sandbox;
+
       return FlightQuote(
         priceEur: cheapest.totalAmount,
         departure: cheapest.segments.first.departingAt,
@@ -63,7 +89,7 @@ class DuffelFlightPriceSource implements FlightPriceSource {
       );
     } catch (error) {
       debugPrint('DuffelFlightPriceSource: falling back to mock data ($error).');
-      return fallback.quoteDirect(origin: origin, destination: destination, date: date);
+      return _fallback(origin, destination, date);
     }
   }
 }

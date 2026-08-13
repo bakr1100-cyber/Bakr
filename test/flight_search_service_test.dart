@@ -19,6 +19,9 @@ class FakeFlightPriceSource implements FlightPriceSource {
   final Map<String, double> prices;
 
   @override
+  FlightDataMode? get lastDataMode => FlightDataMode.live;
+
+  @override
   Future<FlightQuote?> quoteDirect({
     required Airport origin,
     required Airport destination,

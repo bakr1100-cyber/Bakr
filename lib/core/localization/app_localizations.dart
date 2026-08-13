@@ -317,6 +317,18 @@ class AppLocalizations {
       AppLanguage.fr: 'Aller',
       AppLanguage.en: 'Outbound',
     },
+    'testPricesWarning': {
+      AppLanguage.ary:
+          'هاد الأثمنة ماشي حقيقية (بيانات ديال التجريب). ماتحجزش على أساسها.',
+      AppLanguage.ar:
+          'هذه الأسعار ليست حقيقية (بيانات اختبارية). لا تحجز بناءً عليها.',
+      AppLanguage.de:
+          'Diese Preise sind noch Testdaten, keine echten Flugpreise. Bitte noch nicht danach buchen.',
+      AppLanguage.fr:
+          'Ces prix sont des données de test, pas de vrais tarifs. Ne réservez pas encore sur cette base.',
+      AppLanguage.en:
+          "These prices are test data, not real fares. Don't book based on them yet.",
+    },
     'returnFlight': {
       AppLanguage.ary: 'الرجوع',
       AppLanguage.ar: 'العودة',
