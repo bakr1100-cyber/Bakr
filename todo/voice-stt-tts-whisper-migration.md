@@ -11,6 +11,21 @@
   `test/voice_service_test.dart` (the HTTP routing logic - not actual
   audio output, which needs a real device/browser to verify).
 
+### Known issue: MeloTTS is currently returning "capacity exceeded"
+The deploy workflow's `/ai/tts` smoke test has hit Cloudflare's own
+`3040: Capacity temporarily exceeded` error on every deploy so far (3/3),
+not just an occasional blip - this looks like a persistent capacity limit
+on this specific beta model for this account, not something fixable from
+this repo. The request itself is confirmed correct (right model name,
+right shape - Cloudflare's API accepts and processes it, it just can't
+currently fulfil it). **Not a live-app problem**: `VoiceService.speak()`
+already falls back to the native voice on any cloud-TTS failure, so users
+just silently get the native French/English voice for now instead of
+MeloTTS, exactly like before this feature existed - no broken experience,
+just not the upgraded voice yet. Worth re-checking in a few weeks (Workers
+AI beta capacity generally improves over time); no code change needed
+unless it's still failing much later.
+
 ## Still open: speech-to-text (input) migration
 Deliberately NOT done this pass - kept on native Web Speech API
 (`speech_to_text` package) for now. Not a smaller task than TTS, for a
