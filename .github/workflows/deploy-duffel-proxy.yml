@@ -124,17 +124,27 @@ jobs:
       # Same rationale again: catches a wrong MeloTTS model name/input
       # shape right at deploy time. `-o /dev/null` since the response body
       # is a large base64 audio blob, not worth putting in the Actions log.
+      # MeloTTS rejects some `lang` values outright with "8002: Invalid
+      # input" (a known, undocumented gap - see
+      # github.com/cloudflare/cloudflare-docs/issues/23308), so this probes
+      # each language the app would actually ask for rather than assuming.
+      # VoiceService only routes a language to the cloud voice if it's in
+      # its supported set; this is what keeps that set honest.
       - name: Smoke-test the /ai/tts endpoint (real MeloTTS speech synthesis)
         run: |
-          curl -sS -X POST https://marocfly-duffel-proxy.bakr1100.workers.dev/ai/tts \
-            -H "Content-Type: application/json" \
-            -d '{"text":"Bonjour le monde","lang":"fr"}' \
-            -o response.json \
-            -w "\nHTTP_STATUS:%{http_code}\nTOTAL_TIME:%{time_total}s\n" \
-            --max-time 20
-          # If it failed, the body is a small JSON error object worth
-          # seeing; if it succeeded, don't dump a multi-KB base64 blob into
-          # the log.
-          size=$(wc -c < response.json)
-          if [ "$size" -lt 1000 ]; then cat response.json; echo; fi
+          probe() {
+            lang="$1"; text="$2"
+            status=$(curl -sS -X POST https://marocfly-duffel-proxy.bakr1100.workers.dev/ai/tts \
+              -H "Content-Type: application/json" \
+              -d "{\"text\":\"$text\",\"lang\":\"$lang\"}" \
+              -o "resp_$lang.json" -w '%{http_code}' --max-time 25) || status=000
+            size=$(wc -c < "resp_$lang.json")
+            if [ "$status" = "200" ] && [ "$size" -gt 1000 ]; then
+              echo "lang=$lang OK (${size} bytes of audio)"
+            else
+              echo "lang=$lang FAILED (HTTP $status): $(head -c 200 "resp_$lang.json")"
+            fi
+          }
+          probe en "Hello world"
+          probe fr "Bonjour le monde"
         continue-on-error: true
