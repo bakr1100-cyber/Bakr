@@ -108,7 +108,12 @@ jobs:
           curl -sS -X POST https://marocfly-duffel-proxy.bakr1100.workers.dev/ai/tts \
             -H "Content-Type: application/json" \
             -d '{"text":"Bonjour le monde","lang":"fr"}' \
-            -o /dev/null \
+            -o response.json \
             -w "\nHTTP_STATUS:%{http_code}\nTOTAL_TIME:%{time_total}s\n" \
             --max-time 20
+          # If it failed, the body is a small JSON error object worth
+          # seeing; if it succeeded, don't dump a multi-KB base64 blob into
+          # the log.
+          size=$(wc -c < response.json)
+          if [ "$size" -lt 1000 ]; then cat response.json; echo; fi
         continue-on-error: true
