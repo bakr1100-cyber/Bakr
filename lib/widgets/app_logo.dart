@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 
 /// The app's mark: a climbing airliner in front of the Moroccan flag's
-/// five-pointed star, on the flag's red field - "Tayarti" (طيارتي, "my
-/// flight"), a plane and the flag together, per explicit request. The
-/// artwork in `assets/images/app_logo.png` is a text-free crop of the
-/// browser/home-screen icon (`web/icons/Icon-192.png` etc., which carries
-/// the "Tayarti" wordmark baked in) - no wordmark here since this widget
-/// sits next to a separately localized name (e.g. "طيارتي" in Arabic UI),
-/// where baked-in Latin text would be wrong.
+/// five-pointed star, on the flag's red field, with the "Tayarti" wordmark
+/// baked in - per explicit request, shown in-app exactly as it is on the
+/// browser/home-screen icon (`web/icons/Icon-192.png` etc.), not a
+/// text-free variant. `assets/images/app_logo.png` is that same source
+/// image, cropped to drop its pre-baked rounded corners/border (which
+/// would show as a stray white square on non-white app backgrounds, since
+/// the source PNG has no alpha channel) and composited onto a full-bleed
+/// flag-red backing.
 class AppLogo extends StatelessWidget {
   const AppLogo({super.key, required this.size});
 
