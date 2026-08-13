@@ -60,3 +60,21 @@ jobs:
             -w "\nHTTP_STATUS:%{http_code}\nTOTAL_TIME:%{time_total}s\n" \
             --max-time 20
         continue-on-error: true
+
+      # Same rationale as the /ai/chat smoke test above: catches an
+      # invalid/expired DUFFEL_API_KEY or a Duffel-side outage right at
+      # deploy time, in the Actions log, rather than only being discovered
+      # by a user always seeing mock prices with no clue why. Uses the
+      # exact request shape DuffelFlightApi sends (see
+      # lib/services/duffel_flight_api.dart) against a real, well-covered
+      # route (Paris CDG -> Casablanca CMN) 30 days out.
+      - name: Smoke-test the /air/offer_requests endpoint (real Duffel flight search)
+        run: |
+          departure_date=$(date -u -d '+30 days' +%Y-%m-%d)
+          curl -sS -X POST "https://marocfly-duffel-proxy.bakr1100.workers.dev/air/offer_requests?return_offers=true" \
+            -H "Content-Type: application/json" \
+            -H "Duffel-Version: v2" \
+            -d "{\"data\":{\"slices\":[{\"origin\":\"CDG\",\"destination\":\"CMN\",\"departure_date\":\"$departure_date\"}],\"passengers\":[{\"type\":\"adult\"}],\"cabin_class\":\"economy\"}}" \
+            -w "\nHTTP_STATUS:%{http_code}\nTOTAL_TIME:%{time_total}s\n" \
+            --max-time 25
+        continue-on-error: true
