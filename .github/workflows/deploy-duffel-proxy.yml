@@ -99,3 +99,16 @@ jobs:
             -w "\nHTTP_STATUS:%{http_code}\nTOTAL_TIME:%{time_total}s\n" \
             --max-time 25
         continue-on-error: true
+
+      # Same rationale again: catches a wrong MeloTTS model name/input
+      # shape right at deploy time. `-o /dev/null` since the response body
+      # is a large base64 audio blob, not worth putting in the Actions log.
+      - name: Smoke-test the /ai/tts endpoint (real MeloTTS speech synthesis)
+        run: |
+          curl -sS -X POST https://marocfly-duffel-proxy.bakr1100.workers.dev/ai/tts \
+            -H "Content-Type: application/json" \
+            -d '{"text":"Bonjour le monde","lang":"fr"}' \
+            -o /dev/null \
+            -w "\nHTTP_STATUS:%{http_code}\nTOTAL_TIME:%{time_total}s\n" \
+            --max-time 20
+        continue-on-error: true
