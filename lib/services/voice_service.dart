@@ -4,6 +4,7 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:http/http.dart' as http;
+import 'package:record/record.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 
 /// MeloTTS (see the Worker's `/ai/tts` route) only documents support for
@@ -17,11 +18,15 @@ const _cloudTtsSupportedLangPrefixes = {'en', 'fr'};
 /// Thin wrapper around speech-to-text and text-to-speech so the whole app
 /// can be operated by voice.
 ///
-/// Speech-to-text still uses the platform's built-in engine (the
+/// Speech-to-text primarily uses the platform's built-in engine (the
 /// `speech_to_text` plugin, wrapping Safari's on-device Web Speech API on
-/// this app's only deployed platform) - no cloud speech API keys required
-/// for that half, and unlike TTS output there's no cross-language support
-/// gap to work around (see below).
+/// this app's main deployed target) - no cloud speech API keys required,
+/// and live partial transcripts as the user speaks. When that engine isn't
+/// available at all (e.g. a browser with no Web Speech API support), and
+/// [proxyBaseUrl] is configured, [startListening] falls back to recording
+/// audio and transcribing it via the Worker's `/ai/stt` (Whisper) route
+/// instead - no live partial text in that case, the transcript only
+/// arrives once recording stops.
 ///
 /// Text-to-speech, when [proxyBaseUrl] is configured (the same Cloudflare
 /// Worker URL that already proxies Duffel/the AI chat - see
@@ -41,37 +46,115 @@ class VoiceService {
   final http.Client _client;
   final SpeechToText _speechToText = SpeechToText();
   final FlutterTts _tts = FlutterTts();
-  // Lazy: constructing an AudioPlayer touches a platform channel
-  // immediately, which both isn't needed until the cloud voice path is
+  // Lazy: constructing an AudioPlayer/AudioRecorder touches a platform
+  // channel immediately, which both isn't needed until the cloud path is
   // actually reached and would blow up eagerly in a plain unit-test
   // environment (no platform bindings registered) even for tests that
-  // never touch audio playback at all.
+  // never touch audio at all.
   late final AudioPlayer _cloudPlayer = AudioPlayer();
+  late final AudioRecorder _recorder = AudioRecorder();
   bool _speechAvailable = false;
+  bool _cloudSttRecording = false;
+  void Function(String text, bool isFinal)? _pendingSttCallback;
 
   Future<bool> init() async {
     _speechAvailable = await _speechToText.initialize();
     await _tts.setSpeechRate(0.48);
-    return _speechAvailable;
+    return isAvailable;
   }
 
-  bool get isAvailable => _speechAvailable;
-  bool get isListening => _speechToText.isListening;
+  /// True if either the native engine or the cloud fallback (see
+  /// [_startCloudRecording]) can plausibly handle voice input - used to
+  /// decide whether the mic button does anything at all. Cloud
+  /// availability only means a proxy URL is configured; an actual
+  /// recording attempt can still fail (e.g. mic permission denied), same
+  /// as the native engine can.
+  bool get isAvailable => _speechAvailable || _cloudSttAvailable;
+  bool get isListening => _speechToText.isListening || _cloudSttRecording;
+
+  bool get _cloudSttAvailable {
+    final proxy = _proxyBaseUrl;
+    return proxy != null && proxy.isNotEmpty;
+  }
 
   Future<void> startListening({
     required void Function(String text, bool isFinal) onResult,
     String localeId = 'de-DE',
   }) async {
-    if (!_speechAvailable) return;
-    await _speechToText.listen(
-      onResult: (result) {
-        onResult(result.recognizedWords, result.finalResult);
-      },
-      listenOptions: SpeechListenOptions(localeId: localeId),
-    );
+    if (_speechAvailable) {
+      await _speechToText.listen(
+        onResult: (result) {
+          onResult(result.recognizedWords, result.finalResult);
+        },
+        listenOptions: SpeechListenOptions(localeId: localeId),
+      );
+      return;
+    }
+    // Fallback for a browser with no native speech recognition at all
+    // (e.g. Firefox has no Web Speech API) - this app's primary target,
+    // Safari, already has native support and never reaches this path, so
+    // it carries no regression risk for the existing, tested experience.
+    // Unlike native listening there's no live partial transcript: the mic
+    // stays in the "listening" state while recording, and text only
+    // arrives once recording stops and the upload+transcribe round-trip
+    // completes.
+    await _startCloudRecording(onResult);
   }
 
-  Future<void> stopListening() => _speechToText.stop();
+  Future<void> stopListening() async {
+    if (_speechToText.isListening) {
+      await _speechToText.stop();
+      return;
+    }
+    if (_cloudSttRecording) await _stopCloudRecordingAndTranscribe();
+  }
+
+  Future<void> _startCloudRecording(
+    void Function(String text, bool isFinal) onResult,
+  ) async {
+    if (!_cloudSttAvailable) return;
+    try {
+      if (!await _recorder.hasPermission()) return;
+      _pendingSttCallback = onResult;
+      _cloudSttRecording = true;
+      // AAC/M4A: the format Safari's MediaRecorder actually supports, and
+      // one of Whisper's documented accepted input formats on Workers AI.
+      await _recorder.start(
+        const RecordConfig(encoder: AudioEncoder.aacLc),
+        path: 'voice-input.m4a', // ignored on web - kept for other platforms
+      );
+    } catch (error) {
+      debugPrint('VoiceService: cloud STT recording failed to start ($error).');
+      _cloudSttRecording = false;
+      _pendingSttCallback = null;
+    }
+  }
+
+  Future<void> _stopCloudRecordingAndTranscribe() async {
+    _cloudSttRecording = false;
+    final callback = _pendingSttCallback;
+    _pendingSttCallback = null;
+    try {
+      final path = await _recorder.stop();
+      if (path == null || callback == null) return;
+      // On web `path` is a blob: URL holding the recorded audio in memory
+      // - fetch it back into bytes to upload, same as any other resource.
+      final audioBytes = (await _client.get(Uri.parse(path)).timeout(const Duration(seconds: 10))).bodyBytes;
+      final response = await _client
+          .post(
+            Uri.parse('$_proxyBaseUrl/ai/stt'),
+            headers: const {'Content-Type': 'application/octet-stream'},
+            body: audioBytes,
+          )
+          .timeout(const Duration(seconds: 20));
+      if (response.statusCode != 200) return;
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final text = data['text'] as String?;
+      if (text != null && text.trim().isNotEmpty) callback(text, true);
+    } catch (error) {
+      debugPrint('VoiceService: cloud STT transcription failed ($error).');
+    }
+  }
 
   /// Web browsers (notably Safari on iOS/iPadOS) only allow speech
   /// synthesis/audio playback to actually produce sound when triggered

@@ -92,4 +92,43 @@ void main() {
       expect(body, contains('"lang":"fr"'));
     });
   });
+
+  group('VoiceService cloud STT fallback', () {
+    // These tests never call init(), so `_speechAvailable` stays at its
+    // default false - the same state a browser with no Web Speech API
+    // support would be in, exercising the fallback path without needing to
+    // fake platform-level speech recognition.
+
+    test('isAvailable reflects the cloud fallback even before init(), independent of native support', () {
+      final withProxy = VoiceService(proxyBaseUrl: 'https://proxy.example');
+      final withoutProxy = VoiceService();
+
+      expect(withProxy.isAvailable, isTrue);
+      expect(withoutProxy.isAvailable, isFalse);
+    });
+
+    test('startListening does not throw and never calls back when no proxy is configured', () async {
+      final voice = VoiceService();
+      var callbackFired = false;
+
+      await voice.startListening(onResult: (_, __) => callbackFired = true);
+
+      expect(callbackFired, isFalse);
+    });
+
+    test('startListening does not throw when a proxy is configured but recording is unavailable '
+        '(no platform binding in a plain test environment, same as a real permission denial)', () async {
+      final voice = VoiceService(
+        proxyBaseUrl: 'https://proxy.example',
+        client: MockClient((request) async => http.Response('{}', 200)),
+      );
+      var callbackFired = false;
+
+      await voice.startListening(onResult: (_, __) => callbackFired = true);
+      await voice.stopListening();
+
+      expect(callbackFired, isFalse);
+      expect(voice.isListening, isFalse);
+    });
+  });
 }
