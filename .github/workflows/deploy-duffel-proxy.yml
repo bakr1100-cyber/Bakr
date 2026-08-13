@@ -7,6 +7,10 @@ on:
     paths:
       - 'cloudflare-worker/**'
       - '.github/workflows/deploy-duffel-proxy.yml'
+  # workflow_dispatch is also declared below, but the GitHub API's
+  # /dispatches endpoint has intermittently 500'd for this workflow -
+  # pushing a no-op change to this file (matching the path filter above)
+  # is a reliable fallback trigger when that happens.
   workflow_dispatch:
 
 jobs:
