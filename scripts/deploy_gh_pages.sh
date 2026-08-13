@@ -13,7 +13,18 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
-flutter build web --release --base-href /Bakr/
+# Wires the deployed app to the real flight-price proxy (see app.dart's
+# `_duffelProxyUrl`/`_resolvePriceSource`) - without this define the app
+# always fell back to MockFlightPriceSource's synthetic prices, even on
+# builds made after the Cloudflare Worker + DUFFEL_API_KEY secret were set
+# up, because nothing ever actually told the compiled app the proxy's URL.
+# Safe to pass unconditionally: if the Worker has no DUFFEL_API_KEY secret
+# configured yet, it responds with an error and DuffelFlightPriceSource
+# catches that and falls back to the mock data exactly as before.
+DUFFEL_PROXY_URL="${DUFFEL_PROXY_URL:-https://marocfly-duffel-proxy.bakr1100.workers.dev}"
+
+flutter build web --release --base-href /Bakr/ \
+  --dart-define=DUFFEL_PROXY_URL="$DUFFEL_PROXY_URL"
 
 worktree_dir=$(mktemp -d)
 git fetch origin gh-pages

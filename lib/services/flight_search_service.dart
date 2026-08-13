@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import '../core/localization/app_localizations.dart';
 import '../models/airport.dart';
 import '../models/itinerary.dart';
@@ -17,6 +19,39 @@ const _nearbyDepartureRadiusKm = 220.0;
 /// catch Casablanca<->Rabat (~90 km) while excluding pairs that aren't a
 /// realistic swap (Fès is ~200 km from Casablanca).
 const _nearbyDestinationRadiusKm = 120.0;
+
+/// An "alternative" only earns the label if it actually saves a
+/// noticeable amount - the larger of a flat floor and a percentage of the
+/// direct price, so a €400 route needs to save more than a €80 one does
+/// to count. Without this, a handful of euros of noise (e.g. two nearby
+/// airports pricing a few euros apart) showed up as a whole extra
+/// "alternative" that wasn't meaningfully better than just booking direct.
+const _minMeaningfulSavingsEur = 15.0;
+const _minMeaningfulSavingsFraction = 0.05;
+
+/// However many genuinely-better alternatives exist, only the best ones
+/// are worth showing - past this many, more options stop helping the
+/// user decide and start being noise. Ranked by [_alternativeValueScore],
+/// not just price, before capping.
+const _maxAlternativesShown = 5;
+
+/// Assumed value of the traveler's own time, used only to rank
+/// alternatives against each other (an alternative that saves €20 but
+/// costs 3 extra hours should rank below one that saves €15 for 20 extra
+/// minutes) - not shown to the user, not used to filter anything out.
+const _timeValueEurPerHour = 8.0;
+
+bool _isMeaningfulSaving(double directTotal, double alternativeTotal) {
+  final savings = directTotal - alternativeTotal;
+  final bar = math.max(_minMeaningfulSavingsEur, directTotal * _minMeaningfulSavingsFraction);
+  return savings >= bar;
+}
+
+double _alternativeValueScore(Itinerary itinerary) {
+  final savings = itinerary.savingsEur ?? 0;
+  final extraHours = (itinerary.extraTravelTime ?? Duration.zero).inMinutes / 60;
+  return savings - extraHours * _timeValueEurPerHour;
+}
 
 /// The "Smart Flight Engine": generates and prices normal flight
 /// connections (direct + a real layover via Casablanca - [ResultTier.
@@ -70,9 +105,13 @@ class FlightSearchService {
       _multimodal(origin, destination, date, passengers, directTotal, directDuration, language),
     ]);
 
+    final standardTier = <Itinerary>[directItinerary, ...results.first];
+    final alternativeTier = <Itinerary>[for (final group in results.skip(1)) ...group]
+      ..sort((a, b) => _alternativeValueScore(b).compareTo(_alternativeValueScore(a)));
+
     final candidates = <Itinerary>[
-      directItinerary,
-      for (final group in results) ...group,
+      ...standardTier,
+      ...alternativeTier.take(_maxAlternativesShown),
     ];
 
     candidates.sort((a, b) => a.totalPriceEur.compareTo(b.totalPriceEur));
@@ -202,7 +241,7 @@ class FlightSearchService {
       if (quote == null) continue;
 
       final total = quote.priceEur * pax;
-      if (total >= directTotal) continue;
+      if (!_isMeaningfulSaving(directTotal, total)) continue;
 
       final duration = quote.arrival.difference(quote.departure);
       final km = distanceKm(origin, alt);
@@ -251,7 +290,7 @@ class FlightSearchService {
     final flightPrice = quote.priceEur * pax;
     final trainPrice = 18.0 * pax;
     final total = flightPrice + trainPrice;
-    if (total >= directTotal) return [];
+    if (!_isMeaningfulSaving(directTotal, total)) return [];
 
     final trainDeparture = quote.arrival.add(const Duration(hours: 1));
     final trainArrival = trainDeparture.add(const Duration(hours: 2, minutes: 50));
@@ -316,7 +355,7 @@ class FlightSearchService {
       final transferPrice = groundTransferPriceEur(km) * pax;
       final transferDuration = groundTransferDuration(km);
       final total = flightPrice + transferPrice;
-      if (total >= directTotal) continue;
+      if (!_isMeaningfulSaving(directTotal, total)) continue;
 
       final transferDeparture = quote.arrival.add(const Duration(minutes: 30));
       final transferArrival = transferDeparture.add(transferDuration);
@@ -398,7 +437,7 @@ class FlightSearchService {
     final leg1Price = leg1Quote.priceEur * pax;
     final leg2Price = leg2Quote.priceEur * pax;
     final total = leg1Price + leg2Price;
-    if (total >= directTotal) return [];
+    if (!_isMeaningfulSaving(directTotal, total)) return [];
 
     final duration = leg2Quote.arrival.difference(leg1Quote.departure);
 
@@ -460,7 +499,7 @@ class FlightSearchService {
     final includesOnwardTrain = destination.code != rabat.code;
 
     final total = trainPrice + flightPrice + (includesOnwardTrain ? onwardTrainPrice : 0);
-    if (total >= directTotal) return [];
+    if (!_isMeaningfulSaving(directTotal, total)) return [];
 
     final lastArrival = includesOnwardTrain
         ? onwardTrainDeparture.add(const Duration(hours: 2, minutes: 50))

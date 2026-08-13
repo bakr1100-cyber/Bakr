@@ -36,8 +36,12 @@ class FakeFlightPriceSource implements FlightPriceSource {
 }
 
 void main() {
-  const dus = Airport(code: 'DUS', city: 'Düsseldorf', country: 'Deutschland');
-  const fez = Airport(code: 'FEZ', city: 'Fès', country: 'Marokko');
+  // Real coordinates (matching the entries in europeanAirports/
+  // moroccanAirports) so nearby-airport lookups - and the tests that rely
+  // on them - work against genuine distances instead of the default (0, 0).
+  const dus = Airport(
+      code: 'DUS', city: 'Düsseldorf', country: 'Deutschland', lat: 51.2895, lon: 6.7668);
+  const fez = Airport(code: 'FEZ', city: 'Fès', country: 'Marokko', lat: 33.9273, lon: -4.9778);
   final departureDate = DateTime.now().add(const Duration(days: 30));
 
   TravelIntent intentFor(int pax, {double? maxBudgetEur}) => TravelIntent(
@@ -64,7 +68,11 @@ void main() {
     test('explanation text is in the language passed to search(), not hardcoded German',
         () async {
       final results = await service.search(intentFor(1), language: AppLanguage.fr);
-      final direct = results.firstWhere((i) => i.isDirect);
+      // Not `i.isDirect` - an alternative-departure itinerary is also a
+      // single leg (isDirect just means "no layover"), so with real
+      // coordinates there can be more than one; this test wants
+      // specifically the direct-from-the-requested-airport itinerary.
+      final direct = results.firstWhere((i) => i.id.startsWith('direct-'));
 
       expect(direct.explanation, contains('Vol direct'));
       expect(direct.explanation, isNot(contains('Direktflug')));
@@ -249,6 +257,49 @@ void main() {
       final service = FlightSearchService(priceSource: FakeFlightPriceSource({}));
       final results = await service.search(intentFor(1));
       expect(results, isEmpty);
+    });
+  });
+
+  // Regression tests for the "alternatives aren't really cheaper/there are
+  // too many/too few" complaint: a marginal price difference (noise, not a
+  // genuine saving) must not be labeled an "alternative", and once several
+  // *do* clear that bar, only the best few (by savings weighed against
+  // extra travel time) should actually be shown.
+  group('meaningful-savings gate and alternative capping', () {
+    test('does not surface an alternative that only saves a trivial amount', () async {
+      final service = FlightSearchService(
+        priceSource: FakeFlightPriceSource({
+          'DUS-FEZ': 300,
+          'CGN-FEZ': 295, // only €5 cheaper - below the meaningful-savings bar
+        }),
+      );
+
+      final results = await service.search(intentFor(1));
+      expect(results.any((i) => i.id.startsWith('altdep-CGN')), isFalse);
+    });
+
+    test('caps alternatives to the best 5 by value, dropping the weakest', () async {
+      final service = FlightSearchService(
+        priceSource: FakeFlightPriceSource({
+          'DUS-FEZ': 400,
+          'CGN-FEZ': 300, // saves 100
+          'DTM-FEZ': 310, // saves 90
+          'EIN-FEZ': 320, // saves 80
+          'BRU-FEZ': 330, // saves 70 - weakest of the 4 altdep candidates
+          'DUS-RBA': 200, // hub+train: 200+18=218, saves 182
+          'FRA-RBA': 150, // multimodal: 35+150+18=203, saves 197
+        }),
+      );
+
+      final results = await service.search(intentFor(1));
+      final alternatives = results.where((i) => i.tier == ResultTier.alternative).toList();
+
+      // 6 candidates clear the savings bar (4 altdep + hub-train + multimodal);
+      // only the best 5 by value score should survive.
+      expect(alternatives, hasLength(5));
+      expect(alternatives.any((i) => i.id.startsWith('altdep-BRU')), isFalse);
+      expect(alternatives.any((i) => i.id.startsWith('althub-')), isTrue);
+      expect(alternatives.any((i) => i.isMultimodal), isTrue);
     });
   });
 }
