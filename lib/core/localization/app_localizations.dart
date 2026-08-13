@@ -1165,6 +1165,13 @@ class AppLocalizations {
       AppLanguage.fr: 'Aucun changement de prix trouvé.',
       AppLanguage.en: 'No price change found.',
     },
+    'addToHomeScreenHint': {
+      AppLanguage.ary: 'باش توصلك التنبيهات ديال الثمن حتى منين تكون سدها التطبيق، زيد Tayarti للشاشة الرئيسية: كليك على زر المشاركة تحت، وبعدها "زيد للشاشة الرئيسية".',
+      AppLanguage.ar: 'لتصلك تنبيهات الأسعار حتى عند إغلاق التطبيق، أضف Tayarti إلى الشاشة الرئيسية: اضغط على زر المشاركة أدناه، ثم "إضافة إلى الشاشة الرئيسية".',
+      AppLanguage.de: 'Damit Preisalarme auch ankommen, wenn die App geschlossen ist, füge Tayarti dem Home-Bildschirm hinzu: Teilen-Symbol unten antippen, dann "Zum Home-Bildschirm".',
+      AppLanguage.fr: "Pour recevoir les alertes de prix même app fermée, ajoute Tayarti à l'écran d'accueil : appuie sur le bouton Partager en bas, puis \"Sur l'écran d'accueil\".",
+      AppLanguage.en: 'To get price alerts even when the app is closed, add Tayarti to your Home Screen: tap the Share button below, then "Add to Home Screen".',
+    },
     'onePriceDropped': {
       AppLanguage.ary: 'هبط ثمن وحدة!',
       AppLanguage.ar: 'انخفض سعر واحد!',

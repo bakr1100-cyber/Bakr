@@ -18,11 +18,14 @@ Future<void> main() async {
   }
   // NotificationService.init() already fails safe internally (Firebase is
   // optional), but nothing should ever be able to keep the app off-screen -
-  // any unexpected startup failure still has to end in runApp().
+  // any unexpected startup failure still has to end in runApp(). The
+  // instance is passed into MarocFlyApp (rather than discarded) so its
+  // Firebase setup and FCM push token aren't wasted/redone.
+  final notificationService = NotificationService();
   try {
-    await NotificationService().init();
+    await notificationService.init();
   } catch (error) {
     debugPrint('NotificationService failed to initialize: $error');
   }
-  runApp(const MarocFlyApp());
+  runApp(MarocFlyApp(notificationService: notificationService));
 }

@@ -41,6 +41,12 @@ class AccountSyncService {
 
   late bool _wasLoggedIn;
 
+  /// This device's FCM registration token (see [NotificationService]),
+  /// once known - kept here (not pulled from the cloud, unlike preferences/
+  /// alerts) since it identifies *this* device/browser install, not
+  /// something to copy from another device.
+  String? _pushToken;
+
   /// Set while applying data just pulled from the cloud, so that write-back
   /// (`_onLocalDataChanged`) doesn't immediately re-push the same data we
   /// just pulled.
@@ -57,8 +63,36 @@ class AccountSyncService {
     if (isLoggedIn && !_wasLoggedIn) {
       _wasLoggedIn = true;
       _pullFromCloud();
+      if (_pushToken != null) _pushPushToken();
     } else if (!isLoggedIn) {
       _wasLoggedIn = false;
+    }
+  }
+
+  /// Called once [NotificationService] has a registration token for this
+  /// device (may happen before or after login) - pushes it to the
+  /// signed-in account's document so the server-side price-check job (see
+  /// `cloudflare-worker/`) knows where to send that account's
+  /// notifications. A no-op while signed out; the token is remembered and
+  /// pushed as soon as the user does sign in.
+  void setPushToken(String? token) {
+    _pushToken = token;
+    if (_auth.isLoggedIn) _pushPushToken();
+  }
+
+  Future<void> _pushPushToken() async {
+    final uid = _auth.currentUserUid;
+    final idToken = await _auth.getValidIdToken();
+    final token = _pushToken;
+    if (uid == null || idToken == null || token == null) return;
+    try {
+      await _cloudSync.saveUserDocument(
+        uid: uid,
+        idToken: idToken,
+        data: {'pushToken': token},
+      );
+    } catch (error) {
+      debugPrint('AccountSyncService: push-token sync failed: $error');
     }
   }
 

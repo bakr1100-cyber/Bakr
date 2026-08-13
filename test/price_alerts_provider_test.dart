@@ -22,6 +22,9 @@ class _CountingNotificationService implements NotificationService {
 
   @override
   bool get isPushEnabled => false;
+
+  @override
+  String? get pushToken => null;
 }
 
 void main() {

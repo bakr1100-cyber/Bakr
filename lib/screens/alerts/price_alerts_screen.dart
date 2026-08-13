@@ -1,12 +1,17 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/localization/app_localizations.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../models/price_alert.dart';
 import '../../providers/price_alerts_provider.dart';
+import '../../services/pwa_install_hint.dart';
 import '../../widgets/responsive_body.dart';
+
+const _homeScreenHintDismissedKey = 'price_alerts_home_screen_hint_dismissed';
 
 class PriceAlertsScreen extends StatefulWidget {
   const PriceAlertsScreen({super.key});
@@ -17,6 +22,34 @@ class PriceAlertsScreen extends StatefulWidget {
 
 class _PriceAlertsScreenState extends State<PriceAlertsScreen> {
   bool _checking = false;
+  bool _showHomeScreenHint = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadHomeScreenHintState();
+  }
+
+  Future<void> _loadHomeScreenHintState() async {
+    // Real push notifications only ever arrive while this is running as an
+    // installed PWA - a page open in a normal Safari tab (iPad's only
+    // browser choice) can't receive them at all, no matter how well the
+    // rest of the notification pipeline works. Nudge the user toward that
+    // one-time setup step instead of leaving them wondering why nothing
+    // ever arrives.
+    if (!kIsWeb || isRunningAsInstalledPwa()) return;
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    if (prefs.getBool(_homeScreenHintDismissedKey) != true) {
+      setState(() => _showHomeScreenHint = true);
+    }
+  }
+
+  Future<void> _dismissHomeScreenHint() async {
+    setState(() => _showHomeScreenHint = false);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_homeScreenHintDismissedKey, true);
+  }
 
   Future<void> _checkForDrops(PriceAlertsProvider provider) async {
     if (_checking) return;
@@ -74,7 +107,23 @@ class _PriceAlertsScreenState extends State<PriceAlertsScreen> {
         ],
       ),
       body: ResponsiveBody(
-        child: provider.alerts.isEmpty
+        child: Column(
+          children: [
+            if (_showHomeScreenHint) _HomeScreenHintBanner(onDismiss: _dismissHomeScreenHint),
+            Expanded(child: _buildBody(context, provider, theme, t)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBody(
+    BuildContext context,
+    PriceAlertsProvider provider,
+    ThemeData theme,
+    String Function(String) t,
+  ) {
+    return provider.alerts.isEmpty
             ? Center(
                 child: Padding(
                   padding: const EdgeInsets.all(AppSpacing.xxl),
@@ -150,7 +199,44 @@ class _PriceAlertsScreenState extends State<PriceAlertsScreen> {
                       ),
                     ),
                 ],
-              ),
+              );
+  }
+}
+
+class _HomeScreenHintBanner extends StatelessWidget {
+  const _HomeScreenHintBanner({required this.onDismiss});
+
+  final VoidCallback onDismiss;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final t = AppLocalizations.of(context).t;
+    return Container(
+      margin: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, 0),
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: AppColors.moroccoGold.withValues(alpha: 0.16),
+        borderRadius: BorderRadius.circular(AppRadius.md),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.ios_share_rounded, size: 20, color: theme.colorScheme.tertiary),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Text(
+              t('addToHomeScreenHint'),
+              style: theme.textTheme.bodySmall
+                  ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.close_rounded, size: 18),
+            visualDensity: VisualDensity.compact,
+            onPressed: onDismiss,
+          ),
+        ],
       ),
     );
   }

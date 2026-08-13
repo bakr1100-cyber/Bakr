@@ -33,7 +33,10 @@ class AiChatScreen extends StatefulWidget {
 class _AiChatScreenState extends State<AiChatScreen> {
   final _controller = TextEditingController();
   final _scrollController = ScrollController();
-  final _voice = VoiceService();
+  // Same proxy URL used for Duffel/the AI chat (see `_duffelProxyUrl` in
+  // app.dart) - dart-defines are compile-time globals, readable from any
+  // file, so this doesn't need to be threaded through the widget tree.
+  final _voice = VoiceService(proxyBaseUrl: const String.fromEnvironment('DUFFEL_PROXY_URL'));
   bool _voiceReady = false;
   bool _isListening = false;
   late final HomeNavigationProvider _navigation;

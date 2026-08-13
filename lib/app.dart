@@ -22,6 +22,7 @@ import 'services/flight_price_source.dart';
 import 'services/flight_search_service.dart';
 import 'services/llm_chat_service.dart';
 import 'services/mock_flight_price_source.dart';
+import 'services/notification_service.dart';
 
 /// Set via
 /// `flutter run --dart-define=DUFFEL_PROXY_URL=https://marocfly-duffel-proxy.<you>.workers.dev`
@@ -59,7 +60,13 @@ const _affiliateMarker = String.fromEnvironment('AFFILIATE_MARKER');
 const _affiliateUrlTemplateOverride = String.fromEnvironment('AFFILIATE_URL_TEMPLATE');
 
 class MarocFlyApp extends StatefulWidget {
-  const MarocFlyApp({super.key});
+  const MarocFlyApp({super.key, this.notificationService});
+
+  /// Pass the already-`init()`-ed instance `main()` constructed (so its
+  /// Firebase setup and FCM token fetch aren't redone/discarded) - a fresh
+  /// one is created for callers that don't care (tests, previews), whose
+  /// `pushToken` will simply be null.
+  final NotificationService? notificationService;
 
   @override
   State<MarocFlyApp> createState() => _MarocFlyAppState();
@@ -71,6 +78,8 @@ class _MarocFlyAppState extends State<MarocFlyApp> {
   final _preferencesProvider = PreferencesProvider();
   final _authProvider = AuthProvider();
   final _priceAlertsProvider = PriceAlertsProvider();
+  late final NotificationService _notificationService =
+      widget.notificationService ?? NotificationService();
   // `late` because the initializer references other instance fields (only
   // allowed for `late` field initializers, which run lazily on first
   // access rather than as part of the constructor's initializer list) -
@@ -122,6 +131,7 @@ class _MarocFlyAppState extends State<MarocFlyApp> {
   void initState() {
     super.initState();
     _accountSync; // force construction now, before _bootstrap() below
+    _accountSync.setPushToken(_notificationService.pushToken);
     _bootstrap();
   }
 

@@ -50,19 +50,24 @@ class CloudSyncService {
     return fields.map((key, value) => MapEntry(key, _decodeValue(value as Map<String, dynamic>)));
   }
 
-  /// Overwrites the user's document with [data] (Firestore's PATCH without
-  /// an `updateMask` replaces the whole document, creating it if it doesn't
-  /// exist yet) - simplest correct option for this app's scale, where the
-  /// whole account's synced state is just two fields.
+  /// Updates only the top-level fields present in [data], leaving any other
+  /// fields on the document untouched - e.g. calling this with just
+  /// `{'pushToken': ...}` must not wipe out `preferences`/`priceAlerts`
+  /// written by a previous call. Firestore's PATCH replaces the *whole*
+  /// document unless an `updateMask` is given, so every call here passes
+  /// one `updateMask.fieldPaths` per key in [data]; this also creates the
+  /// document (with just those fields) if it doesn't exist yet.
   Future<void> saveUserDocument({
     required String uid,
     required String idToken,
     required Map<String, dynamic> data,
   }) async {
     final fields = data.map((key, value) => MapEntry(key, _encodeValue(value)));
+    final maskQuery =
+        data.keys.map((key) => 'updateMask.fieldPaths=${Uri.encodeQueryComponent(key)}').join('&');
     final response = await _client
         .patch(
-          Uri.parse(_documentUrl(uid)),
+          Uri.parse('${_documentUrl(uid)}?$maskQuery'),
           headers: {
             'Authorization': 'Bearer $idToken',
             'Content-Type': 'application/json',

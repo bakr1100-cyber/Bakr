@@ -8,7 +8,7 @@
  * committed to git, never shipped to the browser) and the Flutter app calls
  * THIS endpoint instead of the third-party APIs directly.
  *
- * Two routes:
+ * Two HTTP routes, plus a scheduled job:
  *  - POST /air/offer_requests - Duffel flight search (mirrors Duffel's own
  *    "create an offer request" shape so the Dart-side DuffelFlightApi
  *    client barely changes).
@@ -28,7 +28,16 @@
  *    (A third tier, Qwen/Alibaba Cloud, was tried and removed - the
  *    signup required identity/payment verification that wasn't worth the
  *    hassle for a hobby project. Mistral + Workers AI is plenty.)
+ *  - `scheduled` (see `wrangler.toml`'s `[triggers]`) - runs
+ *    `price_check_job.js`, which re-checks every tracked price alert for
+ *    every user with a push token and sends a real push notification
+ *    (Firebase Cloud Messaging) on a meaningful drop, whether or not
+ *    anyone has the app open. Needs `FIREBASE_SERVICE_ACCOUNT_EMAIL`/
+ *    `FIREBASE_SERVICE_ACCOUNT_KEY` (see `google_auth.js`) in addition to
+ *    `DUFFEL_API_KEY` - silently skipped if either is missing.
  */
+
+import { runPriceCheckJob } from './price_check_job.js';
 
 const DUFFEL_BASE_URL = 'https://api.duffel.com';
 const DUFFEL_VERSION = 'v2';
@@ -54,6 +63,21 @@ const MISTRAL_CHAT_MODEL = 'mistral-small-latest';
 // hitting the endpoint directly, not just the docs page.
 const CHAT_MODEL = '@cf/meta/llama-3.2-3b-instruct';
 
+// Whisper (speech-to-text) and MeloTTS (text-to-speech), both via the same
+// no-signup Workers AI [ai] binding that already powers the Workers-AI
+// tier of /ai/chat above - see todo/voice-stt-tts-whisper-migration.md in
+// the main repo for why: Safari's on-device Web Speech API (used by
+// VoiceService today) was the suspected/reported cause of poor Darija
+// transcription and unnatural-sounding speech.
+const STT_MODEL = '@cf/openai/whisper';
+// MeloTTS's documented `lang` values are a short fixed list (EN/ES/FR/
+// ZH/JP/KR) - there is no Arabic/Darija option. Requests for those
+// languages are still sent through (best-effort, likely mispronounced)
+// rather than rejected outright, so VoiceService's fallback to the native
+// TTS engine - which at least tries - only kicks in on an actual error,
+// not preemptively.
+const TTS_MODEL = '@cf/myshell-ai/melotts';
+
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
@@ -76,7 +100,24 @@ export default {
       return handleAiChat(request, env);
     }
 
+    if (url.pathname === '/ai/stt' && request.method === 'POST') {
+      return handleSpeechToText(request, env);
+    }
+
+    if (url.pathname === '/ai/tts' && request.method === 'POST') {
+      return handleTextToSpeech(request, env);
+    }
+
     return jsonResponse({ error: 'not_found' }, 404);
+  },
+
+  // Fired on the schedule in `wrangler.toml`'s `[triggers]` - the
+  // server-side half of real, "even when the app is closed" price-drop
+  // notifications. `ctx.waitUntil` keeps the Worker alive until the run
+  // (which makes several sequential Duffel/Firestore/FCM calls) actually
+  // finishes, not just until this function returns.
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(runPriceCheckJob(env));
   },
 };
 
@@ -169,6 +210,67 @@ async function handleAiChat(request, env) {
     // diagnosing a broken deploy and carries no secret - unlike the Duffel
     // route, there is no API key involved in this call at all.
     return jsonResponse({ error: 'ai_request_failed', detail: String(error?.message ?? error) }, 502);
+  }
+}
+
+async function handleSpeechToText(request, env) {
+  if (!env.AI) {
+    return jsonResponse({ error: 'ai_not_configured' }, 500);
+  }
+
+  let audioBytes;
+  try {
+    audioBytes = new Uint8Array(await request.arrayBuffer());
+  } catch (error) {
+    return jsonResponse({ error: 'invalid_request_body' }, 400);
+  }
+  if (audioBytes.length === 0) {
+    return jsonResponse({ error: 'empty_audio' }, 400);
+  }
+
+  try {
+    const result = await env.AI.run(STT_MODEL, { audio: Array.from(audioBytes) });
+    const text = (result?.text ?? '').trim();
+    return jsonResponse({ text }, 200);
+  } catch (error) {
+    return jsonResponse(
+      { error: 'stt_request_failed', detail: String(error?.message ?? error) },
+      502,
+    );
+  }
+}
+
+async function handleTextToSpeech(request, env) {
+  if (!env.AI) {
+    return jsonResponse({ error: 'ai_not_configured' }, 500);
+  }
+
+  let body;
+  try {
+    body = await request.json();
+  } catch (error) {
+    return jsonResponse({ error: 'invalid_request_body' }, 400);
+  }
+  const text = typeof body?.text === 'string' ? body.text.trim() : '';
+  if (!text) {
+    return jsonResponse({ error: 'text_required' }, 400);
+  }
+  // See TTS_MODEL's doc comment above - unsupported languages are sent
+  // through anyway rather than rejected.
+  const lang = typeof body?.lang === 'string' && body.lang ? body.lang : 'en';
+
+  try {
+    const result = await env.AI.run(TTS_MODEL, { prompt: text, lang });
+    const audioBase64 = result?.audio;
+    if (!audioBase64) {
+      return jsonResponse({ error: 'tts_no_audio_returned' }, 502);
+    }
+    return jsonResponse({ audio: audioBase64, mimeType: 'audio/mpeg' }, 200);
+  } catch (error) {
+    return jsonResponse(
+      { error: 'tts_request_failed', detail: String(error?.message ?? error) },
+      502,
+    );
   }
 }
 

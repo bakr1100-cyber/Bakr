@@ -196,5 +196,82 @@ void main() {
 
       expect(requestsToFirestore, isEmpty);
     });
+
+    test('setPushToken while already logged in pushes only the pushToken field', () async {
+      final requestsToFirestore = <http.Request>[];
+      final firestoreClient = MockClient((request) async {
+        requestsToFirestore.add(request);
+        if (request.method == 'GET') return http.Response('', 404);
+        return http.Response('{}', 200);
+      });
+
+      final auth = AuthProvider(client: _authClientSigningIn(uid: 'uid-4'));
+      final preferences = PreferencesProvider();
+      final priceAlerts = PriceAlertsProvider();
+      await preferences.load();
+      await priceAlerts.load();
+
+      final accountSync = AccountSyncService(
+        auth: auth,
+        preferences: preferences,
+        priceAlerts: priceAlerts,
+        cloudSync: CloudSyncService(client: firestoreClient, projectId: 'test-project'),
+      );
+      await auth.signIn(email: 'diaspora@example.com', password: 'x', language: AppLanguage.en);
+      await _letAsyncWorkSettle();
+      requestsToFirestore.clear();
+
+      accountSync.setPushToken('fcm-token-123');
+      await _letAsyncWorkSettle();
+
+      expect(requestsToFirestore, hasLength(1));
+      final patch = requestsToFirestore.single;
+      expect(patch.method, 'PATCH');
+      expect(patch.url.toString(), contains('updateMask.fieldPaths=pushToken'));
+      final body = jsonDecode(patch.body) as Map<String, dynamic>;
+      expect((body['fields'] as Map).keys, ['pushToken']);
+      expect(body['fields']['pushToken'], {'stringValue': 'fcm-token-123'});
+    });
+
+    test('setPushToken before login is deferred and pushed once the user signs in', () async {
+      final requestsToFirestore = <http.Request>[];
+      final firestoreClient = MockClient((request) async {
+        requestsToFirestore.add(request);
+        if (request.method == 'GET') return http.Response('', 404);
+        return http.Response('{}', 200);
+      });
+
+      final auth = AuthProvider(client: _authClientSigningIn(uid: 'uid-5'));
+      final preferences = PreferencesProvider();
+      final priceAlerts = PriceAlertsProvider();
+      await preferences.load();
+      await priceAlerts.load();
+
+      final accountSync = AccountSyncService(
+        auth: auth,
+        preferences: preferences,
+        priceAlerts: priceAlerts,
+        cloudSync: CloudSyncService(client: firestoreClient, projectId: 'test-project'),
+      );
+
+      // Token becomes known before the user is logged in (e.g. notification
+      // permission granted at first launch, before the login screen) -
+      // nothing should be pushed yet.
+      accountSync.setPushToken('fcm-token-early');
+      await _letAsyncWorkSettle();
+      expect(requestsToFirestore, isEmpty);
+
+      await auth.signIn(email: 'diaspora@example.com', password: 'x', language: AppLanguage.en);
+      await _letAsyncWorkSettle();
+
+      final pushTokenPatch = requestsToFirestore.where(
+        (r) =>
+            r.method == 'PATCH' &&
+            (jsonDecode(r.body) as Map)['fields'].containsKey('pushToken'),
+      );
+      expect(pushTokenPatch, isNotEmpty);
+      final body = jsonDecode(pushTokenPatch.first.body) as Map<String, dynamic>;
+      expect(body['fields']['pushToken'], {'stringValue': 'fcm-token-early'});
+    });
   });
 }

@@ -23,8 +23,19 @@ cd "$(dirname "$0")/.."
 # catches that and falls back to the mock data exactly as before.
 DUFFEL_PROXY_URL="${DUFFEL_PROXY_URL:-https://marocfly-duffel-proxy.bakr1100.workers.dev}"
 
+# Wires real push notifications (see NotificationService/AccountSyncService)
+# - the "Web Push certificate" key pair from Firebase console: Project
+# settings -> Cloud Messaging -> Web configuration. Left empty until set as
+# a local env var before running this script (there's no safe placeholder
+# default the way there is for DUFFEL_PROXY_URL above, since this one is
+# project-specific and secret-ish); without it, getToken() simply fails and
+# push notifications stay unavailable, same graceful degradation as every
+# other optional integration here.
+FIREBASE_VAPID_KEY="${FIREBASE_VAPID_KEY:-}"
+
 flutter build web --release --base-href /Bakr/ \
-  --dart-define=DUFFEL_PROXY_URL="$DUFFEL_PROXY_URL"
+  --dart-define=DUFFEL_PROXY_URL="$DUFFEL_PROXY_URL" \
+  --dart-define=FIREBASE_VAPID_KEY="$FIREBASE_VAPID_KEY"
 
 worktree_dir=$(mktemp -d)
 git fetch origin gh-pages
