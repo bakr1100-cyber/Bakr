@@ -53,7 +53,8 @@ class ModeSelectScreen extends StatelessWidget {
                     subtitle: t('modeAiSubtitle'),
                     gradient: AppGradients.primaryDeep,
                     tint: AppColors.moroccoGreen,
-                    onTap: () => _enter(context, HomeNavigationProvider.assistantTabIndex),
+                    onTap: () => _enter(
+                        context, HomeNavigationProvider.assistantTabIndex),
                   ),
                   const SizedBox(height: AppSpacing.lg),
                   _ModeCard(
@@ -100,53 +101,62 @@ class _ModeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
+    // Same shadow-outside/clip-inside split as the language cards on the
+    // previous screen (see language_select_screen.dart) - keeps the
+    // gradient crisply rounded with no sub-pixel bleed at the corners
+    // while still letting the shadow itself extend past the shape.
+    return DecoratedBox(
+      decoration: BoxDecoration(boxShadow: AppShadows.card(tint)),
+      child: ClipRRect(
         borderRadius: BorderRadius.circular(AppRadius.xl),
-        onTap: onTap,
-        child: Ink(
-          width: double.infinity,
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          decoration: BoxDecoration(
-            gradient: gradient,
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
             borderRadius: BorderRadius.circular(AppRadius.xl),
-            boxShadow: AppShadows.card(tint),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 52,
-                height: 52,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.22),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(icon, color: Colors.white, size: 26),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
-                      ),
+            onTap: onTap,
+            child: Ink(
+              width: double.infinity,
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              decoration: BoxDecoration(gradient: gradient),
+              child: Row(
+                children: [
+                  Container(
+                    width: 52,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.22),
+                      shape: BoxShape.circle,
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      subtitle,
-                      style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: 13),
+                    child: Icon(icon, color: Colors.white, size: 26),
+                  ),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          subtitle,
+                          style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.85),
+                              fontSize: 13),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                  const Icon(Icons.chevron_right_rounded,
+                      color: Colors.white, size: 24),
+                ],
               ),
-              const Icon(Icons.chevron_right_rounded, color: Colors.white, size: 24),
-            ],
+            ),
           ),
         ),
       ),

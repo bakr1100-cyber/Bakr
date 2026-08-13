@@ -64,9 +64,11 @@ class LanguageSelectScreen extends StatelessWidget {
                           height: 204,
                           child: _LanguageCard(
                             language: AppLanguage.values[i],
-                            recommended: AppLanguage.values[i] == AppLanguage.ary,
+                            recommended:
+                                AppLanguage.values[i] == AppLanguage.ary,
                             entranceDelay: Duration(milliseconds: 80 * i),
-                            onTap: () => _select(context, AppLanguage.values[i]),
+                            onTap: () =>
+                                _select(context, AppLanguage.values[i]),
                           ),
                         ),
                     ],
@@ -175,76 +177,92 @@ class _LanguageCardState extends State<_LanguageCard>
           child: AnimatedScale(
             scale: _pressed ? 0.96 : 1,
             duration: const Duration(milliseconds: 120),
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
+            // The shadow needs to sit outside the clip (clipping the
+            // shadow-carrying decoration itself would cut the shadow off),
+            // so it's painted one level up here, while the ClipRRect below
+            // clips the gradient/content to a crisp rounded edge with no
+            // sub-pixel bleed past the corners.
+            child: DecoratedBox(
+              decoration:
+                  BoxDecoration(boxShadow: AppShadows.card(Colors.black)),
+              child: ClipRRect(
                 borderRadius: BorderRadius.circular(AppRadius.xl),
-                onTap: widget.onTap,
-                child: Ink(
-                  decoration: BoxDecoration(
-                    gradient: gradient,
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
                     borderRadius: BorderRadius.circular(AppRadius.xl),
-                    border: widget.recommended
-                        ? Border.all(color: Colors.white.withValues(alpha: 0.75), width: 2)
-                        : null,
-                    boxShadow: AppShadows.card(Colors.black),
-                  ),
-                  child: Stack(
-                    children: [
-                      if (widget.recommended)
-                        Positioned(
-                          top: AppSpacing.sm,
-                          right: AppSpacing.sm,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.25),
-                              borderRadius: BorderRadius.circular(AppRadius.pill),
-                            ),
-                            child: Text(
-                              AppLocalizations.of(context).t('recommendedForYou'),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 9,
-                                fontWeight: FontWeight.w800,
+                    onTap: widget.onTap,
+                    child: Ink(
+                      decoration: BoxDecoration(
+                        gradient: gradient,
+                        border: widget.recommended
+                            ? Border.all(
+                                color: Colors.white.withValues(alpha: 0.75),
+                                width: 2)
+                            : null,
+                      ),
+                      child: Stack(
+                        children: [
+                          if (widget.recommended)
+                            Positioned(
+                              top: AppSpacing.sm,
+                              right: AppSpacing.sm,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.25),
+                                  borderRadius:
+                                      BorderRadius.circular(AppRadius.pill),
+                                ),
+                                child: Text(
+                                  AppLocalizations.of(context)
+                                      .t('recommendedForYou'),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
                               ),
+                            ),
+                          Padding(
+                            padding: const EdgeInsets.all(AppSpacing.lg),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(widget.language.flagEmoji,
+                                    style: const TextStyle(fontSize: 44)),
+                                const SizedBox(height: AppSpacing.md),
+                                Text(
+                                  widget.language.nativeName,
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 17,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                                const SizedBox(height: AppSpacing.sm),
+                                Container(
+                                  width: 32,
+                                  height: 32,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.22),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.record_voice_over_rounded,
+                                    color: Colors.white,
+                                    size: 17,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                        ),
-                      Padding(
-                        padding: const EdgeInsets.all(AppSpacing.lg),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(widget.language.flagEmoji, style: const TextStyle(fontSize: 44)),
-                            const SizedBox(height: AppSpacing.md),
-                            Text(
-                              widget.language.nativeName,
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 17,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                            const SizedBox(height: AppSpacing.sm),
-                            Container(
-                              width: 32,
-                              height: 32,
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.22),
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.record_voice_over_rounded,
-                                color: Colors.white,
-                                size: 17,
-                              ),
-                            ),
-                          ],
-                        ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
               ),
@@ -255,4 +273,3 @@ class _LanguageCardState extends State<_LanguageCard>
     );
   }
 }
-
