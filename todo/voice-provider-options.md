@@ -32,7 +32,20 @@ automatisch.
 
 ---
 
-## Option 1: Microsoft Azure — **die einzige mit echtem Marokkanisch**
+## ✅ Option 1: Microsoft Azure — ERLEDIGT, LÄUFT
+Eingerichtet am 14.8.2026, Region `northeurope`, Tarif F0 (gratis).
+Der Deploy-Test bestätigt alle vier Sprachen über Azure, inklusive
+marokkanischem Arabisch (`ar-MA-MounaNeural`).
+
+**Noch offen (Hygiene, kein Fehler):** Der Azure-Schlüssel war einmal in
+einem Screenshot sichtbar. Gelegentlich im Azure-Portal unter „Schlüssel
+und Endpunkt" auf „Schlüssel1 neu generieren" tippen und den neuen Wert im
+GitHub-Secret `AZURE_SPEECH_KEY` ersetzen. Freier Tarif, also kein
+Kostenrisiko - nur sauberer.
+
+Die ursprüngliche Anleitung, falls du es je neu aufsetzen musst:
+
+### Microsoft Azure — die einzige mit echtem Marokkanisch
 Der stärkste Vorteil für deine Zielgruppe: Azure hat echte marokkanische
 Stimmen (`ar-MA-MounaNeural` weiblich, `ar-MA-JamalNeural` männlich).
 Kein anderer der drei Dienste hat das. Deutsch und Französisch sind
@@ -89,11 +102,8 @@ gesetzt lassen (die anderen Secrets löschen oder leeren) - dann hörst du
 eindeutig, wen du gerade testest, und das Deploy-Protokoll bestätigt es
 (`OK via 'azure'` / `'google'` / `'elevenlabs'`).
 
-## Noch zu tun, sobald der erste Dienst läuft
-In `lib/services/voice_service.dart` steht `_cloudTtsEnabledByDefault =
-false` (weil MeloTTS nie funktioniert hat). Sobald im Deploy-Protokoll ein
-`OK via '...'` auftaucht, muss das auf `true` - **eine Zeile**. Die App
-hat zusätzlich eine Schutzschaltung: schlägt der Dienst zweimal
-hintereinander fehl, hört sie für die Sitzung auf, es zu versuchen, und
-nimmt sofort die Gerätestimme - eine Störung beim Anbieter kann die App
-also nicht ausbremsen.
+## Schutzschaltung (erledigt)
+`_cloudTtsEnabledByDefault` in `lib/services/voice_service.dart` steht auf
+`true`. Schlägt der Dienst zweimal hintereinander fehl, hört die App für
+die Sitzung auf, es zu versuchen, und nimmt sofort die Gerätestimme - eine
+Störung beim Anbieter kann die App also nicht ausbremsen.

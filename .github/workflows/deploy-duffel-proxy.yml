@@ -64,9 +64,9 @@ jobs:
       # Optional text-to-speech providers - see cloudflare-worker/src/
       # tts_providers.js. Whichever of these has a value wins, in that
       # file's documented order; with none set, TTS falls back to Workers
-      # AI's own (currently broken) MeloTTS and the app just uses the
-      # device's built-in voice. Safe to push unconditionally: an empty
-      # value reads as "not configured".
+      # AI's own (broken) MeloTTS and the app just uses the device's
+      # built-in voice. Safe to push unconditionally: an empty value reads
+      # as "not configured".
       - name: Set Azure Speech secrets as Cloudflare secrets
         run: |
           echo "${{ secrets.AZURE_SPEECH_KEY }}" | wrangler secret put AZURE_SPEECH_KEY
@@ -147,16 +147,16 @@ jobs:
           PY
         continue-on-error: true
 
-      # Same rationale again: catches a wrong MeloTTS model name/input
-      # shape right at deploy time. `-o /dev/null` since the response body
-      # is a large base64 audio blob, not worth putting in the Actions log.
+      # Same rationale again, and the check that caught two real bugs: a
+      # missing SSML namespace, then a missing charset that broke Arabic
+      # specifically while leaving the ASCII languages working.
       # MeloTTS rejects some `lang` values outright with "8002: Invalid
       # input" (a known, undocumented gap - see
       # github.com/cloudflare/cloudflare-docs/issues/23308), so this probes
       # each language the app would actually ask for rather than assuming.
       # VoiceService only routes a language to the cloud voice if it's in
       # its supported set; this is what keeps that set honest.
-      - name: Smoke-test the /ai/tts endpoint (real MeloTTS speech synthesis)
+      - name: Smoke-test the /ai/tts endpoint (real speech synthesis, per language)
         run: |
           probe() {
             lang="$1"; text="$2"
@@ -179,55 +179,4 @@ jobs:
           probe fr "Bonjour le monde"
           probe ar "مرحبا بالعالم"
           probe en "Hello world"
-        continue-on-error: true
-
-      # Azure rejects an unavailable voice with a bare HTTP 400 and no
-      # explanation, so the only way to know which voices a region really
-      # serves is to ask it. Lists the Arabic ones specifically: Moroccan
-      # (ar-MA) is the reason this app prefers Azure at all, and voice
-      # availability genuinely varies by region.
-      - name: List the Arabic voices this Azure region actually offers
-        run: |
-          if [ -z "${{ secrets.AZURE_SPEECH_KEY }}" ]; then
-            echo "No Azure key configured - skipping."; exit 0
-          fi
-          curl -sS "https://${{ secrets.AZURE_SPEECH_REGION }}.tts.speech.microsoft.com/cognitiveservices/voices/list" \
-            -H "Ocp-Apim-Subscription-Key: ${{ secrets.AZURE_SPEECH_KEY }}" \
-            -o voices.json -w "HTTP_STATUS:%{http_code}\n" --max-time 25
-          python3 - <<'PY'
-          import json
-          try:
-              voices = json.load(open('voices.json'))
-          except Exception as e:
-              print('could not parse voice list:', e); raise SystemExit(0)
-          arabic = sorted({v['ShortName'] for v in voices if v.get('Locale','').startswith('ar')})
-          print(f'{len(voices)} voices total, {len(arabic)} Arabic:')
-          for name in arabic:
-              print('  ', name, '<-- MOROCCAN' if name.startswith('ar-MA') else '')
-          PY
-        continue-on-error: true
-
-      # Arabic is the one language Azure still rejects through the Worker,
-      # with an empty-bodied 400. Calling Azure directly with the identical
-      # SSML separates "my request is malformed" from "something between
-      # here and Azure mangles the Arabic text".
-      - name: Diagnose the Arabic voice by calling Azure directly
-        run: |
-          if [ -z "${{ secrets.AZURE_SPEECH_KEY }}" ]; then echo "skipped"; exit 0; fi
-          try_ssml() {
-            echo "--- $1"
-            printf '%s' "$2" > body.xml
-            curl -sS -X POST "https://${{ secrets.AZURE_SPEECH_REGION }}.tts.speech.microsoft.com/cognitiveservices/v1" \
-              -H "Ocp-Apim-Subscription-Key: ${{ secrets.AZURE_SPEECH_KEY }}" \
-              -H "Content-Type: application/ssml+xml; charset=utf-8" \
-              -H "X-Microsoft-OutputFormat: audio-24khz-48kbitrate-mono-mp3" \
-              -H "User-Agent: tayarti-voice" \
-              --data-binary @body.xml -o out.mp3 -D headers.txt \
-              -w "  status=%{http_code} bytes=%{size_download}\n" --max-time 25
-            grep -i -E '^(x-requestid|content-type)' headers.txt || true
-            [ "$(wc -c < out.mp3)" -lt 400 ] && { echo "  body:"; head -c 300 out.mp3; echo; } || true
-          }
-          try_ssml "ar-MA Arabic text" "<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='ar-MA'><voice xml:lang='ar-MA' name='ar-MA-MounaNeural'>مرحبا بالعالم</voice></speak>"
-          try_ssml "ar-MA Latin text (is it the script?)" "<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='ar-MA'><voice xml:lang='ar-MA' name='ar-MA-MounaNeural'>salam</voice></speak>"
-          try_ssml "de-DE control (known good)" "<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='de-DE'><voice xml:lang='de-DE' name='de-DE-KatjaNeural'>Hallo</voice></speak>"
         continue-on-error: true

@@ -18,20 +18,19 @@ const _cloudTtsSupportedLangPrefixes = {'ar', 'de', 'en', 'fr'};
 
 /// Whether to try the cloud voice at all.
 ///
-/// Currently **off**: MeloTTS on Workers AI has failed on every single
-/// deploy smoke test so far, for both `en` and `fr`, with three different
-/// errors (`3040: Capacity temporarily exceeded`, `3043: Internal server
-/// error`, `8002: Invalid input` - the last one is a known, undocumented
-/// per-language gap, see cloudflare/cloudflare-docs#23308). It has never
-/// once returned audio.
+/// **On**: the Worker now reaches Azure Speech, which the deploy smoke
+/// test confirms end to end for all four languages - including genuine
+/// Moroccan Arabic (`ar-MA`), the whole reason Azure was chosen over the
+/// alternatives.
 ///
-/// Leaving it enabled isn't harmless: every French/English reply would
-/// first spend a network round-trip failing before the native voice starts
-/// speaking, so the user just waits longer for the same voice they already
-/// had. The whole path stays wired up and tested behind this flag - flip
-/// it back to `true` once the deploy smoke test starts reporting
-/// `lang=... OK`, no other change needed.
-const _cloudTtsEnabledByDefault = false;
+/// This was off while the only available backend was Workers AI's MeloTTS,
+/// which never once returned audio; leaving it on then meant every reply
+/// paid a doomed round-trip before the native voice started. The circuit
+/// breaker in [VoiceService._speakViaCloud] means that failure mode can no
+/// longer cost more than two attempts per session, so an outage at the
+/// provider degrades to the native voice quickly instead of dragging on
+/// every utterance.
+const _cloudTtsEnabledByDefault = true;
 
 /// Apple ships these alongside the real ones and they are, without
 /// exception, unusable for reading out a flight price - they must never be
@@ -128,13 +127,15 @@ int _voiceScore(Map<String, String> voice, String locale, bool preferFemale) {
 ///
 /// Text-to-speech, when [proxyBaseUrl] is configured (the same Cloudflare
 /// Worker URL that already proxies Duffel/the AI chat - see
-/// `_duffelProxyUrl` in `app.dart`) and the target language is one MeloTTS
-/// actually supports, tries that cloud voice first for a markedly more
-/// natural result than `flutter_tts`'s OS-default voice - falling back to
-/// the native engine on any failure (network error, unsupported language,
-/// proxy not configured, playback error), exactly the same
-/// never-worse-than-before degradation every other optional integration
-/// in this app follows.
+/// `_duffelProxyUrl` in `app.dart`), tries the cloud voice first: markedly
+/// more natural than `flutter_tts`'s OS-default voice, and for Darija the
+/// difference is categorical rather than cosmetic, since the Worker's
+/// first-choice provider has genuine Moroccan voices. Falls back to the
+/// native engine on any failure (network error, provider outage, proxy not
+/// configured, playback error), and stops retrying after a couple of
+/// consecutive failures so a broken provider cannot slow every reply -
+/// the same never-worse-than-before degradation every other optional
+/// integration in this app follows.
 class VoiceService {
   VoiceService({
     String? proxyBaseUrl,

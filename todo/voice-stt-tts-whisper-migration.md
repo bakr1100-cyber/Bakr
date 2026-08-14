@@ -11,33 +11,30 @@
   `test/voice_service_test.dart` (the HTTP routing logic - not actual
   audio output, which needs a real device/browser to verify).
 
-### MeloTTS does not work at all right now - cloud voice is DISABLED
-Corrected finding. An earlier read of this was too optimistic ("transient
-capacity, request shape is fine"). Probing each language separately across
-four deploys shows it has **never once returned audio**, with three
-different errors:
+### Resolved: the cloud voice now runs on Azure Speech
+Workers AI's MeloTTS never once returned audio across four deploys (three
+different errors, including a known undocumented per-language gap). It is
+now only the last-resort provider. The Worker instead picks a real TTS
+service by configured secret (`cloudflare-worker/src/tts_providers.js`),
+and **Azure Speech is live** - confirmed end to end by the deploy smoke
+test for all four languages:
 
-| attempt | lang | error |
-|---|---|---|
-| 1-3 | fr | `3040: Capacity temporarily exceeded` |
-| 4 | en | `3043: Internal server error` |
-| 4 | fr | `8002: Invalid input` |
+```
+lang=de OK via 'azure'   lang=fr OK via 'azure'
+lang=ar OK via 'azure'   lang=en OK via 'azure'
+```
 
-`8002` on a plain `fr` request is a known, undocumented per-language gap in
-Cloudflare's MeloTTS wrapper (cloudflare/cloudflare-docs#23308) - not
-something fixable from this repo.
+Arabic uses `ar-MA-MounaNeural` / `ar-MA-JamalNeural` - genuine Moroccan
+voices, which no other candidate provider offers.
 
-**So the cloud voice is now off by default** (`_cloudTtsEnabledByDefault`
-in `voice_service.dart`). Leaving it on was not harmless: every
-French/English reply would first spend a network round-trip failing before
-the native voice started speaking, i.e. the user waits longer to hear the
-exact same voice as before. With it off, French/English behave precisely as
-they did before this feature existed.
-
-The whole path stays wired up and tested behind that one flag. The deploy
-smoke test now probes `en` and `fr` separately on every deploy and prints
-`lang=xx OK` when it works - **flip the flag back to `true` when that
-appears**, nothing else needs changing.
+Two bugs were found and fixed getting there, both of which the per-language
+smoke test caught and neither of which unit tests could have:
+1. The SSML was missing `xmlns='http://www.w3.org/2001/10/synthesis'`.
+   Azure rejects that with a bare HTTP 400 and an empty body.
+2. `Content-Type` lacked `charset=utf-8`, so Azure decoded the body as
+   single-byte text. ASCII languages were unaffected; **only** Arabic
+   broke, arriving as mojibake. Worth remembering: an integration passing
+   for European languages says nothing about whether it handles Arabic.
 
 ## Speech-to-text (input): Whisper added as a fallback, native path untouched
 The primary voice-input experience is deliberately unchanged: native Web

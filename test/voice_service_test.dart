@@ -134,8 +134,8 @@ void main() {
       expect(body, contains('"lang":"fr"'));
     });
 
-    test('is OFF by default - MeloTTS has never once returned audio, so the app must not '
-        'spend a doomed round-trip before falling back to the native voice', () async {
+    test('is ON by default now that the Worker reaches a provider that actually '
+        'returns audio, including a Moroccan voice for Darija', () async {
       final requests = <http.Request>[];
       final client = MockClient((request) async {
         requests.add(request);
@@ -144,9 +144,10 @@ void main() {
       // Note: no enableCloudTts argument - this is what the real app builds.
       final voice = VoiceService(proxyBaseUrl: 'https://proxy.example', client: client);
 
-      await voice.speak('Bonjour', locale: 'fr-FR');
+      await voice.speak('مرحبا', locale: 'ar-MA');
 
-      expect(requests, isEmpty);
+      expect(requests, hasLength(1));
+      expect(requests.single.url.path, '/ai/tts');
     });
   });
 
