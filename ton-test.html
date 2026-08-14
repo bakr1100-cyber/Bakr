@@ -47,6 +47,15 @@
   <div class="out" id="oAll" style="background:rgba(255,255,255,.94);margin-top:14px"></div>
 </div>
 
+<div class="step" style="background:#7a4b0a">
+  <h2 style="color:#fff;margin-bottom:8px">Test 2: mit Mikrofon</h2>
+  <p style="color:#f2e3d2">Erst Mikrofon an, dann Stimme abspielen – genau wie die App es macht.</p>
+  <button onclick="runWithMic()" style="background:#fff;color:#7a4b0a;font-size:18px;padding:18px">
+    🎤  MIT MIKROFON TESTEN
+  </button>
+  <div class="out" id="oMic" style="background:rgba(255,255,255,.94);margin-top:14px"></div>
+</div>
+
 <p class="sub" style="margin:22px 0 10px"><b>Sag mir nur eins von diesen dreien:</b><br>
 A) Ich höre einen Piepton UND eine Frauenstimme<br>
 B) Ich höre nur den Piepton, keine Stimme<br>
@@ -176,6 +185,47 @@ async function runAll() {
     (started
       ? 'Technisch läuft alles.\nWenn du trotzdem NICHTS hörst → dein Gerät steht auf stumm oder ganz leise.'
       : 'Safari blockiert das Abspielen.\nDas ist der Fehler, den ich suche – Screenshot bitte.');
+}
+
+// Reproduces the app's exact sequence: hold the microphone, then play.
+// If plain playback works but this does not, iOS is keeping the audio
+// session in recording mode - which would explain why the app is silent
+// while this very page is not.
+async function runWithMic() {
+  const box = document.getElementById('oMic');
+  box.className = 'out show';
+  box.textContent = 'Mikrofon anfordern …';
+  let stream = null;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    box.textContent = 'Mikrofon läuft. Hole Stimme …';
+  } catch (e) {
+    box.className = 'out show bad';
+    box.textContent = '✗ Mikrofon abgelehnt: ' + e + '\n(Erlaubnis verweigert? Dann bitte erlauben und nochmal.)';
+    return;
+  }
+  await fetchVoice();
+  if (!audioBytes) { box.className='out show bad'; box.textContent='✗ Stimme kam nicht an.'; return; }
+
+  box.textContent = 'Spiele ab, WÄHREND das Mikrofon läuft …';
+  await playVoice();
+  const whileMic = el.currentTime > 0;
+
+  // Now release the mic and try again - the comparison is the point.
+  stream.getTracks().forEach(t => t.stop());
+  await new Promise(r => setTimeout(r, 600));
+  el.currentTime = 0;
+  await playVoice();
+  const afterMic = el.currentTime > 0;
+
+  box.className = 'out show ' + (afterMic ? 'ok' : 'bad');
+  box.textContent =
+    'Mit laufendem Mikrofon: ' + (whileMic ? 'läuft' : 'STUMM') + '\n' +
+    'Nach Mikrofon-Stopp:    ' + (afterMic ? 'läuft' : 'STUMM') + '\n\n' +
+    'Hast du EINE oder ZWEI Stimmen gehört?\n' +
+    '  Zwei → Mikrofon stört nicht.\n' +
+    '  Eine → das Mikrofon war das Problem.\n' +
+    '  Keine → sag mir das auch.';
 }
 
 async function playVoice() {
