@@ -95,15 +95,21 @@ async function azureTts(text, language, env, female) {
         'Ocp-Apim-Subscription-Key': env.AZURE_SPEECH_KEY,
         'Content-Type': 'application/ssml+xml',
         'X-Microsoft-OutputFormat': 'audio-24khz-48kbitrate-mono-mp3',
+        // Azure's TTS endpoint documents User-Agent as required.
+        'User-Agent': 'tayarti-voice',
       },
+      // The xmlns declaration is NOT optional: without it Azure rejects the
+      // request with a bare HTTP 400 and an empty body, which is a
+      // singularly unhelpful way to say "your SSML is malformed".
       body:
-        `<speak version='1.0' xml:lang='${locale}'>` +
+        `<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='${locale}'>` +
         `<voice xml:lang='${locale}' name='${voice}'>${escapeXml(text)}</voice>` +
         `</speak>`,
     },
   );
   if (!response.ok) {
-    throw new Error(`HTTP ${response.status} ${(await response.text()).slice(0, 200)}`);
+    const detail = (await response.text()).slice(0, 200).trim();
+    throw new Error(`HTTP ${response.status}${detail ? ` ${detail}` : ' (empty body)'}`);
   }
   return {
     audioBase64: bytesToBase64(new Uint8Array(await response.arrayBuffer())),
