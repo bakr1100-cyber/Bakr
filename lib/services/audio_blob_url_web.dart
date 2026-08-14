@@ -28,6 +28,7 @@ import 'dart:typed_data';
 
 html.AudioElement? _element;
 String? _currentUrl;
+bool _unlocked = false;
 
 html.AudioElement _ensureElement() {
   return _element ??= html.AudioElement()
@@ -59,10 +60,20 @@ String? _blobUrl(Uint8List bytes, String mimeType) {
 bool get webAudioAvailable => true;
 
 /// Must be called **synchronously** from inside a user gesture (a tap),
-/// before any `await`. Plays a near-silent clip purely to mark the element
-/// as user-activated; everything afterwards in the session may then start
+/// before any `await`. Plays a silent clip purely to mark the element as
+/// user-activated; everything afterwards in the session may then start
 /// playback on its own.
+///
+/// Note the clip is silenced with `volume = 0` and explicitly **not**
+/// muted. iOS permits muted playback unconditionally, so a muted play
+/// grants no audio activation at all and leaves the element just as locked
+/// as before - which is precisely why this unlock quietly did nothing
+/// while the same code path worked on a plain test page that never muted.
 void unlockWebAudio() {
+  // Once is enough, and repeating it would be actively harmful: a later
+  // unlock would swap the source and drop the volume to 0 in the middle of
+  // whatever the assistant is currently saying.
+  if (_unlocked) return;
   try {
     final element = _ensureElement();
     final url = _blobUrl(_silentWav, 'audio/wav');
@@ -70,11 +81,13 @@ void unlockWebAudio() {
     _releaseCurrentUrl();
     _currentUrl = url;
     element
-      ..muted = true
+      ..muted = false
+      ..volume = 0
       ..src = url;
     // Deliberately not awaited: the point is that this call happens inside
     // the gesture's own call stack.
     element.play().catchError((Object _) {});
+    _unlocked = true;
   } catch (_) {
     // An unlock that fails just means playback may be blocked later, which
     // playWebAudio reports so the caller can fall back to the native voice.
