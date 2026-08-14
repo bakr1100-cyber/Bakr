@@ -180,3 +180,29 @@ jobs:
           probe ar "مرحبا بالعالم"
           probe en "Hello world"
         continue-on-error: true
+
+      # Azure rejects an unavailable voice with a bare HTTP 400 and no
+      # explanation, so the only way to know which voices a region really
+      # serves is to ask it. Lists the Arabic ones specifically: Moroccan
+      # (ar-MA) is the reason this app prefers Azure at all, and voice
+      # availability genuinely varies by region.
+      - name: List the Arabic voices this Azure region actually offers
+        run: |
+          if [ -z "${{ secrets.AZURE_SPEECH_KEY }}" ]; then
+            echo "No Azure key configured - skipping."; exit 0
+          fi
+          curl -sS "https://${{ secrets.AZURE_SPEECH_REGION }}.tts.speech.microsoft.com/cognitiveservices/voices/list" \
+            -H "Ocp-Apim-Subscription-Key: ${{ secrets.AZURE_SPEECH_KEY }}" \
+            -o voices.json -w "HTTP_STATUS:%{http_code}\n" --max-time 25
+          python3 - <<'PY'
+          import json
+          try:
+              voices = json.load(open('voices.json'))
+          except Exception as e:
+              print('could not parse voice list:', e); raise SystemExit(0)
+          arabic = sorted({v['ShortName'] for v in voices if v.get('Locale','').startswith('ar')})
+          print(f'{len(voices)} voices total, {len(arabic)} Arabic:')
+          for name in arabic:
+              print('  ', name, '<-- MOROCCAN' if name.startswith('ar-MA') else '')
+          PY
+        continue-on-error: true
