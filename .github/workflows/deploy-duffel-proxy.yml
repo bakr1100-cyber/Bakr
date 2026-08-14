@@ -206,3 +206,28 @@ jobs:
               print('  ', name, '<-- MOROCCAN' if name.startswith('ar-MA') else '')
           PY
         continue-on-error: true
+
+      # Arabic is the one language Azure still rejects through the Worker,
+      # with an empty-bodied 400. Calling Azure directly with the identical
+      # SSML separates "my request is malformed" from "something between
+      # here and Azure mangles the Arabic text".
+      - name: Diagnose the Arabic voice by calling Azure directly
+        run: |
+          if [ -z "${{ secrets.AZURE_SPEECH_KEY }}" ]; then echo "skipped"; exit 0; fi
+          try_ssml() {
+            echo "--- $1"
+            printf '%s' "$2" > body.xml
+            curl -sS -X POST "https://${{ secrets.AZURE_SPEECH_REGION }}.tts.speech.microsoft.com/cognitiveservices/v1" \
+              -H "Ocp-Apim-Subscription-Key: ${{ secrets.AZURE_SPEECH_KEY }}" \
+              -H "Content-Type: application/ssml+xml; charset=utf-8" \
+              -H "X-Microsoft-OutputFormat: audio-24khz-48kbitrate-mono-mp3" \
+              -H "User-Agent: tayarti-voice" \
+              --data-binary @body.xml -o out.mp3 -D headers.txt \
+              -w "  status=%{http_code} bytes=%{size_download}\n" --max-time 25
+            grep -i -E '^(x-requestid|content-type)' headers.txt || true
+            [ "$(wc -c < out.mp3)" -lt 400 ] && { echo "  body:"; head -c 300 out.mp3; echo; } || true
+          }
+          try_ssml "ar-MA Arabic text" "<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='ar-MA'><voice xml:lang='ar-MA' name='ar-MA-MounaNeural'>مرحبا بالعالم</voice></speak>"
+          try_ssml "ar-MA Latin text (is it the script?)" "<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='ar-MA'><voice xml:lang='ar-MA' name='ar-MA-MounaNeural'>salam</voice></speak>"
+          try_ssml "de-DE control (known good)" "<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='de-DE'><voice xml:lang='de-DE' name='de-DE-KatjaNeural'>Hallo</voice></speak>"
+        continue-on-error: true
