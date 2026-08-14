@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tayarti – Ton-Test</title>
+<style>
+  :root { color-scheme: light; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    margin: 0; padding: 20px 16px 60px; background: #f6f3ec; color: #1c1c1e;
+    line-height: 1.5;
+  }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  .sub { color: #6b6b70; font-size: 15px; margin: 0 0 24px; }
+  .step {
+    background: #fff; border-radius: 14px; padding: 16px;
+    margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.08);
+  }
+  .step h2 { font-size: 17px; margin: 0 0 6px; }
+  .step p { margin: 0 0 12px; font-size: 15px; color: #46464a; }
+  button {
+    width: 100%; font-size: 17px; font-weight: 600; padding: 15px;
+    border: 0; border-radius: 11px; background: #0a7d4b; color: #fff;
+    -webkit-appearance: none; cursor: pointer;
+  }
+  button:active { background: #086039; }
+  .out {
+    margin-top: 12px; font-size: 14px; white-space: pre-wrap;
+    font-family: ui-monospace, Menlo, monospace; background: #f2f2f5;
+    border-radius: 9px; padding: 11px; display: none; word-break: break-word;
+  }
+  .out.show { display: block; }
+  .ok { color: #0a7d4b; } .bad { color: #b3261e; }
+  .note { font-size: 14px; color: #6b6b70; }
+</style>
+</head>
+<body>
+
+<h1>Ton-Test</h1>
+<p class="sub">Bitte der Reihe nach antippen. Nach jedem Schritt steht unten, was passiert ist – schick mir davon einen Screenshot.</p>
+
+<div class="step">
+  <h2>0. Zuerst prüfen</h2>
+  <p class="note">
+    Ist die Lautstärke oben? Und beim iPhone/iPad: <b>steht der kleine Schalter
+    an der Seite auf „laut"?</b> Safari spielt Ton nicht ab, wenn das Gerät auf
+    stumm steht – das ist der häufigste Grund und hat nichts mit der App zu tun.
+  </p>
+</div>
+
+<div class="step">
+  <h2>1. Kommt überhaupt Ton aus dem Browser?</h2>
+  <p>Du solltest einen kurzen Piepton hören.</p>
+  <button onclick="testTone()">Piepton abspielen</button>
+  <div class="out" id="o1"></div>
+</div>
+
+<div class="step">
+  <h2>2. Kommt die marokkanische Stimme vom Server?</h2>
+  <p>Holt echtes Audio und sagt, ob es angekommen ist – noch ohne Abspielen.</p>
+  <button onclick="fetchVoice()">Stimme holen</button>
+  <div class="out" id="o2"></div>
+</div>
+
+<div class="step">
+  <h2>3. Die marokkanische Stimme abspielen</h2>
+  <p>Erst Schritt 2 machen. Du solltest „مرحبا بالعالم" hören.</p>
+  <button onclick="playVoice()">Marokkanisch abspielen</button>
+  <div class="out" id="o3"></div>
+</div>
+
+<script>
+const PROXY = 'https://marocfly-duffel-proxy.bakr1100.workers.dev';
+let audioBytes = null, audioMime = 'audio/mpeg';
+const el = document.createElement('audio');
+el.setAttribute('playsinline', 'true');
+
+function show(id, text, good) {
+  const box = document.getElementById(id);
+  box.className = 'out show ' + (good === true ? 'ok' : good === false ? 'bad' : '');
+  box.textContent = text;
+}
+
+// A plain beep via WebAudio - proves whether Safari lets this page make
+// any sound at all, independently of the app and of the voice service.
+function testTone() {
+  try {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return show('o1', '✗ Dieser Browser kann keinen Ton erzeugen.', false);
+    const ctx = new Ctx();
+    ctx.resume();
+    const osc = ctx.createOscillator(), gain = ctx.createGain();
+    osc.frequency.value = 440; gain.gain.value = 0.25;
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.start(); osc.stop(ctx.currentTime + 0.4);
+    show('o1',
+      'Status: ' + ctx.state + '\n\n' +
+      (ctx.state === 'running'
+        ? '✓ Der Browser darf Ton abspielen.\n\nHast du den Piepton GEHÖRT?\n• Ja  → Ton geht, weiter mit Schritt 2.\n• Nein → Gerät steht auf stumm oder leise (siehe Schritt 0).'
+        : '✗ Der Browser blockiert Ton ("' + ctx.state + '").'),
+      ctx.state === 'running');
+  } catch (e) {
+    show('o1', '✗ Fehler: ' + e, false);
+  }
+}
+
+async function fetchVoice() {
+  show('o2', 'Hole Audio vom Server …');
+  try {
+    const r = await fetch(PROXY + '/ai/tts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: 'مرحبا بالعالم', lang: 'ar' })
+    });
+    const data = await r.json();
+    if (!r.ok || !data.audio) {
+      return show('o2', '✗ Server-Fehler ' + r.status + '\n' + JSON.stringify(data).slice(0, 300), false);
+    }
+    const bin = atob(data.audio);
+    audioBytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) audioBytes[i] = bin.charCodeAt(i);
+    audioMime = data.mimeType || 'audio/mpeg';
+    show('o2',
+      '✓ Audio angekommen.\n' +
+      'Anbieter: ' + (data.provider || '?') + '\n' +
+      'Größe: ' + audioBytes.length + ' Bytes\n' +
+      'Format: ' + audioMime + '\n\nJetzt Schritt 3.', true);
+  } catch (e) {
+    show('o2', '✗ Netzwerkfehler: ' + e, false);
+  }
+}
+
+async function playVoice() {
+  if (!audioBytes) return show('o3', 'Bitte zuerst Schritt 2 antippen.', false);
+  const url = URL.createObjectURL(new Blob([audioBytes], { type: audioMime }));
+  el.src = url;
+  el.muted = false;
+  el.volume = 1;
+  let log = 'Blob-URL gesetzt (' + audioBytes.length + ' Bytes)\n';
+  try {
+    await el.play();
+    log += '✓ play() akzeptiert\n';
+    await new Promise(r => setTimeout(r, 900));
+    log += 'Abspielposition: ' + el.currentTime.toFixed(2) + ' s\n';
+    log += 'Länge: ' + (isNaN(el.duration) ? '?' : el.duration.toFixed(2) + ' s') + '\n';
+    log += 'Stumm: ' + el.muted + ', Lautstärke: ' + el.volume + '\n\n';
+    // currentTime staying at 0 is the tell-tale: accepted but never started.
+    log += el.currentTime > 0
+      ? '✓ Der Ton LÄUFT wirklich.\nHörst du ihn? Wenn nein → Gerät steht auf stumm (Schritt 0).'
+      : '✗ play() wurde angenommen, aber es läuft nichts.\nGenau das ist der Fehler, den ich suche.';
+    show('o3', log, el.currentTime > 0);
+  } catch (e) {
+    show('o3', log + '✗ Abspielen abgelehnt: ' + e, false);
+  }
+}
+</script>
+</body>
+</html>
