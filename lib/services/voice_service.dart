@@ -7,6 +7,8 @@ import 'package:http/http.dart' as http;
 import 'package:record/record.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 
+import 'audio_blob_url.dart';
+
 /// Languages the Worker's `/ai/tts` route can actually voice.
 ///
 /// All five, now that the Worker picks between real TTS services
@@ -247,7 +249,8 @@ class VoiceService {
       if (path == null || callback == null) return;
       // On web `path` is a blob: URL holding the recorded audio in memory
       // - fetch it back into bytes to upload, same as any other resource.
-      final audioBytes = (await _client.get(Uri.parse(path)).timeout(const Duration(seconds: 10))).bodyBytes;
+      final audioBytes =
+          (await _client.get(Uri.parse(path)).timeout(const Duration(seconds: 10))).bodyBytes;
       final response = await _client
           .post(
             Uri.parse('$_proxyBaseUrl/ai/stt'),
@@ -278,8 +281,11 @@ class VoiceService {
     // synchronous gesture call stack.
     // ignore: discarded_futures
     _tts.speak(' ');
+    // Must go through the same blob path as real playback: priming with a
+    // `data:` URI does not unlock anything on iOS Safari, since that is
+    // exactly the thing it refuses to play.
     // ignore: discarded_futures
-    _cloudPlayer.play(_silentWavSource, volume: 0);
+    _play(_silentWav, 'audio/wav');
   }
 
   /// [useFemaleVoice] toggles between the two voice options called for in
@@ -372,11 +378,35 @@ class VoiceService {
       final audioBase64 = data['audio'] as String?;
       if (audioBase64 == null || audioBase64.isEmpty) return _recordCloudFailure('no audio');
 
-      await _cloudPlayer.play(BytesSource(base64Decode(audioBase64)));
+      final mimeType = data['mimeType'] as String? ?? 'audio/mpeg';
+      await _play(base64Decode(audioBase64), mimeType);
       _consecutiveCloudFailures = 0;
       return true;
     } catch (error) {
       return _recordCloudFailure('$error');
+    }
+  }
+
+  /// Plays [bytes] through a blob URL where the platform offers one,
+  /// falling back to handing the bytes straight to the player.
+  ///
+  /// The blob detour is not incidental: `audioplayers` turns a
+  /// [BytesSource] into a `data:` URI on web, and iOS Safari silently
+  /// refuses to play audio from those - no error, no sound. That failure
+  /// mode is especially nasty here because it looks like success, so the
+  /// native-voice fallback never engages and the user simply gets nothing.
+  Future<void> _play(Uint8List bytes, String mimeType) async {
+    final blobUrl = createAudioBlobUrl(bytes, mimeType);
+    if (blobUrl == null) {
+      await _cloudPlayer.play(BytesSource(bytes, mimeType: mimeType));
+      return;
+    }
+    try {
+      await _cloudPlayer.play(UrlSource(blobUrl, mimeType: mimeType));
+    } finally {
+      // Safe to release immediately: the player has already taken its own
+      // reference to the underlying blob by this point.
+      revokeAudioBlobUrl(blobUrl);
     }
   }
 
@@ -397,11 +427,9 @@ class VoiceService {
 /// The shortest possible valid WAV file (a handful of silent PCM
 /// samples), used only to unlock autoplay - see
 /// [VoiceService.unlockSpeechForThisGesture].
-final _silentWavSource = BytesSource(
-  Uint8List.fromList([
-    0x52, 0x49, 0x46, 0x46, 0x24, 0x00, 0x00, 0x00, 0x57, 0x41, 0x56, 0x45, //
-    0x66, 0x6d, 0x74, 0x20, 0x10, 0x00, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00,
-    0x44, 0xac, 0x00, 0x00, 0x88, 0x58, 0x01, 0x00, 0x02, 0x00, 0x10, 0x00,
-    0x64, 0x61, 0x74, 0x61, 0x00, 0x00, 0x00, 0x00,
-  ]),
-);
+final _silentWav = Uint8List.fromList([
+  0x52, 0x49, 0x46, 0x46, 0x24, 0x00, 0x00, 0x00, 0x57, 0x41, 0x56, 0x45, //
+  0x66, 0x6d, 0x74, 0x20, 0x10, 0x00, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00,
+  0x44, 0xac, 0x00, 0x00, 0x88, 0x58, 0x01, 0x00, 0x02, 0x00, 0x10, 0x00,
+  0x64, 0x61, 0x74, 0x61, 0x00, 0x00, 0x00, 0x00,
+]);
