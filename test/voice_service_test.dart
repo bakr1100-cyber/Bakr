@@ -40,7 +40,8 @@ void main() {
       expect(requests, hasLength(1));
     });
 
-    test('skips the cloud voice for German - MeloTTS has no German support', () async {
+    test('uses the cloud voice for German too - the Worker now has providers that '
+        'speak it, unlike MeloTTS which had no German at all', () async {
       final requests = <http.Request>[];
       final client = MockClient((request) async {
         requests.add(request);
@@ -51,10 +52,12 @@ void main() {
 
       await voice.speak('Hallo', locale: 'de-DE');
 
-      expect(requests, isEmpty);
+      expect(requests, hasLength(1));
+      expect(requests.single.body, contains('"lang":"de"'));
     });
 
-    test('skips the cloud voice for Darija/Arabic - MeloTTS has no support', () async {
+    test('uses the cloud voice for Darija/Arabic - the whole point of preferring '
+        'Azure, which has genuine Moroccan (ar-MA) voices', () async {
       final requests = <http.Request>[];
       final client = MockClient((request) async {
         requests.add(request);
@@ -65,7 +68,41 @@ void main() {
 
       await voice.speak('مرحبا', locale: 'ar-MA');
 
-      expect(requests, isEmpty);
+      expect(requests, hasLength(1));
+      expect(requests.single.body, contains('"lang":"ar"'));
+    });
+
+    test('passes the female/male voice preference through to the provider', () async {
+      final requests = <http.Request>[];
+      final client = MockClient((request) async {
+        requests.add(request);
+        return http.Response('{"error":"no_audio"}', 502);
+      });
+      final voice = VoiceService(
+          proxyBaseUrl: 'https://proxy.example', client: client, enableCloudTts: true);
+
+      await voice.speak('Hallo', locale: 'de-DE', useFemaleVoice: false);
+
+      expect(requests.single.body, contains('"female":false'));
+    });
+
+    test('gives up on the cloud voice after repeated failures, so a down provider '
+        'cannot slow down every single reply for the whole session', () async {
+      final requests = <http.Request>[];
+      final client = MockClient((request) async {
+        requests.add(request);
+        return http.Response('{"error":"provider_down"}', 502);
+      });
+      final voice = VoiceService(
+          proxyBaseUrl: 'https://proxy.example', client: client, enableCloudTts: true);
+
+      for (var i = 0; i < 5; i++) {
+        await voice.speak('Hallo', locale: 'de-DE');
+      }
+
+      // Two attempts, then the breaker opens and the rest go straight to
+      // the native voice with no network round-trip at all.
+      expect(requests, hasLength(2));
     });
 
     test('skips the cloud voice entirely when no proxy is configured', () async {

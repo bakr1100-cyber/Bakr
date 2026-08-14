@@ -61,6 +61,32 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
+      # Optional text-to-speech providers - see cloudflare-worker/src/
+      # tts_providers.js. Whichever of these has a value wins, in that
+      # file's documented order; with none set, TTS falls back to Workers
+      # AI's own (currently broken) MeloTTS and the app just uses the
+      # device's built-in voice. Safe to push unconditionally: an empty
+      # value reads as "not configured".
+      - name: Set Azure Speech secrets as Cloudflare secrets
+        run: |
+          echo "${{ secrets.AZURE_SPEECH_KEY }}" | wrangler secret put AZURE_SPEECH_KEY
+          echo "${{ secrets.AZURE_SPEECH_REGION }}" | wrangler secret put AZURE_SPEECH_REGION
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Set Google TTS API key as a Cloudflare secret
+        run: echo "${{ secrets.GOOGLE_TTS_API_KEY }}" | wrangler secret put GOOGLE_TTS_API_KEY
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Set ElevenLabs API key as a Cloudflare secret
+        run: echo "${{ secrets.ELEVENLABS_API_KEY }}" | wrangler secret put ELEVENLABS_API_KEY
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
       - name: Deploy Worker
         run: wrangler deploy
         env:
@@ -140,11 +166,17 @@ jobs:
               -o "resp_$lang.json" -w '%{http_code}' --max-time 25) || status=000
             size=$(wc -c < "resp_$lang.json")
             if [ "$status" = "200" ] && [ "$size" -gt 1000 ]; then
-              echo "lang=$lang OK (${size} bytes of audio)"
+              provider=$(python3 -c "import json;print(json.load(open('resp_$lang.json')).get('provider','?'))" 2>/dev/null || echo '?')
+              echo "lang=$lang OK via '$provider' (${size} bytes of audio)"
             else
-              echo "lang=$lang FAILED (HTTP $status): $(head -c 200 "resp_$lang.json")"
+              echo "lang=$lang FAILED (HTTP $status): $(head -c 300 "resp_$lang.json")"
             fi
           }
-          probe en "Hello world"
+          # Every language the app speaks, so a provider that covers only
+          # some of them (MeloTTS has no German/Arabic at all) is visible
+          # here rather than discovered by a user hearing silence.
+          probe de "Hallo Welt"
           probe fr "Bonjour le monde"
+          probe ar "مرحبا بالعالم"
+          probe en "Hello world"
         continue-on-error: true

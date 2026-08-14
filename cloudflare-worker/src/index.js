@@ -38,6 +38,7 @@
  */
 
 import { runPriceCheckJob } from './price_check_job.js';
+import { synthesizeSpeech } from './tts_providers.js';
 
 const DUFFEL_BASE_URL = 'https://api.duffel.com';
 const DUFFEL_VERSION = 'v2';
@@ -258,14 +259,17 @@ async function handleTextToSpeech(request, env) {
   // See TTS_MODEL's doc comment above - unsupported languages are sent
   // through anyway rather than rejected.
   const lang = typeof body?.lang === 'string' && body.lang ? body.lang : 'en';
+  const female = body?.female !== false;
 
   try {
-    const result = await env.AI.run(TTS_MODEL, { prompt: text, lang });
-    const audioBase64 = result?.audio;
-    if (!audioBase64) {
-      return jsonResponse({ error: 'tts_no_audio_returned' }, 502);
-    }
-    return jsonResponse({ audio: audioBase64, mimeType: 'audio/mpeg' }, 200);
+    // Which service actually answers depends purely on which secrets are
+    // configured - see tts_providers.js. `provider` is echoed back so the
+    // deploy smoke test can report which one is live.
+    const result = await synthesizeSpeech(text, lang, env, { female });
+    return jsonResponse(
+      { audio: result.audioBase64, mimeType: result.mimeType, provider: result.provider },
+      200,
+    );
   } catch (error) {
     return jsonResponse(
       { error: 'tts_request_failed', detail: String(error?.message ?? error) },

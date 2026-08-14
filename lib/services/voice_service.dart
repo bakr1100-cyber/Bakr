@@ -7,13 +7,14 @@ import 'package:http/http.dart' as http;
 import 'package:record/record.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 
-/// MeloTTS (see the Worker's `/ai/tts` route) only documents support for
-/// these languages - German/Arabic/Darija text sent to it would likely
-/// come out badly mispronounced, worse than the native OS voice this app
-/// already has working for those. Only attempt the cloud voice for a
-/// locale on this list; everything else goes straight to the native
-/// engine, no wasted network round-trip either.
-const _cloudTtsSupportedLangPrefixes = {'en', 'fr'};
+/// Languages the Worker's `/ai/tts` route can actually voice.
+///
+/// All five, now that the Worker picks between real TTS services
+/// (Azure/Google/ElevenLabs - see `cloudflare-worker/src/tts_providers.js`)
+/// rather than only Workers AI's MeloTTS, which had no German or Arabic at
+/// all. Azure in particular has genuine Moroccan Arabic (ar-MA) voices,
+/// which is the whole reason it's tried first.
+const _cloudTtsSupportedLangPrefixes = {'ar', 'de', 'en', 'fr'};
 
 /// Whether to try the cloud voice at all.
 ///
@@ -155,7 +156,11 @@ class VoiceService {
   // never touch audio at all.
   late final AudioPlayer _cloudPlayer = AudioPlayer();
   late final AudioRecorder _recorder = AudioRecorder();
+  int _consecutiveCloudFailures = 0;
+  bool _preferFemaleVoice = true;
   bool _speechAvailable = false;
+
+  static const _maxCloudFailuresBeforeGivingUp = 2;
   bool _cloudSttRecording = false;
   void Function(String text, bool isFinal)? _pendingSttCallback;
 
@@ -287,6 +292,7 @@ class VoiceService {
   /// language it was last configured with (or its OS default) regardless
   /// of the app's selected language.
   Future<void> speak(String text, {bool useFemaleVoice = true, String? locale}) async {
+    _preferFemaleVoice = useFemaleVoice;
     final cloudLang = _cloudTtsLang(locale);
     if (cloudLang != null && await _speakViaCloud(text, cloudLang)) return;
 
@@ -343,26 +349,45 @@ class VoiceService {
   /// Returns whether the cloud voice actually played, so the caller knows
   /// whether it still needs to fall back to the native engine.
   Future<bool> _speakViaCloud(String text, String lang) async {
+    // Circuit breaker: when the configured cloud provider is down (or
+    // simply isn't configured on the Worker), every single utterance would
+    // otherwise pay a full failed round-trip before the native voice
+    // starts - the user just waits longer for the same voice. After a
+    // couple of consecutive failures, stop trying for the rest of the
+    // session. Reset on any success, so a provider that recovers mid-flight
+    // is picked straight back up on the next app start.
+    if (_consecutiveCloudFailures >= _maxCloudFailuresBeforeGivingUp) return false;
     try {
       final response = await _client
           .post(
             Uri.parse('$_proxyBaseUrl/ai/tts'),
             headers: const {'Content-Type': 'application/json'},
-            body: jsonEncode({'text': text, 'lang': lang}),
+            body: jsonEncode({'text': text, 'lang': lang, 'female': _preferFemaleVoice}),
           )
           .timeout(const Duration(seconds: 12));
-      if (response.statusCode != 200) return false;
+      if (response.statusCode != 200) return _recordCloudFailure('HTTP ${response.statusCode}');
 
       final data = jsonDecode(response.body) as Map<String, dynamic>;
       final audioBase64 = data['audio'] as String?;
-      if (audioBase64 == null || audioBase64.isEmpty) return false;
+      if (audioBase64 == null || audioBase64.isEmpty) return _recordCloudFailure('no audio');
 
       await _cloudPlayer.play(BytesSource(base64Decode(audioBase64)));
+      _consecutiveCloudFailures = 0;
       return true;
     } catch (error) {
-      debugPrint('VoiceService: cloud TTS failed, falling back to native ($error).');
-      return false;
+      return _recordCloudFailure('$error');
     }
+  }
+
+  /// Always returns false, so callers can `return _recordCloudFailure(...)`
+  /// and fall through to the native engine in one line.
+  bool _recordCloudFailure(String reason) {
+    _consecutiveCloudFailures++;
+    debugPrint(
+      'VoiceService: cloud TTS failed ($reason), falling back to native. '
+      '${_consecutiveCloudFailures >= _maxCloudFailuresBeforeGivingUp ? "Giving up on the cloud voice for this session." : ""}',
+    );
+    return false;
   }
 
   Future<void> stopSpeaking() => Future.wait([_tts.stop(), _cloudPlayer.stop()]);
