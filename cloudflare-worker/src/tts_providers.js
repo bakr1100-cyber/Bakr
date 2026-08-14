@@ -40,6 +40,29 @@ const ELEVENLABS_DEFAULT_VOICES = {
   male: 'TxGEqnHWrfWFTfGW9XjX', // "Josh"
 };
 
+/**
+ * Per-language ElevenLabs voice overrides, by secret name.
+ *
+ * Exists for Darija specifically. Azure's ar-MA voices are Modern Standard
+ * Arabic spoken with a Moroccan accent, whereas ElevenLabs' voice library
+ * has voices actually trained on Darija - a real difference to the people
+ * this app is for, not a cosmetic one. Setting ELEVENLABS_VOICE_ID_AR is
+ * therefore enough to make Arabic prefer ElevenLabs while every other
+ * language stays on Azure, which also keeps ElevenLabs' small free
+ * character quota for the one language that benefits from it.
+ */
+const ELEVENLABS_LANGUAGE_VOICE_SECRETS = {
+  ar: 'ELEVENLABS_VOICE_ID_AR',
+  de: 'ELEVENLABS_VOICE_ID_DE',
+  fr: 'ELEVENLABS_VOICE_ID_FR',
+  en: 'ELEVENLABS_VOICE_ID_EN',
+};
+
+function elevenLabsVoiceForLanguage(env, language) {
+  const secret = ELEVENLABS_LANGUAGE_VOICE_SECRETS[language];
+  return secret ? env[secret] : undefined;
+}
+
 const MELOTTS_MODEL = '@cf/myshell-ai/melotts';
 
 /**
@@ -51,7 +74,7 @@ export async function synthesizeSpeech(text, lang, env, { female = true } = {}) 
   const language = (lang || 'en').split('-')[0].toLowerCase();
   const errors = [];
 
-  for (const provider of providersFor(env)) {
+  for (const provider of providersFor(env, language)) {
     try {
       const result = await provider.run(text, language, env, female);
       if (result?.audioBase64) return { ...result, provider: provider.name };
@@ -66,16 +89,25 @@ export async function synthesizeSpeech(text, lang, env, { female = true } = {}) 
 }
 
 /** Only providers whose secrets are actually set, in preference order. */
-function providersFor(env) {
+function providersFor(env, language) {
   const providers = [];
+  const elevenLabs = { name: 'elevenlabs', run: elevenLabsTts };
+
+  // A language-specific ElevenLabs voice is an explicit choice for that
+  // language, so it outranks the default order - see
+  // ELEVENLABS_LANGUAGE_VOICE_SECRETS.
+  const hasDedicatedVoice =
+    env.ELEVENLABS_API_KEY && elevenLabsVoiceForLanguage(env, language);
+  if (hasDedicatedVoice) providers.push(elevenLabs);
+
   if (env.AZURE_SPEECH_KEY && env.AZURE_SPEECH_REGION) {
     providers.push({ name: 'azure', run: azureTts });
   }
   if (env.GOOGLE_TTS_API_KEY) {
     providers.push({ name: 'google', run: googleTts });
   }
-  if (env.ELEVENLABS_API_KEY) {
-    providers.push({ name: 'elevenlabs', run: elevenLabsTts });
+  if (env.ELEVENLABS_API_KEY && !hasDedicatedVoice) {
+    providers.push(elevenLabs);
   }
   // Always last: free and needs no signup, but currently broken upstream.
   if (env.AI) providers.push({ name: 'melotts', run: meloTts });
@@ -146,6 +178,7 @@ async function googleTts(text, language, env, female) {
 
 async function elevenLabsTts(text, language, env, female) {
   const voiceId =
+    elevenLabsVoiceForLanguage(env, language) ||
     env.ELEVENLABS_VOICE_ID ||
     (female ? ELEVENLABS_DEFAULT_VOICES.female : ELEVENLABS_DEFAULT_VOICES.male);
 

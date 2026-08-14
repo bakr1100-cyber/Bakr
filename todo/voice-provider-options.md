@@ -80,7 +80,30 @@ Ein GitHub-Secret:
 
 ---
 
-## Option 3: ElevenLabs — die natürlichste, aber knapp gratis
+## Option 3: ElevenLabs — für Darija, gezielt nur dafür
+**Von Bakr gefunden: „Ghizlane – Moroccan Darija" in der Voice Library.**
+Das ist inhaltlich besser als Azure für Arabisch: Azures `ar-MA` ist
+Hocharabisch mit marokkanischem Akzent, Ghizlane ist auf echtem Darija
+trainiert.
+
+Der Worker ist darauf vorbereitet: sobald `ELEVENLABS_VOICE_ID_AR` gesetzt
+ist, geht **nur Arabisch** an ElevenLabs, alles andere bleibt bei Azure.
+So reicht das kleine Gratis-Kontingent (ca. 10.000 Zeichen/Monat) für die
+Sprache, wo es den größten Unterschied macht.
+
+So kommst du an die Voice-ID:
+1. elevenlabs.io → Konto anlegen
+2. **Voice Library** öffnen → nach „Ghizlane" suchen → **„Add to my
+   voices"**
+3. **My Voices** → die Stimme antippen → dort steht die **Voice ID**
+   (eine lange Buchstaben-Zahlen-Folge) → kopieren
+4. Profil (oben rechts) → **API Keys** → Schlüssel erstellen → kopieren
+
+Zwei GitHub-Secrets:
+- `ELEVENLABS_API_KEY` = der Schlüssel
+- `ELEVENLABS_VOICE_ID_AR` = die Voice ID von Ghizlane
+
+### Die allgemeine ElevenLabs-Info
 Klingt am menschlichsten, alle Sprachen über ein Modell. Aber: gratis nur
 ca. 10.000 Zeichen/Monat - das sind wenige Minuten. Danach kostenpflichtig
 (ab ca. 5 $/Monat).
