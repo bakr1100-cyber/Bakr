@@ -162,6 +162,12 @@ class _AiChatScreenState extends State<AiChatScreen> {
         _controller.text = text;
         if (isFinal) {
           setState(() => _isListening = false);
+          // Release the microphone before the reply is spoken. iOS keeps
+          // the audio session in recording mode while a recognizer holds
+          // the mic, and playback started in that state is inaudible - the
+          // recognizer stops itself after a final result on most platforms,
+          // but not reliably, and nothing here was ever asking it to.
+          unawaited(_voice.stopListening());
           if (_suppressNextAutoSend) {
             _suppressNextAutoSend = false;
             return;
