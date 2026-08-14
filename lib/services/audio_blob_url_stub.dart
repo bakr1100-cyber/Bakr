@@ -1,7 +1,11 @@
 import 'dart:typed_data';
 
-/// Non-web targets have no blob URLs; callers fall back to handing the
-/// bytes to the audio player directly.
-String? createAudioBlobUrl(Uint8List bytes, String mimeType) => null;
+/// Non-web targets use the `audioplayers` path instead - see
+/// [VoiceService._play].
+bool get webAudioAvailable => false;
 
-void revokeAudioBlobUrl(String url) {}
+void unlockWebAudio() {}
+
+Future<bool> playWebAudio(Uint8List bytes, String mimeType) async => false;
+
+void stopWebAudio() {}
