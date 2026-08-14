@@ -32,6 +32,86 @@ const _cloudTtsSupportedLangPrefixes = {'en', 'fr'};
 /// `lang=... OK`, no other change needed.
 const _cloudTtsEnabledByDefault = false;
 
+/// Apple ships these alongside the real ones and they are, without
+/// exception, unusable for reading out a flight price - they must never be
+/// picked even if they happen to be the only "enhanced" voice available.
+const _noveltyVoiceNames = {
+  'albert', 'bad news', 'bahh', 'bells', 'boing', 'bubbles', 'cellos',
+  'good news', 'jester', 'organ', 'superstar', 'trinoids', 'whisper',
+  'wobble', 'zarvox', //
+};
+
+/// Used only to honour the app's female/male voice preference - engines
+/// don't expose a gender field, so this matches the standard Apple/Google
+/// voice names for the five languages this app speaks. Missing a name here
+/// costs nothing: the voice is still chosen on quality first, this only
+/// breaks ties.
+const _femaleVoiceNames = {
+  'amelie', 'amélie', 'anna', 'aurelie', 'aurélie', 'audrey', 'carmit',
+  'ellen', 'fiona', 'helena', 'karen', 'katya', 'laila', 'lana', 'lekha',
+  'marie', 'maryam', 'moira', 'monica', 'mounia', 'nora', 'paulina',
+  'petra', 'samantha', 'sara', 'serena', 'sinji', 'susan', 'tessa',
+  'veena', 'victoria', 'yelda', 'zosia', 'zuzana', //
+};
+
+/// Picks the best-sounding installed voice for [locale] out of the raw
+/// `[{name, locale}]` list a TTS engine reports, or null when none of them
+/// beats leaving the engine's own default alone.
+///
+/// Split out as a plain function purely so it can be tested: everything
+/// else in [VoiceService] needs a live platform channel, while this - the
+/// part that actually decides how the app sounds - is pure data.
+@visibleForTesting
+Map<String, String>? pickBestVoice(List<dynamic> raw, String locale, bool preferFemale) {
+  final language = locale.split('-').first.toLowerCase();
+  final candidates = <Map<String, String>>[];
+  for (final entry in raw) {
+    if (entry is! Map) continue;
+    final name = entry['name']?.toString();
+    final voiceLocale = entry['locale']?.toString();
+    if (name == null || voiceLocale == null) continue;
+    // Match on the language family, not the exact locale: a de-AT voice is
+    // a far better German than no German at all. Exact matches are still
+    // preferred, via the score below.
+    if (!voiceLocale.toLowerCase().startsWith(language)) continue;
+    candidates.add({'name': name, 'locale': voiceLocale});
+  }
+  if (candidates.isEmpty) return null;
+
+  candidates.sort((a, b) =>
+      _voiceScore(b, locale, preferFemale).compareTo(_voiceScore(a, locale, preferFemale)));
+  final best = candidates.first;
+  // A score of 0 means nothing distinguishes this voice from the default
+  // the engine already picked - changing it would be churn, not an upgrade.
+  return _voiceScore(best, locale, preferFemale) > 0 ? best : null;
+}
+
+/// Higher is better. Quality markers dominate deliberately: the gap
+/// between a compact and an enhanced voice is far more audible than the
+/// gap between two voices of the same tier.
+int _voiceScore(Map<String, String> voice, String locale, bool preferFemale) {
+  final name = voice['name']!.toLowerCase();
+  final voiceLocale = voice['locale']!.toLowerCase();
+  var score = 0;
+
+  // Apple/Google mark their better voices in the name itself...
+  if (name.contains('premium')) score += 100;
+  if (name.contains('enhanced')) score += 80;
+  if (name.contains('neural')) score += 80;
+  if (name.contains('siri')) score += 60;
+  // ...and their thinnest one, likewise.
+  if (name.contains('compact')) score -= 50;
+  // Apple ships joke voices that will cheerfully read out a flight price
+  // in a cartoon warble - never pick one, even if it's the only
+  // "enhanced" entry in the list.
+  if (_noveltyVoiceNames.any(name.contains)) score -= 500;
+
+  if (voiceLocale == locale.toLowerCase()) score += 20;
+  if (_femaleVoiceNames.any(name.contains) == preferFemale) score += 10;
+
+  return score;
+}
+
 /// Thin wrapper around speech-to-text and text-to-speech so the whole app
 /// can be operated by voice.
 ///
@@ -211,7 +291,10 @@ class VoiceService {
     if (cloudLang != null && await _speakViaCloud(text, cloudLang)) return;
 
     try {
-      if (locale != null) await _tts.setLanguage(locale);
+      if (locale != null) {
+        await _tts.setLanguage(locale);
+        await _applyBestVoice(locale, useFemaleVoice);
+      }
       await _tts.setPitch(useFemaleVoice ? 1.05 : 0.85);
       await _tts.speak(text);
     } catch (error) {
@@ -219,6 +302,34 @@ class VoiceService {
       // now the native engine itself is erroring) - fail silently rather
       // than crash whatever async callback called this.
       debugPrint('VoiceService: native TTS failed ($error).');
+    }
+  }
+
+  /// Upgrades the voice for [locale] from whatever the engine picked by
+  /// default to the best one actually installed on the device.
+  ///
+  /// This matters more than it sounds: `flutter_tts`'s web implementation
+  /// resolves `setLanguage('de-DE')` by taking the *first* voice the
+  /// browser happens to list for that language - no quality ranking at
+  /// all. On Apple devices that first entry is typically the small
+  /// "compact" voice, which is exactly the thin, robotic one; the richer
+  /// Enhanced/Premium voice sits further down the same list, already
+  /// installed and free. Picking it deliberately is the single biggest
+  /// quality win available without any external service.
+  ///
+  /// Entirely best-effort: any failure, or a device that simply has no
+  /// better voice, leaves the engine's own choice untouched.
+  Future<void> _applyBestVoice(String locale, bool preferFemale) async {
+    try {
+      final raw = await _tts.getVoices;
+      if (raw is! List) return;
+
+      final best = pickBestVoice(raw, locale, preferFemale);
+      if (best == null) return;
+
+      await _tts.setVoice({'name': best['name']!, 'locale': best['locale']!});
+    } catch (error) {
+      debugPrint('VoiceService: could not select a better voice ($error).');
     }
   }
 

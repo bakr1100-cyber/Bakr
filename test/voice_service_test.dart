@@ -113,6 +113,121 @@ void main() {
     });
   });
 
+  group('picking the best installed voice', () {
+    // Names taken from what Apple actually reports on iOS/macOS.
+    const appleGerman = [
+      {'name': 'Anna', 'locale': 'de-DE'},
+      {'name': 'Helena (Enhanced)', 'locale': 'de-DE'},
+      {'name': 'Martin (Compact)', 'locale': 'de-DE'},
+    ];
+
+    test('prefers an Enhanced voice over the plain default the engine would have used', () {
+      final best = pickBestVoice(appleGerman, 'de-DE', true);
+
+      expect(best?['name'], 'Helena (Enhanced)');
+    });
+
+    test('prefers Premium over Enhanced', () {
+      final best = pickBestVoice([
+        {'name': 'Helena (Enhanced)', 'locale': 'de-DE'},
+        {'name': 'Anna (Premium)', 'locale': 'de-DE'},
+      ], 'de-DE', true);
+
+      expect(best?['name'], 'Anna (Premium)');
+    });
+
+    test('never picks one of Apple\'s novelty voices, even when marked Enhanced', () {
+      final best = pickBestVoice([
+        {'name': 'Zarvox (Enhanced)', 'locale': 'de-DE'},
+        {'name': 'Anna', 'locale': 'de-DE'},
+      ], 'de-DE', true);
+
+      expect(best?['name'], 'Anna');
+    });
+
+    test('honours the female/male preference when quality is equal', () {
+      const voices = [
+        {'name': 'Thomas (Enhanced)', 'locale': 'fr-FR'},
+        {'name': 'Amelie (Enhanced)', 'locale': 'fr-FR'},
+      ];
+
+      expect(pickBestVoice(voices, 'fr-FR', true)?['name'], 'Amelie (Enhanced)');
+      expect(pickBestVoice(voices, 'fr-FR', false)?['name'], 'Thomas (Enhanced)');
+    });
+
+    test('quality beats the gender preference - an enhanced male voice is better than '
+        'a compact female one even when a female voice was asked for', () {
+      final best = pickBestVoice([
+        {'name': 'Anna (Compact)', 'locale': 'de-DE'},
+        {'name': 'Martin (Enhanced)', 'locale': 'de-DE'},
+      ], 'de-DE', true);
+
+      expect(best?['name'], 'Martin (Enhanced)');
+    });
+
+    test('accepts a same-language voice from another region rather than giving up', () {
+      final best = pickBestVoice([
+        {'name': 'Petra (Enhanced)', 'locale': 'de-AT'},
+      ], 'de-DE', true);
+
+      expect(best?['name'], 'Petra (Enhanced)');
+    });
+
+    test('prefers the exact locale when quality is otherwise equal', () {
+      final best = pickBestVoice([
+        {'name': 'Petra (Enhanced)', 'locale': 'de-AT'},
+        {'name': 'Helena (Enhanced)', 'locale': 'de-DE'},
+      ], 'de-DE', true);
+
+      expect(best?['name'], 'Helena (Enhanced)');
+    });
+
+    test('ignores voices for other languages entirely', () {
+      expect(pickBestVoice([
+        {'name': 'Samantha (Enhanced)', 'locale': 'en-US'},
+      ], 'ar-MA', true), isNull);
+    });
+
+    test('leaves the engine default alone when nothing about the voice is better', () {
+      // No quality marker, not an exact locale match, and the wrong gender
+      // for the requested preference - nothing here beats what the engine
+      // already chose, so overriding would be churn rather than an upgrade.
+      expect(pickBestVoice([
+        {'name': 'Majed', 'locale': 'ar-SA'},
+      ], 'ar-MA', true), isNull);
+    });
+
+    test('still switches for the gender preference alone, since that is a real '
+        'preference the user set even when no quality marker distinguishes the voices', () {
+      expect(
+        pickBestVoice([
+          {'name': 'Majed', 'locale': 'ar-SA'},
+        ], 'ar-MA', false)?['name'],
+        'Majed',
+      );
+    });
+
+    test('survives the malformed entries a browser can report', () {
+      expect(
+        () => pickBestVoice([
+          {'name': null, 'locale': 'de-DE'},
+          {'locale': 'de-DE'},
+          'not a map',
+          {'name': 'Helena (Enhanced)', 'locale': 'de-DE'},
+        ], 'de-DE', true),
+        returnsNormally,
+      );
+      expect(
+        pickBestVoice([
+          {'name': null, 'locale': 'de-DE'},
+          'not a map',
+          {'name': 'Helena (Enhanced)', 'locale': 'de-DE'},
+        ], 'de-DE', true)?['name'],
+        'Helena (Enhanced)',
+      );
+    });
+  });
+
   group('VoiceService cloud STT fallback', () {
     // These tests never call init(), so `_speechAvailable` stays at its
     // default false - the same state a browser with no Web Speech API
