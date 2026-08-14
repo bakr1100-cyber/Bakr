@@ -93,7 +93,12 @@ async function azureTts(text, language, env, female) {
       method: 'POST',
       headers: {
         'Ocp-Apim-Subscription-Key': env.AZURE_SPEECH_KEY,
-        'Content-Type': 'application/ssml+xml',
+        // charset=utf-8 is load-bearing, not decoration: without it Azure
+        // decodes the body as single-byte text. ASCII languages survive
+        // that, but Arabic script is multi-byte and arrives as mojibake,
+        // which Azure rejects with an empty-bodied HTTP 400. This is why
+        // German/French/English worked while only Arabic failed.
+        'Content-Type': 'application/ssml+xml; charset=utf-8',
         'X-Microsoft-OutputFormat': 'audio-24khz-48kbitrate-mono-mp3',
         // Azure's TTS endpoint documents User-Agent as required.
         'User-Agent': 'tayarti-voice',
