@@ -259,7 +259,7 @@ class AiAssistantService {
   }
 
   String _systemPrompt(AppLanguage language) =>
-      'You are the AI travel assistant inside "MarocFly AI", a flight-search '
+      'You are the AI travel assistant inside "Tayarti" (طيارتي), a flight-search '
       'app built for the Moroccan diaspora living in Europe. You are warm, '
       'concise and conversational - like a knowledgeable friend, not a form. '
       'You help people find flights to Morocco, including creative cheaper '
