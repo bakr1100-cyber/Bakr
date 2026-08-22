@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 /// assistant tab instead of only reacting to the nav bar itself.
 class HomeNavigationProvider extends ChangeNotifier {
   static const assistantTabIndex = 1;
+  static const alertsTabIndex = 3;
 
   int tabIndex = 0;
 

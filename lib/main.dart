@@ -23,7 +23,13 @@ Future<void> main() async {
   // Firebase setup and FCM push token aren't wasted/redone.
   final notificationService = NotificationService();
   try {
-    await notificationService.init();
+    // The timeout is the important part, not the catch. Firebase's setup
+    // reaches the network, and on a connection that neither succeeds nor
+    // fails - a captive portal, a blocked network, a stalled mobile
+    // connection - the future simply never completes. Awaiting it bare
+    // leaves the user staring at a blank screen indefinitely, which is a
+    // far worse outcome than starting without push notifications.
+    await notificationService.init().timeout(const Duration(seconds: 5));
   } catch (error) {
     debugPrint('NotificationService failed to initialize: $error');
   }

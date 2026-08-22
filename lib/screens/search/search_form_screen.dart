@@ -11,6 +11,9 @@ import '../../providers/home_navigation_provider.dart';
 import '../../providers/search_provider.dart';
 import '../../widgets/airport_picker.dart';
 import '../../widgets/big_button.dart';
+import '../../widgets/city_hero_header.dart';
+import '../../widgets/popular_destinations.dart';
+import '../../widgets/trust_badges_row.dart';
 import '../../widgets/passenger_counter.dart';
 import '../../widgets/responsive_body.dart';
 import 'search_results_screen.dart';
@@ -28,139 +31,158 @@ class SearchFormScreen extends StatelessWidget {
     final t = AppLocalizations.of(context).t;
 
     return Scaffold(
-      appBar: AppBar(title: Text(t('appName'))),
-      body: ResponsiveBody(
-        child: ListView(
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          children: [
-            Text(
-              t('tagline'),
-              style: theme.textTheme.headlineSmall,
+      // No AppBar: the photo header from the design mockup takes its place
+      // and carries the greeting and headline itself.
+      body: ListView(
+        padding: EdgeInsets.zero,
+        children: [
+          CityHeroHeader(
+            destination: search.destination,
+            trailing: _NotificationsBell(
+              onTap: () => context.read<HomeNavigationProvider>().goToTab(
+                    HomeNavigationProvider.alertsTabIndex,
+                  ),
             ),
-            const SizedBox(height: AppSpacing.xl),
-            const _VoiceHeroCard(),
-            const SizedBox(height: AppSpacing.xxl),
-            Text(
-              t('routeSectionLabel'),
-              style: theme.textTheme.labelMedium
-                  ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(AppSpacing.lg),
-                child: Column(
-                  children: [
-                    _TripTypeSelector(
-                      tripType: search.tripType,
-                      onChanged: search.setTripType,
-                    ),
-                    const SizedBox(height: AppSpacing.lg),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Expanded(
-                          child: AirportPicker(
-                            label: t('from'),
-                            compact: true,
-                            options: europeanAirports,
-                            selected: search.origin,
-                            onChanged: search.setOrigin,
+          ),
+          ResponsiveBody(
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const TrustBadgesRow(),
+                  const SizedBox(height: AppSpacing.xxl),
+                  PopularDestinations(
+                    selected: search.destination,
+                    onSelected: search.setDestination,
+                  ),
+                  const SizedBox(height: AppSpacing.xxl),
+                  const _VoiceHeroCard(),
+                  const SizedBox(height: AppSpacing.xxl),
+                  Text(
+                    t('routeSectionLabel'),
+                    style: theme.textTheme.labelMedium
+                        ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(AppSpacing.lg),
+                      child: Column(
+                        children: [
+                          _TripTypeSelector(
+                            tripType: search.tripType,
+                            onChanged: search.setTripType,
                           ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-                          child: Icon(
-                            Icons.arrow_forward_rounded,
-                            color: theme.colorScheme.onSurfaceVariant,
+                          const SizedBox(height: AppSpacing.lg),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Expanded(
+                                child: AirportPicker(
+                                  label: t('from'),
+                                  compact: true,
+                                  options: europeanAirports,
+                                  selected: search.origin,
+                                  onChanged: search.setOrigin,
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+                                child: Icon(
+                                  Icons.arrow_forward_rounded,
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                              Expanded(
+                                child: AirportPicker(
+                                  label: t('to'),
+                                  icon: Icons.flight_land_rounded,
+                                  compact: true,
+                                  options: moroccanAirports,
+                                  selected: search.destination,
+                                  onChanged: search.setDestination,
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                        Expanded(
-                          child: AirportPicker(
-                            label: t('to'),
-                            icon: Icons.flight_land_rounded,
-                            compact: true,
-                            options: moroccanAirports,
-                            selected: search.destination,
-                            onChanged: search.setDestination,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.xxl),
-            Text(
-              t('whenAndWhoSectionLabel'),
-              style: theme.textTheme.labelMedium
-                  ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(AppSpacing.lg),
-                child: Column(
-                  children: [
-                    _DateField(
-                      label: t('date'),
-                      date: search.date,
-                      firstDate: DateTime.now(),
-                      onChanged: search.setDate,
-                    ),
-                    if (search.tripType == TripType.roundTrip) ...[
-                      const SizedBox(height: AppSpacing.md),
-                      _DateField(
-                        label: t('returnDate'),
-                        date: search.returnDate ?? search.date,
-                        firstDate: search.date,
-                        onChanged: search.setReturnDate,
+                        ],
                       ),
-                    ],
-                    const SizedBox(height: AppSpacing.md),
-                    _QuickDateChips(selected: search.date, onChanged: search.setDate),
-                    const SizedBox(height: AppSpacing.md),
-                    PassengerCounter(
-                      count: search.passengers,
-                      onChanged: search.setPassengers,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.xxl),
+                  Text(
+                    t('whenAndWhoSectionLabel'),
+                    style: theme.textTheme.labelMedium
+                        ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(AppSpacing.lg),
+                      child: Column(
+                        children: [
+                          _DateField(
+                            label: t('date'),
+                            date: search.date,
+                            firstDate: DateTime.now(),
+                            onChanged: search.setDate,
+                          ),
+                          if (search.tripType == TripType.roundTrip) ...[
+                            const SizedBox(height: AppSpacing.md),
+                            _DateField(
+                              label: t('returnDate'),
+                              date: search.returnDate ?? search.date,
+                              firstDate: search.date,
+                              onChanged: search.setReturnDate,
+                            ),
+                          ],
+                          const SizedBox(height: AppSpacing.md),
+                          _QuickDateChips(selected: search.date, onChanged: search.setDate),
+                          const SizedBox(height: AppSpacing.md),
+                          PassengerCounter(
+                            count: search.passengers,
+                            onChanged: search.setPassengers,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.xxxl),
+                  BigButton(
+                    label: t('searchFlights'),
+                    icon: Icons.search_rounded,
+                    loading: search.isLoading,
+                    onPressed: search.canSearch && !search.isLoading
+                        ? () async {
+                            await search.search(language: AppLocalizations.of(context).language);
+                            if (context.mounted) {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => const SearchResultsScreen(),
+                                ),
+                              );
+                            }
+                          }
+                        : null,
+                  ),
+                  if (!search.canSearch) ...[
+                    const SizedBox(height: AppSpacing.sm),
+                    Center(
+                      child: Text(
+                        t('completeDetailsToSearch'),
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.bodySmall
+                            ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                      ),
                     ),
                   ],
-                ),
+                  const SizedBox(height: AppSpacing.lg),
+                ],
               ),
             ),
-            const SizedBox(height: AppSpacing.xxxl),
-            BigButton(
-              label: t('searchFlights'),
-              icon: Icons.search_rounded,
-              loading: search.isLoading,
-              onPressed: search.canSearch && !search.isLoading
-                  ? () async {
-                      await search.search(language: AppLocalizations.of(context).language);
-                      if (context.mounted) {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => const SearchResultsScreen(),
-                          ),
-                        );
-                      }
-                    }
-                  : null,
-            ),
-            if (!search.canSearch) ...[
-              const SizedBox(height: AppSpacing.sm),
-              Center(
-                child: Text(
-                  t('completeDetailsToSearch'),
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.bodySmall
-                      ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-                ),
-              ),
-            ],
-            const SizedBox(height: AppSpacing.lg),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -200,6 +222,35 @@ class _TripTypeSelector extends StatelessWidget {
   }
 }
 
+/// The bell in the header's top-right corner, from the design mockup -
+/// jumps straight to the price-alerts tab, since that is the one thing a
+/// notification in this app is ever about.
+class _NotificationsBell extends StatelessWidget {
+  const _NotificationsBell({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white.withValues(alpha: 0.1),
+      shape: const CircleBorder(side: BorderSide(color: Color(0x38FFFFFF))),
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(9),
+          child: Icon(
+            Icons.notifications_none_rounded,
+            color: Colors.white.withValues(alpha: 0.92),
+            size: 22,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// A direct, one-tap voice entry point on the landing page itself - jumps
 /// straight to the assistant tab and starts listening immediately, instead
 /// of making a voice-first user first find the "Berater" tab and then the
@@ -219,8 +270,7 @@ class _VoiceHeroCard extends StatelessWidget {
         onTap: () => context.read<HomeNavigationProvider>().goToAssistantWithVoice(),
         child: Ink(
           width: double.infinity,
-          padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.xl, vertical: AppSpacing.xxl),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl, vertical: AppSpacing.xxl),
           decoration: BoxDecoration(
             gradient: AppGradients.gold,
             borderRadius: BorderRadius.circular(AppRadius.xl),

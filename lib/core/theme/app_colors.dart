@@ -11,6 +11,17 @@ class AppColors {
   static const Color moroccoWhite = Color(0xFFFFFFFF);
   static const Color moroccoGold = Color(0xFFDEB44C);
 
+  /// Deep night-blue behind the city photo on the search screen, from the
+  /// header mockup. Dark enough that white headline text stays legible over
+  /// any dusk photograph placed under it.
+  static const Color heroNavy = Color(0xFF0B1B2E);
+  static const Color heroNavySoft = Color(0xFF16324A);
+
+  /// The mockup's gold. Kept distinct from [moroccoGold] rather than reusing
+  /// it: this one only ever appears over the dark photo, where it needs to
+  /// read slightly warmer and brighter than the flag gold does on cream.
+  static const Color heroGold = Color(0xFFE0A23E);
+
   /// True Moroccan flag green — only for rendering the actual flag, not the
   /// app's UI accent (see [moroccoGreen] for that).
   static const Color flagGreen = Color(0xFF006233);

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import 'app_colors.dart';
 import 'app_spacing.dart';
@@ -69,10 +68,17 @@ class AppTheme {
     // the brand's personality), Inter for body/label copy (quiet workhorse
     // for dense flight data). Both re-colored onto the green canvas since
     // Flutter's default text themes assume a light/white background.
+    //
+    // Bundled locally via pubspec.yaml (assets/fonts/) rather than fetched
+    // at runtime via the google_fonts package: that package downloads the
+    // font files from fonts.gstatic.com on first use, and on a network that
+    // blocks or merely stalls that host the fetch never resolves - not even
+    // an error, just a page that never finishes loading. Local assets have
+    // no such failure mode.
     final baseTextTheme =
         isDark ? ThemeData.dark().textTheme : ThemeData.light().textTheme;
-    final display = GoogleFonts.plusJakartaSansTextTheme(baseTextTheme);
-    final body = GoogleFonts.interTextTheme(baseTextTheme);
+    final display = baseTextTheme.apply(fontFamily: 'Plus Jakarta Sans');
+    final body = baseTextTheme.apply(fontFamily: 'Inter');
 
     final textTheme = TextTheme(
       displayLarge:

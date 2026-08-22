@@ -46,7 +46,6 @@ dependencies:
   # Utilities
   intl: ^0.20.2
   uuid: ^4.4.2
-  google_fonts: ^6.2.1
   audioplayers: ^6.8.1
   record: ^7.1.1
   web: ^1.1.1
@@ -61,3 +60,33 @@ flutter:
   assets:
     - assets/fonts/
     - assets/images/
+  fonts:
+    # Bundled locally instead of using google_fonts' runtime fetch from
+    # fonts.gstatic.com: on a network that blocks or merely stalls that
+    # host, the runtime fetch never resolves (it doesn't even fail loudly),
+    # which left the whole app on a permanent blank white screen while
+    # `main()` waited on it. Single variable-font files, registered once
+    # per weight the app actually uses - Flutter renders the correct
+    # weight from the font's own weight axis.
+    - family: Plus Jakarta Sans
+      fonts:
+        - asset: assets/fonts/PlusJakartaSans-Variable.ttf
+          weight: 400
+        - asset: assets/fonts/PlusJakartaSans-Variable.ttf
+          weight: 500
+        - asset: assets/fonts/PlusJakartaSans-Variable.ttf
+          weight: 600
+        - asset: assets/fonts/PlusJakartaSans-Variable.ttf
+          weight: 700
+        - asset: assets/fonts/PlusJakartaSans-Variable.ttf
+          weight: 800
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter-Variable.ttf
+          weight: 400
+        - asset: assets/fonts/Inter-Variable.ttf
+          weight: 500
+        - asset: assets/fonts/Inter-Variable.ttf
+          weight: 600
+        - asset: assets/fonts/Inter-Variable.ttf
+          weight: 700
