@@ -32,15 +32,19 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(vsync: this, duration: AppMotion.slow * 2)
+    // Noticeably alive, not just a fade: the logo starts small and pops up
+    // past full size before settling, rather than the barely-there scale
+    // nudge this had before (0.82 -> 1.0, dead space at both ends of an
+    // easeOutBack) - elasticOut's built-in overshoot-and-settle does the
+    // "grows bigger" motion on its own across the whole duration.
+    _controller = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 1400))
       ..forward();
     _logoFade = CurvedAnimation(
         parent: _controller,
-        curve: const Interval(0, 0.6, curve: Curves.easeOut));
-    _logoScale = Tween(begin: 0.82, end: 1.0).animate(
-      CurvedAnimation(
-          parent: _controller,
-          curve: const Interval(0, 0.7, curve: Curves.easeOutBack)),
+        curve: const Interval(0, 0.25, curve: Curves.easeOut));
+    _logoScale = Tween(begin: 0.25, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.elasticOut),
     );
     _controller.addStatusListener((status) {
       if (status == AnimationStatus.completed) _advance();
