@@ -84,7 +84,7 @@ class CityHeroHeader extends StatelessWidget {
             bottom: false,
             child: Padding(
               padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.lg, AppSpacing.md, AppSpacing.lg, AppSpacing.lg),
+                  AppSpacing.lg, AppSpacing.xl, AppSpacing.lg, AppSpacing.lg),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [

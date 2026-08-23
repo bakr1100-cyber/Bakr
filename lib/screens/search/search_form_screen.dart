@@ -197,24 +197,64 @@ class _TripTypeSelector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context).t;
-    return SegmentedButton<TripType>(
-      segments: [
-        ButtonSegment(
-          value: TripType.oneWay,
-          label: Text(t('oneWay')),
-          icon: const Icon(Icons.arrow_forward_rounded, size: 16),
+    final theme = Theme.of(context);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: theme.dividerColor.withValues(alpha: 0.3))),
+      ),
+      child: Row(
+        children: [
+          _TripTypeTab(
+            label: t('oneWay'),
+            selected: tripType == TripType.oneWay,
+            onTap: () => onChanged(TripType.oneWay),
+          ),
+          _TripTypeTab(
+            label: t('roundTrip'),
+            selected: tripType == TripType.roundTrip,
+            onTap: () => onChanged(TripType.roundTrip),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A single understated text tab, gold-underlined when selected - the
+/// design mockup's tab style (plain labels, a thin colored indicator),
+/// not a heavy filled segmented control.
+class _TripTypeTab extends StatelessWidget {
+  const _TripTypeTab({required this.label, required this.selected, required this.onTap});
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Expanded(
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+          decoration: BoxDecoration(
+            border: Border(
+              bottom: BorderSide(
+                color: selected ? AppColors.moroccoGold : Colors.transparent,
+                width: 2,
+              ),
+            ),
+          ),
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: theme.textTheme.titleSmall?.copyWith(
+              fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+              color: selected ? theme.colorScheme.onSurface : theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
         ),
-        ButtonSegment(
-          value: TripType.roundTrip,
-          label: Text(t('roundTrip')),
-          icon: const Icon(Icons.sync_alt_rounded, size: 16),
-        ),
-      ],
-      selected: {tripType},
-      showSelectedIcon: false,
-      onSelectionChanged: (selection) => onChanged(selection.first),
-      style: SegmentedButton.styleFrom(
-        minimumSize: const Size.fromHeight(44),
       ),
     );
   }
