@@ -13,8 +13,9 @@ import '../models/airport.dart';
 /// that genuinely shows that city get their own - anything else falls back
 /// to the general Morocco image, deliberately, because this app's users are
 /// Moroccan and would spot a wrong landmark immediately. (The mockup's
-/// Casablanca photo was left out for exactly that reason: it showed a
-/// European campanile, not the Hassan II mosque.)
+/// original Casablanca photo was left out for exactly that reason: it
+/// showed a European campanile, not the Hassan II mosque - the current
+/// `hero_casablanca.jpg` is a verified replacement.)
 class CityHeroHeader extends StatelessWidget {
   const CityHeroHeader({super.key, this.destination, this.trailing});
 
@@ -25,6 +26,8 @@ class CityHeroHeader extends StatelessWidget {
 
   static const _cityImages = <String, String>{
     'FEZ': 'assets/images/hero_fes.jpg',
+    'CMN': 'assets/images/hero_casablanca.jpg',
+    'RAK': 'assets/images/hero_marrakech.jpg',
   };
 
   static const _defaultImage = 'assets/images/hero_morocco.jpg';

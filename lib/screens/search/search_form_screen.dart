@@ -27,7 +27,6 @@ class SearchFormScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final search = context.watch<SearchProvider>();
-    final theme = Theme.of(context);
     final t = AppLocalizations.of(context).t;
 
     return Scaffold(
@@ -44,9 +43,23 @@ class SearchFormScreen extends StatelessWidget {
                   ),
             ),
           ),
+          // Sits directly against the header's lower (already-dark,
+          // text-free) edge, its own card elevation/shadow doing the work of
+          // reading as "resting on" the photo above it, per the design
+          // mockup.
           ResponsiveBody(
             child: Padding(
-              padding: const EdgeInsets.all(AppSpacing.lg),
+              padding: const EdgeInsets.fromLTRB(AppSpacing.lg, 0, AppSpacing.lg, 0),
+              child: Transform.translate(
+                offset: const Offset(0, -20),
+                child: _SearchCard(search: search, t: t),
+              ),
+            ),
+          ),
+          ResponsiveBody(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, AppSpacing.lg),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -58,131 +71,116 @@ class SearchFormScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: AppSpacing.xxl),
                   const _VoiceHeroCard(),
-                  const SizedBox(height: AppSpacing.xxl),
-                  Text(
-                    t('routeSectionLabel'),
-                    style: theme.textTheme.labelMedium
-                        ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(AppSpacing.lg),
-                      child: Column(
-                        children: [
-                          _TripTypeSelector(
-                            tripType: search.tripType,
-                            onChanged: search.setTripType,
-                          ),
-                          const SizedBox(height: AppSpacing.lg),
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Expanded(
-                                child: AirportPicker(
-                                  label: t('from'),
-                                  compact: true,
-                                  options: europeanAirports,
-                                  selected: search.origin,
-                                  onChanged: search.setOrigin,
-                                ),
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-                                child: Icon(
-                                  Icons.arrow_forward_rounded,
-                                  color: theme.colorScheme.onSurfaceVariant,
-                                ),
-                              ),
-                              Expanded(
-                                child: AirportPicker(
-                                  label: t('to'),
-                                  icon: Icons.flight_land_rounded,
-                                  compact: true,
-                                  options: moroccanAirports,
-                                  selected: search.destination,
-                                  onChanged: search.setDestination,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.xxl),
-                  Text(
-                    t('whenAndWhoSectionLabel'),
-                    style: theme.textTheme.labelMedium
-                        ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(AppSpacing.lg),
-                      child: Column(
-                        children: [
-                          _DateField(
-                            label: t('date'),
-                            date: search.date,
-                            firstDate: DateTime.now(),
-                            onChanged: search.setDate,
-                          ),
-                          if (search.tripType == TripType.roundTrip) ...[
-                            const SizedBox(height: AppSpacing.md),
-                            _DateField(
-                              label: t('returnDate'),
-                              date: search.returnDate ?? search.date,
-                              firstDate: search.date,
-                              onChanged: search.setReturnDate,
-                            ),
-                          ],
-                          const SizedBox(height: AppSpacing.md),
-                          _QuickDateChips(selected: search.date, onChanged: search.setDate),
-                          const SizedBox(height: AppSpacing.md),
-                          PassengerCounter(
-                            count: search.passengers,
-                            onChanged: search.setPassengers,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.xxxl),
-                  BigButton(
-                    label: t('searchFlights'),
-                    icon: Icons.search_rounded,
-                    loading: search.isLoading,
-                    onPressed: search.canSearch && !search.isLoading
-                        ? () async {
-                            await search.search(language: AppLocalizations.of(context).language);
-                            if (context.mounted) {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) => const SearchResultsScreen(),
-                                ),
-                              );
-                            }
-                          }
-                        : null,
-                  ),
-                  if (!search.canSearch) ...[
-                    const SizedBox(height: AppSpacing.sm),
-                    Center(
-                      child: Text(
-                        t('completeDetailsToSearch'),
-                        textAlign: TextAlign.center,
-                        style: theme.textTheme.bodySmall
-                            ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-                      ),
-                    ),
-                  ],
                   const SizedBox(height: AppSpacing.lg),
                 ],
               ),
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// The flight-search form itself, as one card directly beneath the photo
+/// header - trip type, route, dates and travellers all in the one place a
+/// traveller expects to find them immediately, rather than several taps of
+/// scrolling below the landing page's decorative sections.
+class _SearchCard extends StatelessWidget {
+  const _SearchCard({required this.search, required this.t});
+
+  final SearchProvider search;
+  final String Function(String) t;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _TripTypeSelector(tripType: search.tripType, onChanged: search.setTripType),
+            const SizedBox(height: AppSpacing.lg),
+            AirportPicker(
+              label: t('from'),
+              options: europeanAirports,
+              selected: search.origin,
+              onChanged: search.setOrigin,
+            ),
+            const SizedBox(height: AppSpacing.md),
+            AirportPicker(
+              label: t('to'),
+              icon: Icons.flight_land_rounded,
+              options: moroccanAirports,
+              selected: search.destination,
+              onChanged: search.setDestination,
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            if (search.tripType == TripType.roundTrip)
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: _DateField(
+                      label: t('date'),
+                      date: search.date,
+                      firstDate: DateTime.now(),
+                      onChanged: search.setDate,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: _DateField(
+                      label: t('returnDate'),
+                      date: search.returnDate ?? search.date,
+                      firstDate: search.date,
+                      onChanged: search.setReturnDate,
+                    ),
+                  ),
+                ],
+              )
+            else
+              _DateField(
+                label: t('date'),
+                date: search.date,
+                firstDate: DateTime.now(),
+                onChanged: search.setDate,
+              ),
+            const SizedBox(height: AppSpacing.md),
+            _QuickDateChips(selected: search.date, onChanged: search.setDate),
+            const SizedBox(height: AppSpacing.md),
+            PassengerCounter(count: search.passengers, onChanged: search.setPassengers),
+            const SizedBox(height: AppSpacing.xl),
+            BigButton(
+              label: t('searchFlights'),
+              icon: Icons.search_rounded,
+              loading: search.isLoading,
+              onPressed: search.canSearch && !search.isLoading
+                  ? () async {
+                      await search.search(language: AppLocalizations.of(context).language);
+                      if (context.mounted) {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const SearchResultsScreen()),
+                        );
+                      }
+                    }
+                  : null,
+            ),
+            if (!search.canSearch) ...[
+              const SizedBox(height: AppSpacing.sm),
+              Center(
+                child: Text(
+                  t('completeDetailsToSearch'),
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodySmall
+                      ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }

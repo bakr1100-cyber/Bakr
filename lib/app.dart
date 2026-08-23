@@ -12,7 +12,7 @@ import 'providers/preferences_provider.dart';
 import 'providers/price_alerts_provider.dart';
 import 'providers/search_provider.dart';
 import 'providers/theme_provider.dart';
-import 'screens/onboarding/language_select_screen.dart';
+import 'screens/onboarding/splash_screen.dart';
 import 'services/account_sync_service.dart';
 import 'services/affiliate_service.dart';
 import 'services/ai_assistant_service.dart';
@@ -219,7 +219,10 @@ class _MarocFlyAppState extends State<MarocFlyApp> {
                 // repeat launches for now, even though a language is saved
                 // and can still be changed anytime from Settings. Revisit
                 // once that's confirmed as the wanted long-term behavior.
-                home: const LanguageSelectScreen(),
+                // SplashScreen hands off to it itself once its entrance
+                // animation finishes (or immediately, tapped, or on
+                // reduced-motion).
+                home: const SplashScreen(),
               );
             },
           );

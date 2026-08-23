@@ -8,11 +8,11 @@ import '../models/airport.dart';
 /// "Beliebte Ziele in Marokko" from the design mockup - a row of city cards
 /// that fill in the destination with one tap.
 ///
-/// The cards use colour, not photographs, on purpose. The mockup's own notes
-/// call its city thumbnails placeholders, and the one city picture that did
-/// come with it showed the wrong landmark entirely; a card that is honestly
-/// abstract is better than one that misidentifies a Moroccan city to
-/// Moroccan users. Swap in photographs per city as verified ones appear.
+/// Cities with a verified photo (one that genuinely shows that city, not a
+/// generic or mislabeled stand-in) get it; anything else falls back to a
+/// solid gradient rather than risk showing a Moroccan user the wrong
+/// landmark for their own city. Swap in a photo per city as verified ones
+/// appear - see [CityHeroHeader] for the same policy on the header photo.
 class PopularDestinations extends StatelessWidget {
   const PopularDestinations({super.key, required this.onSelected, this.selected});
 
@@ -22,6 +22,12 @@ class PopularDestinations extends StatelessWidget {
   /// Ordered by how often the diaspora actually flies there, not
   /// alphabetically.
   static const _codes = ['CMN', 'RAK', 'AGA', 'FEZ', 'TNG', 'RBA'];
+
+  static const _images = <String, String>{
+    'CMN': 'assets/images/hero_casablanca.jpg',
+    'RAK': 'assets/images/hero_marrakech.jpg',
+    'FEZ': 'assets/images/hero_fes.jpg',
+  };
 
   static const _gradients = <String, List<Color>>{
     'CMN': [Color(0xFF16324A), Color(0xFF2E6B8A)],
@@ -61,6 +67,7 @@ class PopularDestinations extends StatelessWidget {
               final airport = airports[index];
               return _CityCard(
                 airport: airport,
+                image: _images[airport.code],
                 colors: _gradients[airport.code] ?? _gradients['CMN']!,
                 isSelected: selected?.code == airport.code,
                 onTap: () => onSelected(airport),
@@ -76,12 +83,14 @@ class PopularDestinations extends StatelessWidget {
 class _CityCard extends StatelessWidget {
   const _CityCard({
     required this.airport,
+    required this.image,
     required this.colors,
     required this.isSelected,
     required this.onTap,
   });
 
   final Airport airport;
+  final String? image;
   final List<Color> colors;
   final bool isSelected;
   final VoidCallback onTap;
@@ -121,29 +130,50 @@ class _CityCard extends StatelessWidget {
                 ),
                 child: InkWell(
                   onTap: onTap,
-                  child: Padding(
-                    padding: const EdgeInsets.all(AppSpacing.md),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        const Spacer(),
-                        Text(
-                          airport.city,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.titleSmall?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      if (image != null)
+                        Image.asset(
+                          image!,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                        ),
+                      if (image != null)
+                        const DecoratedBox(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [Color(0x00000000), Color(0xB3000000)],
+                              stops: [0.4, 1],
+                            ),
                           ),
                         ),
-                        Text(
-                          airport.code,
-                          style: theme.textTheme.labelSmall
-                              ?.copyWith(color: Colors.white.withValues(alpha: 0.82)),
+                      Padding(
+                        padding: const EdgeInsets.all(AppSpacing.md),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            Text(
+                              airport.city,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.titleSmall?.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            Text(
+                              airport.code,
+                              style: theme.textTheme.labelSmall
+                                  ?.copyWith(color: Colors.white.withValues(alpha: 0.82)),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
               ),

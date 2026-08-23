@@ -51,9 +51,23 @@ void main() {
       expect(_imageAssetOf(tester), 'assets/images/hero_fes.jpg');
     });
 
+    testWidgets('uses each verified city\'s own photo, never another city\'s', (tester) async {
+      const verified = {
+        'FEZ': 'assets/images/hero_fes.jpg',
+        'CMN': 'assets/images/hero_casablanca.jpg',
+        'RAK': 'assets/images/hero_marrakech.jpg',
+      };
+      for (final entry in verified.entries) {
+        final airport = findAirportByCode(entry.key);
+        if (airport == null) continue;
+        await _pumpHeader(tester, CityHeroHeader(destination: airport));
+        expect(_imageAssetOf(tester), entry.value, reason: '${entry.key} has its own photo');
+      }
+    });
+
     testWidgets('shows Morocco - never another city\'s photo - for a city with no picture of '
         'its own, since a wrong landmark is worse than a generic one', (tester) async {
-      for (final code in ['CMN', 'RAK', 'RBA', 'AGA', 'TNG']) {
+      for (final code in ['RBA', 'AGA', 'TNG']) {
         final airport = findAirportByCode(code);
         if (airport == null) continue;
         await _pumpHeader(tester, CityHeroHeader(destination: airport));
