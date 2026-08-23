@@ -32,20 +32,30 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   void initState() {
     super.initState();
-    // Noticeably alive, not just a fade: the logo starts small and pops up
-    // past full size before settling, rather than the barely-there scale
-    // nudge this had before (0.82 -> 1.0, dead space at both ends of an
-    // easeOutBack) - elasticOut's built-in overshoot-and-settle does the
-    // "grows bigger" motion on its own across the whole duration.
+    // Exact timing per explicit request: 3 seconds total, 2 of it growing
+    // (small -> an overshoot past full size) and 1 shrinking back down to
+    // rest at full size - a TweenSequence gives that split precisely
+    // (weight 2 vs weight 1 out of a 3000ms controller), rather than
+    // leaving the shape of the motion to whatever a single curve like
+    // elasticOut happens to produce.
     _controller = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 1400))
+        vsync: this, duration: const Duration(milliseconds: 3000))
       ..forward();
     _logoFade = CurvedAnimation(
         parent: _controller,
-        curve: const Interval(0, 0.25, curve: Curves.easeOut));
-    _logoScale = Tween(begin: 0.25, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.elasticOut),
-    );
+        curve: const Interval(0, 0.15, curve: Curves.easeOut));
+    _logoScale = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween(begin: 0.25, end: 1.15)
+            .chain(CurveTween(curve: Curves.easeOut)),
+        weight: 2,
+      ),
+      TweenSequenceItem(
+        tween: Tween(begin: 1.15, end: 1.0)
+            .chain(CurveTween(curve: Curves.easeInOut)),
+        weight: 1,
+      ),
+    ]).animate(_controller);
     _controller.addStatusListener((status) {
       if (status == AnimationStatus.completed) _advance();
     });
