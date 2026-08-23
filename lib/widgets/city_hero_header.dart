@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 
 import '../core/localization/app_localizations.dart';
@@ -5,50 +7,55 @@ import '../core/theme/app_colors.dart';
 import '../core/theme/app_spacing.dart';
 import '../models/airport.dart';
 
-const _cityImages = <String, String>{
-  'FEZ': 'assets/images/hero_fes.jpg',
-  'CMN': 'assets/images/hero_casablanca.jpg',
-  'RAK': 'assets/images/hero_marrakech.jpg',
-};
+/// The three verified photos (one that genuinely, unmistakably shows that
+/// city - not a generic or mislabeled stand-in): the tiled Fès medina gate,
+/// Casablanca's Hassan II mosque on the water, and Marrakech's Koutoubia
+/// minaret.
+const heroImages = <String>[
+  'assets/images/hero_fes.jpg',
+  'assets/images/hero_casablanca.jpg',
+  'assets/images/hero_marrakech.jpg',
+];
 
-const _defaultHeroImage = 'assets/images/hero_morocco.jpg';
+final _heroRandom = Random();
 
-/// The asset path for a destination's header photo - shared by every
-/// photographic header in the app ([CityHeroHeader], [RouteHeroHeader]) so
-/// the "verified photo or generic fallback" policy lives in exactly one
-/// place.
-///
-/// Only cities with a picture that genuinely shows that city get their
-/// own - anything else falls back to the general Morocco image,
-/// deliberately, because this app's users are Moroccan and would spot a
-/// wrong landmark immediately. (The original mockup's Casablanca photo was
-/// left out for exactly that reason: it showed a European campanile, not
-/// the Hassan II mosque - the current `hero_casablanca.jpg` is a verified
-/// replacement.)
-String heroImageForDestination(Airport? destination) =>
-    _cityImages[destination?.code] ?? _defaultHeroImage;
+/// Rolls one of [heroImages] at random - per explicit request, every screen
+/// with a photo header shows one of the three, independent of whatever
+/// destination happens to be selected (most destinations have no verified
+/// photo of their own anyway, so tying the photo to the destination meant
+/// almost every screen fell back to the same generic image).
+String randomHeroImage() => heroImages[_heroRandom.nextInt(heroImages.length)];
 
-/// The photo-header frame shared by [CityHeroHeader] and [RouteHeroHeader]:
-/// a destination photo capped to [ResponsiveBody]'s content width (so a wide
+/// The photo-header frame shared by every screen that has one
+/// ([CityHeroHeader], [RouteHeroHeader]): one of [heroImages] rolled at
+/// random, capped to [ResponsiveBody]'s content width (so a wide
 /// desktop/tablet browser doesn't force BoxFit.cover to crop the photo down
 /// to a barely-recognizable sliver), the same night-blue wash over it, and
 /// arbitrary foreground content on top.
-class HeroPhotoFrame extends StatelessWidget {
-  const HeroPhotoFrame({
-    super.key,
-    required this.image,
-    required this.height,
-    required this.child,
-  });
+///
+/// The random pick is rolled once when this widget is first inserted into
+/// the tree and then held for its lifetime (`late final` in [State]) - a
+/// fresh roll on every rebuild would make the background flicker between
+/// photos as the screen above it re-renders for unrelated reasons (typing a
+/// date, ticking a counter). Navigating to the screen again mounts a new
+/// instance and rolls again.
+class HeroPhotoFrame extends StatefulWidget {
+  const HeroPhotoFrame({super.key, required this.height, required this.child});
 
-  final String image;
   final double height;
   final Widget child;
 
   @override
+  State<HeroPhotoFrame> createState() => _HeroPhotoFrameState();
+}
+
+class _HeroPhotoFrameState extends State<HeroPhotoFrame> {
+  late final String _image = randomHeroImage();
+
+  @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: height,
+      height: widget.height,
       child: ColoredBox(
         color: AppColors.heroNavy,
         child: Center(
@@ -58,7 +65,7 @@ class HeroPhotoFrame extends StatelessWidget {
               fit: StackFit.expand,
               children: [
                 Image.asset(
-                  image,
+                  _image,
                   fit: BoxFit.cover,
                   alignment: const Alignment(0, 0.25),
                   // A plain navy block is a perfectly good header on its own,
@@ -95,7 +102,7 @@ class HeroPhotoFrame extends StatelessWidget {
                     ),
                   ),
                 ),
-                child,
+                widget.child,
               ],
             ),
           ),
@@ -107,9 +114,8 @@ class HeroPhotoFrame extends StatelessWidget {
 
 /// Photographic header for the search screen, from the design mockup: a
 /// Moroccan skyline at dusk, a night-blue wash over it, and the headline
-/// naming wherever the traveller is currently heading. The photo follows
-/// the chosen destination - see [heroImageForDestination] for the policy on
-/// which cities get their own photo.
+/// naming wherever the traveller is currently heading. See [randomHeroImage]
+/// for how the photo itself is picked.
 class CityHeroHeader extends StatelessWidget {
   const CityHeroHeader({super.key, this.destination, this.trailing});
 
@@ -125,7 +131,6 @@ class CityHeroHeader extends StatelessWidget {
     final city = destination?.city ?? t('heroDefaultDestination');
 
     return HeroPhotoFrame(
-      image: heroImageForDestination(destination),
       height: 340,
       child: SafeArea(
         bottom: false,

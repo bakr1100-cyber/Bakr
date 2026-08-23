@@ -43,36 +43,32 @@ void main() {
       await _pumpHeader(tester, const CityHeroHeader());
 
       expect(find.textContaining('Marokko', findRichText: true), findsOneWidget);
-      expect(_imageAssetOf(tester), 'assets/images/hero_morocco.jpg');
     });
 
-    testWidgets('uses the city photo only where the photo really shows that city', (tester) async {
-      await _pumpHeader(tester, CityHeroHeader(destination: findAirportByCode('FEZ')));
-      expect(_imageAssetOf(tester), 'assets/images/hero_fes.jpg');
-    });
-
-    testWidgets('uses each verified city\'s own photo, never another city\'s', (tester) async {
-      const verified = {
-        'FEZ': 'assets/images/hero_fes.jpg',
-        'CMN': 'assets/images/hero_casablanca.jpg',
-        'RAK': 'assets/images/hero_marrakech.jpg',
-      };
-      for (final entry in verified.entries) {
-        final airport = findAirportByCode(entry.key);
-        if (airport == null) continue;
-        await _pumpHeader(tester, CityHeroHeader(destination: airport));
-        expect(_imageAssetOf(tester), entry.value, reason: '${entry.key} has its own photo');
+    testWidgets('always shows one of the three verified city photos, picked at random',
+        (tester) async {
+      // Rolled many times so a real implementation bug (e.g. an index out of
+      // range, or a stray fourth image) would show up as a flaky/failing
+      // assertion rather than getting lucky on a single roll.
+      for (var i = 0; i < 20; i++) {
+        await _pumpHeader(tester, CityHeroHeader(destination: findAirportByCode('TNG')));
+        expect(heroImages, contains(_imageAssetOf(tester)));
       }
     });
 
-    testWidgets('shows Morocco - never another city\'s photo - for a city with no picture of '
-        'its own, since a wrong landmark is worse than a generic one', (tester) async {
-      for (final code in ['RBA', 'AGA', 'TNG']) {
-        final airport = findAirportByCode(code);
-        if (airport == null) continue;
-        await _pumpHeader(tester, CityHeroHeader(destination: airport));
-        expect(_imageAssetOf(tester), 'assets/images/hero_morocco.jpg',
-            reason: '$code has no verified photo of its own');
+    testWidgets('keeps the same photo across rebuilds of the same header instance',
+        (tester) async {
+      final header = CityHeroHeader(destination: findAirportByCode('FEZ'));
+      await _pumpHeader(tester, header);
+      final first = _imageAssetOf(tester);
+
+      // Rebuild the same widget instance several times (as happens whenever
+      // the screen above it rebuilds for an unrelated reason, e.g. typing a
+      // date) - the photo must not flicker between different images.
+      for (var i = 0; i < 5; i++) {
+        await tester.pumpWidget(_wrap(header));
+        await tester.pump();
+        expect(_imageAssetOf(tester), first);
       }
     });
 

@@ -9,9 +9,11 @@ import '../../core/theme/app_spacing.dart';
 import '../../models/itinerary.dart';
 import '../../models/trip_leg.dart';
 import '../../providers/price_alerts_provider.dart';
+import '../../providers/search_provider.dart';
 import '../../services/affiliate_service.dart';
 import '../../widgets/big_button.dart';
 import '../../widgets/responsive_body.dart';
+import '../../widgets/route_hero_header.dart';
 import '../companion/travel_companion_screen.dart';
 
 /// `Colors.white70` (alpha 0.70) measures ~4.3:1 against the darker end of
@@ -28,126 +30,143 @@ class ItineraryDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context).t;
-    final dateFormat =
-        DateFormat.yMMMMd(AppLocalizations.of(context).language.flutterLocale.languageCode);
+    final dateFormat = DateFormat.yMMMMd(
+        AppLocalizations.of(context).language.flutterLocale.languageCode);
     final affiliate = context.read<AffiliateService>();
     final theme = Theme.of(context);
+    final search = context.watch<SearchProvider>();
 
     return Scaffold(
-      appBar: AppBar(title: Text(t('tripDetails'))),
-      body: ResponsiveBody(
-        child: ListView(
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          children: [
-            Container(
-              padding: const EdgeInsets.all(AppSpacing.xl),
-              decoration: BoxDecoration(
-                gradient: AppGradients.primaryDeep,
-                borderRadius: BorderRadius.circular(AppRadius.xl),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+      // No AppBar: the same photo header used on the search and results
+      // screens carries the back button and route here too, replacing the
+      // plain "Trip details" title.
+      body: Column(
+        children: [
+          RouteHeroHeader(
+              origin: search.origin, destination: search.destination),
+          Expanded(
+            child: ResponsiveBody(
+              child: ListView(
+                padding: const EdgeInsets.all(AppSpacing.lg),
                 children: [
-                  Text(
-                    '${itinerary.totalPriceEur.toStringAsFixed(0)} €',
-                    style: theme.textTheme.displaySmall?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w800,
+                  Container(
+                    padding: const EdgeInsets.all(AppSpacing.xl),
+                    decoration: BoxDecoration(
+                      gradient: AppGradients.primaryDeep,
+                      borderRadius: BorderRadius.circular(AppRadius.xl),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${itinerary.totalPriceEur.toStringAsFixed(0)} €',
+                          style: theme.textTheme.displaySmall?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          dateFormat.format(itinerary.departureTime),
+                          style: theme.textTheme.bodyMedium
+                              ?.copyWith(color: _headerSubtleText),
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                        Text(
+                          itinerary.explanation,
+                          style: theme.textTheme.bodyLarge?.copyWith(
+                            color: AppColors.moroccoGold,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        if (itinerary.legs.length > 1) ...[
+                          const SizedBox(height: AppSpacing.sm),
+                          Text(
+                            t('multiStopNotice'),
+                            style: theme.textTheme.bodySmall
+                                ?.copyWith(color: _headerSubtleText),
+                          ),
+                        ],
+                        const SizedBox(height: AppSpacing.md),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              itinerary.riskLevel == RiskLevel.low
+                                  ? Icons.verified_rounded
+                                  : Icons.info_outline_rounded,
+                              size: 16,
+                              color: _headerSubtleText,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              t(switch (itinerary.riskLevel) {
+                                RiskLevel.low => 'riskLow',
+                                RiskLevel.medium => 'riskMedium',
+                                RiskLevel.high => 'riskHigh',
+                              }),
+                              style: theme.textTheme.bodySmall
+                                  ?.copyWith(color: _headerSubtleText),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: AppSpacing.xxl),
                   Text(
-                    dateFormat.format(itinerary.departureTime),
-                    style: theme.textTheme.bodyMedium?.copyWith(color: _headerSubtleText),
+                    t('legsSectionLabel'),
+                    style: theme.textTheme.labelMedium
+                        ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                   ),
-                  const SizedBox(height: AppSpacing.md),
-                  Text(
-                    itinerary.explanation,
-                    style: theme.textTheme.bodyLarge?.copyWith(
-                      color: AppColors.moroccoGold,
-                      fontWeight: FontWeight.w600,
+                  const SizedBox(height: AppSpacing.sm),
+                  for (var i = 0; i < itinerary.legs.length; i++)
+                    _LegCard(
+                      leg: itinerary.legs[i],
+                      affiliate: affiliate,
+                      isLast: i == itinerary.legs.length - 1,
                     ),
-                  ),
-                  if (itinerary.legs.length > 1) ...[
+                  if (_hasMixedModeConnection(itinerary)) ...[
                     const SizedBox(height: AppSpacing.sm),
-                    Text(
-                      t('multiStopNotice'),
-                      style: theme.textTheme.bodySmall?.copyWith(color: _headerSubtleText),
-                    ),
+                    _ConnectionDisclaimer(text: t('connectionDisclaimer')),
                   ],
-                  const SizedBox(height: AppSpacing.md),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        itinerary.riskLevel == RiskLevel.low
-                            ? Icons.verified_rounded
-                            : Icons.info_outline_rounded,
-                        size: 16,
-                        color: _headerSubtleText,
+                  const SizedBox(height: AppSpacing.xxl),
+                  BigButton(
+                    label: t('activateCompanion'),
+                    filled: true,
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            TravelCompanionScreen(itinerary: itinerary),
                       ),
-                      const SizedBox(width: 6),
-                      Text(
-                        t(switch (itinerary.riskLevel) {
-                          RiskLevel.low => 'riskLow',
-                          RiskLevel.medium => 'riskMedium',
-                          RiskLevel.high => 'riskHigh',
-                        }),
-                        style: theme.textTheme.bodySmall?.copyWith(color: _headerSubtleText),
-                      ),
-                    ],
+                    ),
                   ),
+                  const SizedBox(height: AppSpacing.md),
+                  BigButton(
+                    label: t('watchPrice'),
+                    icon: Icons.notifications_active_outlined,
+                    onPressed: () {
+                      final added =
+                          context.read<PriceAlertsProvider>().addAlert(
+                                itinerary.legs.first.from,
+                                itinerary.legs.last.to,
+                                itinerary.totalPriceEur,
+                              );
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(t(added
+                              ? 'priceAlertActivated'
+                              : 'alreadyWatchingRoute')),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
                 ],
               ),
             ),
-            const SizedBox(height: AppSpacing.xxl),
-            Text(
-              t('legsSectionLabel'),
-              style: theme.textTheme.labelMedium
-                  ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            for (var i = 0; i < itinerary.legs.length; i++)
-              _LegCard(
-                leg: itinerary.legs[i],
-                affiliate: affiliate,
-                isLast: i == itinerary.legs.length - 1,
-              ),
-            if (_hasMixedModeConnection(itinerary)) ...[
-              const SizedBox(height: AppSpacing.sm),
-              _ConnectionDisclaimer(text: t('connectionDisclaimer')),
-            ],
-            const SizedBox(height: AppSpacing.xxl),
-            BigButton(
-              label: t('activateCompanion'),
-              filled: true,
-              onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => TravelCompanionScreen(itinerary: itinerary),
-                ),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            BigButton(
-              label: t('watchPrice'),
-              icon: Icons.notifications_active_outlined,
-              onPressed: () {
-                final added = context.read<PriceAlertsProvider>().addAlert(
-                      itinerary.legs.first.from,
-                      itinerary.legs.last.to,
-                      itinerary.totalPriceEur,
-                    );
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content:
-                        Text(t(added ? 'priceAlertActivated' : 'alreadyWatchingRoute')),
-                  ),
-                );
-              },
-            ),
-            const SizedBox(height: AppSpacing.lg),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -186,7 +205,8 @@ class _ConnectionDisclaimer extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.info_outline_rounded, size: 18, color: theme.colorScheme.tertiary),
+          Icon(Icons.info_outline_rounded,
+              size: 18, color: theme.colorScheme.tertiary),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Text(
@@ -205,7 +225,8 @@ class _ConnectionDisclaimer extends StatelessWidget {
 /// commission-tracked affiliate link for flights, or a plain link to the
 /// operator's own site for trains (no rail affiliate program wired up).
 class _LegCard extends StatefulWidget {
-  const _LegCard({required this.leg, required this.affiliate, required this.isLast});
+  const _LegCard(
+      {required this.leg, required this.affiliate, required this.isLast});
 
   final TripLeg leg;
   final AffiliateService affiliate;
@@ -238,7 +259,8 @@ class _LegCardState extends State<_LegCard> {
     setState(() => _opening = false);
     if (!opened) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context).t('bookingLinkFailed'))),
+        SnackBar(
+            content: Text(AppLocalizations.of(context).t('bookingLinkFailed'))),
       );
     }
   }
@@ -272,7 +294,8 @@ class _LegCardState extends State<_LegCard> {
                   child: Container(
                     width: 2,
                     margin: const EdgeInsets.symmetric(vertical: 4),
-                    color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.25),
+                    color: theme.colorScheme.onSurfaceVariant
+                        .withValues(alpha: 0.25),
                   ),
                 ),
             ],
@@ -307,22 +330,26 @@ class _LegCardState extends State<_LegCard> {
                         '${timeFormat.format(leg.departure)} – '
                         '${timeFormat.format(leg.arrival)}'
                         '${leg.carrier != null ? " · ${leg.carrier}" : ""}',
-                        style: theme.textTheme.bodySmall
-                            ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant),
                       ),
                       if (canBook) ...[
                         const SizedBox(height: AppSpacing.md),
                         SizedBox(
                           width: double.infinity,
                           child: OutlinedButton.icon(
-                            onPressed: _opening ? null : () => _openBookingLink(context),
+                            onPressed: _opening
+                                ? null
+                                : () => _openBookingLink(context),
                             icon: _opening
                                 ? const SizedBox(
                                     width: 16,
                                     height: 16,
-                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2),
                                   )
-                                : const Icon(Icons.open_in_new_rounded, size: 18),
+                                : const Icon(Icons.open_in_new_rounded,
+                                    size: 18),
                             label: Text(
                               leg.mode == LegMode.flight
                                   ? t('bookFlight')
@@ -334,8 +361,8 @@ class _LegCardState extends State<_LegCard> {
                         const SizedBox(height: AppSpacing.sm),
                         Text(
                           t('bookLocallyOnArrival'),
-                          style: theme.textTheme.bodySmall
-                              ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                          style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant),
                         ),
                       ],
                     ],

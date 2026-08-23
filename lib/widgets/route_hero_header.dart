@@ -2,15 +2,17 @@ import 'package:flutter/material.dart';
 
 import '../core/theme/app_spacing.dart';
 import '../models/airport.dart';
-import 'city_hero_header.dart' show HeroPhotoFrame, heroImageForDestination;
+import 'city_hero_header.dart' show HeroPhotoFrame;
 
-/// The same photo-header treatment as [CityHeroHeader], reused on the
-/// search-results screen: a back button in place of the AppBar's, and the
-/// route ("Brussels -> Tangier") as the headline instead of a greeting -
-/// added per direct feedback that every screen in the mockup carries this
-/// header, not just the landing page.
+/// The same photo-header treatment as [CityHeroHeader], reused wherever a
+/// screen needs a route ("Brussels -> Tangier") as its headline instead of
+/// a greeting: a back button in place of the AppBar's, and one of the three
+/// verified city photos rolled at random behind it (see
+/// [HeroPhotoFrame]) - added per direct feedback that every screen should
+/// carry this header, not just the landing page.
 class RouteHeroHeader extends StatelessWidget {
-  const RouteHeroHeader({super.key, required this.origin, required this.destination});
+  const RouteHeroHeader(
+      {super.key, required this.origin, required this.destination});
 
   final Airport? origin;
   final Airport? destination;
@@ -18,7 +20,6 @@ class RouteHeroHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return HeroPhotoFrame(
-      image: heroImageForDestination(destination),
       height: 200,
       child: SafeArea(
         bottom: false,
@@ -35,12 +36,15 @@ class RouteHeroHeader extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w700,
-                      shadows: const [
-                        Shadow(color: Color(0x40000000), blurRadius: 16, offset: Offset(0, 2)),
-                      ],
-                    ),
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                  shadows: const [
+                    Shadow(
+                        color: Color(0x40000000),
+                        blurRadius: 16,
+                        offset: Offset(0, 2)),
+                  ],
+                ),
               ),
             ],
           ),
