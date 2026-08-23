@@ -5,50 +5,50 @@ import '../core/theme/app_colors.dart';
 import '../core/theme/app_spacing.dart';
 import '../models/airport.dart';
 
-/// Photographic header for the search screen, from the design mockup: a
-/// Moroccan skyline at dusk, a night-blue wash over it, and the headline
-/// naming wherever the traveller is currently heading.
+const _cityImages = <String, String>{
+  'FEZ': 'assets/images/hero_fes.jpg',
+  'CMN': 'assets/images/hero_casablanca.jpg',
+  'RAK': 'assets/images/hero_marrakech.jpg',
+};
+
+const _defaultHeroImage = 'assets/images/hero_morocco.jpg';
+
+/// The asset path for a destination's header photo - shared by every
+/// photographic header in the app ([CityHeroHeader], [RouteHeroHeader]) so
+/// the "verified photo or generic fallback" policy lives in exactly one
+/// place.
 ///
-/// The photo follows the chosen destination. Only cities with a picture
-/// that genuinely shows that city get their own - anything else falls back
-/// to the general Morocco image, deliberately, because this app's users are
-/// Moroccan and would spot a wrong landmark immediately. (The mockup's
-/// original Casablanca photo was left out for exactly that reason: it
-/// showed a European campanile, not the Hassan II mosque - the current
-/// `hero_casablanca.jpg` is a verified replacement.)
-class CityHeroHeader extends StatelessWidget {
-  const CityHeroHeader({super.key, this.destination, this.trailing});
+/// Only cities with a picture that genuinely shows that city get their
+/// own - anything else falls back to the general Morocco image,
+/// deliberately, because this app's users are Moroccan and would spot a
+/// wrong landmark immediately. (The original mockup's Casablanca photo was
+/// left out for exactly that reason: it showed a European campanile, not
+/// the Hassan II mosque - the current `hero_casablanca.jpg` is a verified
+/// replacement.)
+String heroImageForDestination(Airport? destination) =>
+    _cityImages[destination?.code] ?? _defaultHeroImage;
 
-  final Airport? destination;
+/// The photo-header frame shared by [CityHeroHeader] and [RouteHeroHeader]:
+/// a destination photo capped to [ResponsiveBody]'s content width (so a wide
+/// desktop/tablet browser doesn't force BoxFit.cover to crop the photo down
+/// to a barely-recognizable sliver), the same night-blue wash over it, and
+/// arbitrary foreground content on top.
+class HeroPhotoFrame extends StatelessWidget {
+  const HeroPhotoFrame({
+    super.key,
+    required this.image,
+    required this.height,
+    required this.child,
+  });
 
-  /// Optional action shown opposite the headline (e.g. a notifications bell).
-  final Widget? trailing;
-
-  static const _cityImages = <String, String>{
-    'FEZ': 'assets/images/hero_fes.jpg',
-    'CMN': 'assets/images/hero_casablanca.jpg',
-    'RAK': 'assets/images/hero_marrakech.jpg',
-  };
-
-  static const _defaultImage = 'assets/images/hero_morocco.jpg';
+  final String image;
+  final double height;
+  final Widget child;
 
   @override
   Widget build(BuildContext context) {
-    final localizations = AppLocalizations.of(context);
-    final t = localizations.t;
-    final image = _cityImages[destination?.code] ?? _defaultImage;
-    final city = destination?.city ?? t('heroDefaultDestination');
-
-    // On a wide desktop/tablet browser the header would otherwise stretch
-    // edge to edge while staying a fixed height - an extremely wide, short
-    // band that BoxFit.cover can only fill by cropping the photo down
-    // to a barely-recognizable sliver. Capping the photo itself to the same
-    // width as the content below (matching ResponsiveBody) and filling the
-    // rest with a plain navy band keeps the photo's actual composition
-    // intact instead of destroying it for anyone not on a phone-width
-    // viewport.
     return SizedBox(
-      height: 340,
+      height: height,
       child: ColoredBox(
         color: AppColors.heroNavy,
         child: Center(
@@ -61,14 +61,15 @@ class CityHeroHeader extends StatelessWidget {
                   image,
                   fit: BoxFit.cover,
                   alignment: const Alignment(0, 0.25),
-                  // A plain navy block is a perfectly good header on its own, so a
-                  // missing or slow image degrades to that rather than to a gap.
+                  // A plain navy block is a perfectly good header on its own,
+                  // so a missing or slow image degrades to that rather than
+                  // to a gap.
                   errorBuilder: (_, __, ___) =>
                       const ColoredBox(color: AppColors.heroNavy),
                 ),
-                // Darkest at the top, where the status bar and headline sit, and
-                // again at the very bottom so the search card below reads as
-                // resting on the photo rather than colliding with it.
+                // Darkest at the top, where the status bar and headline sit,
+                // and again at the very bottom so whatever sits below reads
+                // as resting on the photo rather than colliding with it.
                 const DecoratedBox(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
@@ -94,29 +95,58 @@ class CityHeroHeader extends StatelessWidget {
                     ),
                   ),
                 ),
-                SafeArea(
-                  bottom: false,
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(AppSpacing.lg,
-                        AppSpacing.xl, AppSpacing.lg, AppSpacing.lg),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                            child: _Headline(
-                                greeting: t('heroGreeting'),
-                                prefix: t('heroHeadlinePrefix'),
-                                city: city)),
-                        if (trailing != null) ...[
-                          const SizedBox(width: AppSpacing.md),
-                          trailing!,
-                        ],
-                      ],
-                    ),
-                  ),
-                ),
+                child,
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Photographic header for the search screen, from the design mockup: a
+/// Moroccan skyline at dusk, a night-blue wash over it, and the headline
+/// naming wherever the traveller is currently heading. The photo follows
+/// the chosen destination - see [heroImageForDestination] for the policy on
+/// which cities get their own photo.
+class CityHeroHeader extends StatelessWidget {
+  const CityHeroHeader({super.key, this.destination, this.trailing});
+
+  final Airport? destination;
+
+  /// Optional action shown opposite the headline (e.g. a notifications bell).
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context);
+    final t = localizations.t;
+    final city = destination?.city ?? t('heroDefaultDestination');
+
+    return HeroPhotoFrame(
+      image: heroImageForDestination(destination),
+      height: 340,
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+              AppSpacing.lg, AppSpacing.xl, AppSpacing.lg, AppSpacing.lg),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: _Headline(
+                  greeting: t('heroGreeting'),
+                  prefix: t('heroHeadlinePrefix'),
+                  city: city,
+                ),
+              ),
+              if (trailing != null) ...[
+                const SizedBox(width: AppSpacing.md),
+                trailing!,
+              ],
+            ],
           ),
         ),
       ),

@@ -10,6 +10,7 @@ import '../../providers/search_provider.dart';
 import '../../services/flight_price_source.dart';
 import '../../widgets/alternative_itinerary_card.dart';
 import '../../widgets/itinerary_card.dart';
+import '../../widgets/route_hero_header.dart';
 import '../../widgets/skeleton_loader.dart';
 import 'itinerary_detail_screen.dart';
 
@@ -23,25 +24,28 @@ class SearchResultsScreen extends StatelessWidget {
     final bothEmpty = search.results.isEmpty && (!isRoundTrip || search.returnResults.isEmpty);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          '${search.origin?.city} → ${search.destination?.city}',
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-      ),
-      body: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 260),
-        switchInCurve: Curves.easeOut,
-        switchOutCurve: Curves.easeIn,
-        child: search.isLoading
-            ? const _LoadingList(key: ValueKey('loading'))
-            : bothEmpty
-                ? const _EmptyState(key: ValueKey('empty'))
-                : _ResultsList(
-                    key: const ValueKey('results'),
-                    isRoundTrip: isRoundTrip,
-                  ),
+      // No AppBar: the same photo header used on the search screen carries
+      // the back button and the route instead, so this screen keeps the
+      // mockup's header treatment rather than dropping to a plain bar.
+      body: Column(
+        children: [
+          RouteHeroHeader(origin: search.origin, destination: search.destination),
+          Expanded(
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 260),
+              switchInCurve: Curves.easeOut,
+              switchOutCurve: Curves.easeIn,
+              child: search.isLoading
+                  ? const _LoadingList(key: ValueKey('loading'))
+                  : bothEmpty
+                      ? const _EmptyState(key: ValueKey('empty'))
+                      : _ResultsList(
+                          key: const ValueKey('results'),
+                          isRoundTrip: isRoundTrip,
+                        ),
+            ),
+          ),
+        ],
       ),
     );
   }
