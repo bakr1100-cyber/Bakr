@@ -27,6 +27,8 @@ class _SplashScreenState extends State<SplashScreen>
   late final AnimationController _controller;
   late final Animation<double> _logoFade;
   late final Animation<double> _logoScale;
+  late final Animation<double> _wordmarkFade;
+  late final Animation<Offset> _wordmarkSlide;
   bool _advanced = false;
 
   @override
@@ -37,7 +39,9 @@ class _SplashScreenState extends State<SplashScreen>
     // rest at full size - a TweenSequence gives that split precisely
     // (weight 2 vs weight 1 out of a 3000ms controller), rather than
     // leaving the shape of the motion to whatever a single curve like
-    // elasticOut happens to produce.
+    // elasticOut happens to produce. The "Tayarti" wordmark comes in right
+    // as the logo hits its biggest point (the 2s mark, t=0.667) and stays
+    // through the settle-back - also per explicit request.
     _controller = AnimationController(
         vsync: this, duration: const Duration(milliseconds: 3000))
       ..forward();
@@ -56,6 +60,11 @@ class _SplashScreenState extends State<SplashScreen>
         weight: 1,
       ),
     ]).animate(_controller);
+    _wordmarkFade = CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.55, 0.78, curve: Curves.easeOut));
+    _wordmarkSlide = Tween(begin: const Offset(0, 0.4), end: Offset.zero)
+        .animate(_wordmarkFade);
     _controller.addStatusListener((status) {
       if (status == AnimationStatus.completed) _advance();
     });
@@ -92,18 +101,52 @@ class _SplashScreenState extends State<SplashScreen>
           child: Center(
             child: LayoutBuilder(
               builder: (context, constraints) {
-                // Dominates the screen, per explicit request - sized off
-                // the shorter side so it stays a square that actually fits
-                // on both a narrow phone and a wide desktop window, with a
-                // small margin so the glow around it never gets clipped.
-                final logoSize = (constraints.biggest.shortestSide * 0.78)
-                    .clamp(160.0, 560.0);
-                return FadeTransition(
-                  opacity: _logoFade,
-                  child: ScaleTransition(
-                    scale: _logoScale,
-                    child: AppLogo(size: logoSize),
-                  ),
+                // Dominates the screen, per explicit request, while staying
+                // provably within the viewport: the wordmark below adds
+                // roughly another 36% of the logo's own height, so the logo
+                // is capped off the *height* budget (not just the shorter
+                // side) as well as the width, whichever is tighter - a
+                // short/landscape viewport shrinks the logo instead of the
+                // Column overflowing it.
+                final available = constraints.biggest;
+                final logoSize = [
+                  available.height * 0.52,
+                  available.width * 0.75,
+                  480.0,
+                ].reduce((a, b) => a < b ? a : b).clamp(120.0, 480.0);
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    FadeTransition(
+                      opacity: _logoFade,
+                      child: ScaleTransition(
+                        scale: _logoScale,
+                        child: AppLogo(size: logoSize),
+                      ),
+                    ),
+                    SizedBox(height: logoSize * 0.14),
+                    FadeTransition(
+                      opacity: _wordmarkFade,
+                      child: SlideTransition(
+                        position: _wordmarkSlide,
+                        child: Text(
+                          'Tayarti',
+                          style: TextStyle(
+                            fontSize: logoSize * 0.22,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                            letterSpacing: 0.5,
+                            shadows: const [
+                              Shadow(
+                                  color: Color(0x66000000),
+                                  blurRadius: 14,
+                                  offset: Offset(0, 3)),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 );
               },
             ),
