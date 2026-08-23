@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../widgets/app_logo.dart';
+import '../../widgets/full_screen_hero_background.dart';
 import 'language_select_screen.dart';
 
 /// The very first thing a traveller sees: the app mark settling onto the
@@ -21,7 +22,8 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
+class _SplashScreenState extends State<SplashScreen>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
   late final Animation<double> _logoFade;
   late final Animation<double> _logoScale;
@@ -32,9 +34,13 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     super.initState();
     _controller = AnimationController(vsync: this, duration: AppMotion.slow * 2)
       ..forward();
-    _logoFade = CurvedAnimation(parent: _controller, curve: const Interval(0, 0.6, curve: Curves.easeOut));
+    _logoFade = CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0, 0.6, curve: Curves.easeOut));
     _logoScale = Tween(begin: 0.82, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: const Interval(0, 0.7, curve: Curves.easeOutBack)),
+      CurvedAnimation(
+          parent: _controller,
+          curve: const Interval(0, 0.7, curve: Curves.easeOutBack)),
     );
     _controller.addStatusListener((status) {
       if (status == AnimationStatus.completed) _advance();
@@ -68,52 +74,16 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
       body: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: _advance,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            // Same skyline photo as the search header's fallback, anchored
-            // low so only its silhouette shows - the launch screen and the
-            // app's own header read as one continuous scene.
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              height: 320,
-              child: Opacity(
-                opacity: 0.55,
-                child: Image.asset(
-                  'assets/images/hero_morocco.jpg',
-                  fit: BoxFit.cover,
-                  alignment: Alignment.topCenter,
-                  errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-                ),
+        child: FullScreenHeroBackground(
+          child: Center(
+            child: FadeTransition(
+              opacity: _logoFade,
+              child: ScaleTransition(
+                scale: _logoScale,
+                child: const AppLogo(size: 132),
               ),
             ),
-            const DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    AppColors.heroNavy,
-                    Color(0x000B1B2E),
-                    Color(0xCC0B1B2E),
-                    AppColors.heroNavy,
-                  ],
-                  stops: [0, 0.35, 0.72, 1],
-                ),
-              ),
-            ),
-            Center(
-              child: FadeTransition(
-                opacity: _logoFade,
-                child: ScaleTransition(
-                  scale: _logoScale,
-                  child: const AppLogo(size: 132),
-                ),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );

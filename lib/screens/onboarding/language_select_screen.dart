@@ -8,6 +8,7 @@ import '../../core/theme/app_theme.dart';
 import '../../providers/chat_provider.dart';
 import '../../providers/locale_provider.dart';
 import '../../widgets/app_logo.dart';
+import '../../widgets/full_screen_hero_background.dart';
 import 'mode_select_screen.dart';
 
 class LanguageSelectScreen extends StatelessWidget {
@@ -19,61 +20,65 @@ class LanguageSelectScreen extends StatelessWidget {
     final t = AppLocalizations.of(context).t;
 
     return Scaffold(
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(AppSpacing.xl),
-            // Caps the whole block's width BEFORE any stretch alignment
-            // exists inside it - a stretch Column nested directly under a
-            // loose parent forces its ConstrainedBox children to the full
-            // incoming width instead of honoring their own maxWidth, which
-            // is exactly what blew the language cards up to half the
-            // screen each on a wide/tablet viewport.
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const AppLogo(size: 84),
-                  const SizedBox(height: AppSpacing.xl),
-                  Text(
-                    t('appName'),
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.displaySmall,
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  Text(
-                    'Wähle deine Sprache · اختر لغتك · Choisis ta langue',
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.bodyLarge
-                        ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-                  ),
-                  const SizedBox(height: AppSpacing.xxl),
-                  // A Wrap instead of a strict 2-column grid: with an odd
-                  // number of languages, a GridView leaves the last card
-                  // stuck on the left with empty space next to it - Wrap
-                  // centers an incomplete last row instead.
-                  Wrap(
-                    alignment: WrapAlignment.center,
-                    spacing: AppSpacing.md,
-                    runSpacing: AppSpacing.md,
-                    children: [
-                      for (var i = 0; i < AppLanguage.values.length; i++)
-                        SizedBox(
-                          width: 194,
-                          height: 204,
-                          child: _LanguageCard(
-                            language: AppLanguage.values[i],
-                            recommended:
-                                AppLanguage.values[i] == AppLanguage.ary,
-                            entranceDelay: Duration(milliseconds: 80 * i),
-                            onTap: () =>
-                                _select(context, AppLanguage.values[i]),
+      backgroundColor: AppColors.heroNavy,
+      body: FullScreenHeroBackground(
+        child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(AppSpacing.xl),
+              // Caps the whole block's width BEFORE any stretch alignment
+              // exists inside it - a stretch Column nested directly under a
+              // loose parent forces its ConstrainedBox children to the full
+              // incoming width instead of honoring their own maxWidth, which
+              // is exactly what blew the language cards up to half the
+              // screen each on a wide/tablet viewport.
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 420),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const AppLogo(size: 84),
+                    const SizedBox(height: AppSpacing.xl),
+                    Text(
+                      t('appName'),
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.displaySmall
+                          ?.copyWith(color: Colors.white),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Text(
+                      'Wähle deine Sprache · اختر لغتك · Choisis ta langue',
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.bodyLarge?.copyWith(
+                          color: Colors.white.withValues(alpha: 0.78)),
+                    ),
+                    const SizedBox(height: AppSpacing.xxl),
+                    // A Wrap instead of a strict 2-column grid: with an odd
+                    // number of languages, a GridView leaves the last card
+                    // stuck on the left with empty space next to it - Wrap
+                    // centers an incomplete last row instead.
+                    Wrap(
+                      alignment: WrapAlignment.center,
+                      spacing: AppSpacing.md,
+                      runSpacing: AppSpacing.md,
+                      children: [
+                        for (var i = 0; i < AppLanguage.values.length; i++)
+                          SizedBox(
+                            width: 194,
+                            height: 204,
+                            child: _LanguageCard(
+                              language: AppLanguage.values[i],
+                              recommended:
+                                  AppLanguage.values[i] == AppLanguage.ary,
+                              entranceDelay: Duration(milliseconds: 80 * i),
+                              onTap: () =>
+                                  _select(context, AppLanguage.values[i]),
+                            ),
                           ),
-                        ),
-                    ],
-                  ),
-                ],
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ),

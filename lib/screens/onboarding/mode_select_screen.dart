@@ -6,6 +6,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../providers/home_navigation_provider.dart';
 import '../../widgets/app_logo.dart';
+import '../../widgets/full_screen_hero_background.dart';
 import '../home/home_screen.dart';
 
 /// Shown once, right after picking a language: "KI-Modus oder normale
@@ -23,49 +24,53 @@ class ModeSelectScreen extends StatelessWidget {
     final t = AppLocalizations.of(context).t;
 
     return Scaffold(
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(AppSpacing.xl),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const AppLogo(size: 64),
-                  const SizedBox(height: AppSpacing.xl),
-                  Text(
-                    t('modeSelectTitle'),
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.headlineSmall,
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  Text(
-                    t('modeSelectSubtitle'),
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.bodyLarge
-                        ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-                  ),
-                  const SizedBox(height: AppSpacing.xxl),
-                  _ModeCard(
-                    icon: Icons.auto_awesome_rounded,
-                    title: t('modeAiTitle'),
-                    subtitle: t('modeAiSubtitle'),
-                    gradient: AppGradients.primaryDeep,
-                    tint: AppColors.moroccoGreen,
-                    onTap: () => _enter(
-                        context, HomeNavigationProvider.assistantTabIndex),
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                  _ModeCard(
-                    icon: Icons.search_rounded,
-                    title: t('modeClassicTitle'),
-                    subtitle: t('modeClassicSubtitle'),
-                    gradient: AppGradients.accent,
-                    tint: AppColors.moroccoRed,
-                    onTap: () => _enter(context, 0),
-                  ),
-                ],
+      backgroundColor: AppColors.heroNavy,
+      body: FullScreenHeroBackground(
+        child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(AppSpacing.xl),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 420),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const AppLogo(size: 64),
+                    const SizedBox(height: AppSpacing.xl),
+                    Text(
+                      t('modeSelectTitle'),
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.headlineSmall
+                          ?.copyWith(color: Colors.white),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Text(
+                      t('modeSelectSubtitle'),
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.bodyLarge?.copyWith(
+                          color: Colors.white.withValues(alpha: 0.78)),
+                    ),
+                    const SizedBox(height: AppSpacing.xxl),
+                    _ModeCard(
+                      icon: Icons.auto_awesome_rounded,
+                      title: t('modeAiTitle'),
+                      subtitle: t('modeAiSubtitle'),
+                      gradient: AppGradients.primaryDeep,
+                      tint: AppColors.moroccoGreen,
+                      onTap: () => _enter(
+                          context, HomeNavigationProvider.assistantTabIndex),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    _ModeCard(
+                      icon: Icons.search_rounded,
+                      title: t('modeClassicTitle'),
+                      subtitle: t('modeClassicSubtitle'),
+                      gradient: AppGradients.accent,
+                      tint: AppColors.moroccoRed,
+                      onTap: () => _enter(context, 0),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
