@@ -40,15 +40,15 @@ class CityHeroHeader extends StatelessWidget {
     final city = destination?.city ?? t('heroDefaultDestination');
 
     // On a wide desktop/tablet browser the header would otherwise stretch
-    // edge to edge while staying a fixed 232px tall - an extremely wide,
-    // short band that BoxFit.cover can only fill by cropping the photo down
+    // edge to edge while staying a fixed height - an extremely wide, short
+    // band that BoxFit.cover can only fill by cropping the photo down
     // to a barely-recognizable sliver. Capping the photo itself to the same
     // width as the content below (matching ResponsiveBody) and filling the
     // rest with a plain navy band keeps the photo's actual composition
     // intact instead of destroying it for anyone not on a phone-width
     // viewport.
     return SizedBox(
-      height: 232,
+      height: 340,
       child: ColoredBox(
         color: AppColors.heroNavy,
         child: Center(
@@ -153,7 +153,7 @@ class _Headline extends StatelessWidget {
                 greeting.toUpperCase(),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.labelSmall?.copyWith(
+                style: theme.textTheme.labelMedium?.copyWith(
                   color: AppColors.heroGold,
                   fontWeight: FontWeight.w600,
                   letterSpacing: 1,
@@ -162,7 +162,7 @@ class _Headline extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: AppSpacing.sm),
+        const SizedBox(height: AppSpacing.md),
         // The destination is the one word that changes as the user picks a
         // city, so it carries the gold while the rest stays white.
         Text.rich(
@@ -177,10 +177,10 @@ class _Headline extends StatelessWidget {
           ),
           maxLines: 3,
           overflow: TextOverflow.ellipsis,
-          style: theme.textTheme.headlineSmall?.copyWith(
+          style: theme.textTheme.headlineMedium?.copyWith(
             color: Colors.white,
-            fontWeight: FontWeight.w600,
-            height: 1.3,
+            fontWeight: FontWeight.w700,
+            height: 1.25,
             shadows: const [
               Shadow(
                   color: Color(0x40000000),
