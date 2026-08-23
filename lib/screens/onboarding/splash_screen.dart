@@ -90,12 +90,22 @@ class _SplashScreenState extends State<SplashScreen>
         onTap: _advance,
         child: FullScreenHeroBackground(
           child: Center(
-            child: FadeTransition(
-              opacity: _logoFade,
-              child: ScaleTransition(
-                scale: _logoScale,
-                child: const AppLogo(size: 132),
-              ),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                // Dominates the screen, per explicit request - sized off
+                // the shorter side so it stays a square that actually fits
+                // on both a narrow phone and a wide desktop window, with a
+                // small margin so the glow around it never gets clipped.
+                final logoSize = (constraints.biggest.shortestSide * 0.78)
+                    .clamp(160.0, 560.0);
+                return FadeTransition(
+                  opacity: _logoFade,
+                  child: ScaleTransition(
+                    scale: _logoScale,
+                    child: AppLogo(size: logoSize),
+                  ),
+                );
+              },
             ),
           ),
         ),
