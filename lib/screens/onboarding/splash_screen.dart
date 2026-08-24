@@ -25,31 +25,33 @@ class SplashScreen extends StatefulWidget {
 class _SplashScreenState extends State<SplashScreen>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
-  late final Animation<double> _logoFade;
-  late final Animation<double> _logoScale;
-  late final Animation<double> _wordmarkFade;
-  late final Animation<Offset> _wordmarkSlide;
+  late final Animation<double> _contentFade;
+  late final Animation<double> _contentScale;
   bool _advanced = false;
 
   @override
   void initState() {
     super.initState();
-    // Exact timing per explicit request: 4 seconds total now - 2 growing
+    // Exact timing per explicit request: 4 seconds total - 2 growing
     // (small -> an overshoot past full size), 1 holding at that big size,
     // then 1 shrinking back down to rest at full size before advancing. A
     // TweenSequence gives that three-phase split precisely (weights 2:1:1
     // out of a 4000ms controller - the middle phase is a flat hold, begin
     // == end) rather than leaving the shape of the motion to a single
-    // curve. The "Tayarti" wordmark fades in as the logo approaches its
-    // biggest point, so it's fully in by the start of the hold and stays
-    // through the hold and the settle-back - also per explicit request.
+    // curve.
+    //
+    // The logo and the "Tayarti" wordmark grow and shrink together as one
+    // unit (per explicit correction - the wordmark previously faded in
+    // late at a fixed size instead of growing with the logo, which made it
+    // too easy to miss): both share this same scale animation instead of
+    // the wordmark having its own.
     _controller = AnimationController(
         vsync: this, duration: const Duration(milliseconds: 4000))
       ..forward();
-    _logoFade = CurvedAnimation(
+    _contentFade = CurvedAnimation(
         parent: _controller,
         curve: const Interval(0, 0.12, curve: Curves.easeOut));
-    _logoScale = TweenSequence<double>([
+    _contentScale = TweenSequence<double>([
       TweenSequenceItem(
         tween: Tween(begin: 0.25, end: 1.15)
             .chain(CurveTween(curve: Curves.easeOut)),
@@ -62,11 +64,6 @@ class _SplashScreenState extends State<SplashScreen>
         weight: 1,
       ),
     ]).animate(_controller);
-    _wordmarkFade = CurvedAnimation(
-        parent: _controller,
-        curve: const Interval(0.42, 0.5, curve: Curves.easeOut));
-    _wordmarkSlide = Tween(begin: const Offset(0, 0.4), end: Offset.zero)
-        .animate(_wordmarkFade);
     _controller.addStatusListener((status) {
       if (status == AnimationStatus.completed) _advance();
     });
@@ -116,22 +113,16 @@ class _SplashScreenState extends State<SplashScreen>
                   available.width * 0.75,
                   480.0,
                 ].reduce((a, b) => a < b ? a : b).clamp(120.0, 480.0);
-                return Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    FadeTransition(
-                      opacity: _logoFade,
-                      child: ScaleTransition(
-                        scale: _logoScale,
-                        child: AppLogo(size: logoSize),
-                      ),
-                    ),
-                    SizedBox(height: logoSize * 0.14),
-                    FadeTransition(
-                      opacity: _wordmarkFade,
-                      child: SlideTransition(
-                        position: _wordmarkSlide,
-                        child: Text(
+                return FadeTransition(
+                  opacity: _contentFade,
+                  child: ScaleTransition(
+                    scale: _contentScale,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        AppLogo(size: logoSize),
+                        SizedBox(height: logoSize * 0.14),
+                        Text(
                           'Tayarti',
                           style: TextStyle(
                             fontSize: logoSize * 0.22,
@@ -146,9 +137,9 @@ class _SplashScreenState extends State<SplashScreen>
                             ],
                           ),
                         ),
-                      ),
+                      ],
                     ),
-                  ],
+                  ),
                 );
               },
             ),
