@@ -16,7 +16,7 @@ Built the full pipeline the original note called for:
    preferences/priceAlerts).
 2. **Server checks prices on a schedule, not just on app-open.**
    `cloudflare-worker/src/price_check_job.js`, fired by a Cron Trigger
-   (`wrangler.toml`, every 6 hours) - reads every user with a push token
+   (`wrangler.toml`, every 15 minutes) - reads every user with a push token
    and tracked alerts from Firestore (Admin-scoped, via a service-account
    OAuth2 token minted in `google_auth.js`), re-quotes each route via
    Duffel, and sends a real Firebase Cloud Messaging push on a meaningful

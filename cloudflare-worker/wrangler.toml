@@ -13,13 +13,15 @@ compatibility_date = "2026-01-01"
 
 # Real, server-side price-drop notifications (see price_check_job.js) -
 # fires on this schedule regardless of whether anyone has the app open.
-# Every 6 hours; Cloudflare's free tier allows up to 3 cron triggers per
-# Worker and doesn't meaningfully limit how often they fire, but the
-# alerts here are inherently not time-critical (fares move slowly) and
-# each run makes one Duffel search per tracked alert, so there's no
-# reason to poll more aggressively than this.
+# Every 15 minutes per explicit request, to get as close to "instant" as a
+# request/response API allows - no flight-price provider (Duffel included)
+# pushes a live event the moment a fare changes, so polling more often is
+# the only lever there is. Each run makes one Duffel search per tracked
+# alert, so this is a real 24x jump in Duffel API call volume versus the
+# previous 6h interval - worth watching for Duffel rate-limit errors in
+# the Worker logs if the number of tracked alerts grows.
 [triggers]
-crons = ["0 */6 * * *"]
+crons = ["*/15 * * * *"]
 
 # Workers AI: runs open-source LLMs (Llama 3.1, etc.) directly on
 # Cloudflare's infrastructure. This binding needs no separate API key/
