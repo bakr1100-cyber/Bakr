@@ -76,17 +76,20 @@ class _HeroPhotoFrameState extends State<HeroPhotoFrame> {
                 ),
                 // Darkest at the top, where the status bar and headline sit,
                 // and again at the very bottom so whatever sits below reads
-                // as resting on the photo rather than colliding with it.
+                // as resting on the photo rather than colliding with it -
+                // lightened across the board per direct feedback: the photo
+                // needs to read clearly enough to actually recognize the
+                // city, not disappear under a dark wash.
                 const DecoratedBox(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                       colors: [
-                        Color(0xE00B1B2E),
-                        Color(0x8C0B1B2E),
-                        Color(0x260B1B2E),
-                        Color(0x590B1B2E),
+                        Color(0xB00B1B2E),
+                        Color(0x6E0B1B2E),
+                        Color(0x1A0B1B2E),
+                        Color(0x400B1B2E),
                       ],
                       stops: [0, 0.3, 0.62, 1],
                     ),
@@ -97,7 +100,7 @@ class _HeroPhotoFrameState extends State<HeroPhotoFrame> {
                     gradient: RadialGradient(
                       center: Alignment.topCenter,
                       radius: 1.1,
-                      colors: [Color(0x00000000), Color(0x59040A14)],
+                      colors: [Color(0x00000000), Color(0x40040A14)],
                       stops: [0.55, 1],
                     ),
                   ),

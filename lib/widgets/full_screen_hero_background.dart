@@ -17,14 +17,17 @@ class FullScreenHeroBackground extends StatefulWidget {
   const FullScreenHeroBackground({
     super.key,
     required this.child,
-    this.overlayOpacity = 0.74,
+    this.overlayOpacity = 0.48,
   });
 
   final Widget child;
 
-  /// How dark the navy wash over the photo is - high enough by default that
-  /// plain dark-on-cream text (unchanged from the non-photo screens) stays
-  /// legible without every caller having to re-color its own text white.
+  /// How dark the navy wash over the photo is. Lowered from an initial
+  /// 0.74 per direct feedback - the photo needs to read clearly enough
+  /// that a traveller recognizes which city it actually is, not just a
+  /// dark, generic wash. Every screen using this already sets its own text
+  /// white (see LanguageSelectScreen/ModeSelectScreen), so nothing depends
+  /// on the wash staying dark for legibility.
   final double overlayOpacity;
 
   @override
