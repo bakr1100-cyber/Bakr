@@ -94,6 +94,20 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
+      # Travelpayouts/Aviasales Data API token - the cached-price data
+      # source that's replacing the automatic Duffel polling in the
+      # scheduled price-check job (see price_check_job.js and
+      # todo/business-model-data-strategy.md for why: Duffel bills per
+      # search, and this app never books through Duffel, so an automated
+      # background job hitting it on a timer was a real cost risk with no
+      # revenue behind it - this API is free to call, priced instead as a
+      # commission on the affiliate bookings it leads to).
+      - name: Set Travelpayouts API token as a Cloudflare secret
+        run: echo "${{ secrets.TRAVELPAYOUTS_API_TOKEN }}" | wrangler secret put TRAVELPAYOUTS_API_TOKEN
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
       - name: Deploy Worker
         run: wrangler deploy
         env:
