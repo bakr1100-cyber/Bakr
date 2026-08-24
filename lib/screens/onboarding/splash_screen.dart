@@ -34,26 +34,28 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   void initState() {
     super.initState();
-    // Exact timing per explicit request: 3 seconds total, 2 of it growing
-    // (small -> an overshoot past full size) and 1 shrinking back down to
-    // rest at full size - a TweenSequence gives that split precisely
-    // (weight 2 vs weight 1 out of a 3000ms controller), rather than
-    // leaving the shape of the motion to whatever a single curve like
-    // elasticOut happens to produce. The "Tayarti" wordmark comes in right
-    // as the logo hits its biggest point (the 2s mark, t=0.667) and stays
-    // through the settle-back - also per explicit request.
+    // Exact timing per explicit request: 4 seconds total now - 2 growing
+    // (small -> an overshoot past full size), 1 holding at that big size,
+    // then 1 shrinking back down to rest at full size before advancing. A
+    // TweenSequence gives that three-phase split precisely (weights 2:1:1
+    // out of a 4000ms controller - the middle phase is a flat hold, begin
+    // == end) rather than leaving the shape of the motion to a single
+    // curve. The "Tayarti" wordmark fades in as the logo approaches its
+    // biggest point, so it's fully in by the start of the hold and stays
+    // through the hold and the settle-back - also per explicit request.
     _controller = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 3000))
+        vsync: this, duration: const Duration(milliseconds: 4000))
       ..forward();
     _logoFade = CurvedAnimation(
         parent: _controller,
-        curve: const Interval(0, 0.15, curve: Curves.easeOut));
+        curve: const Interval(0, 0.12, curve: Curves.easeOut));
     _logoScale = TweenSequence<double>([
       TweenSequenceItem(
         tween: Tween(begin: 0.25, end: 1.15)
             .chain(CurveTween(curve: Curves.easeOut)),
         weight: 2,
       ),
+      TweenSequenceItem(tween: ConstantTween(1.15), weight: 1),
       TweenSequenceItem(
         tween: Tween(begin: 1.15, end: 1.0)
             .chain(CurveTween(curve: Curves.easeInOut)),
@@ -62,7 +64,7 @@ class _SplashScreenState extends State<SplashScreen>
     ]).animate(_controller);
     _wordmarkFade = CurvedAnimation(
         parent: _controller,
-        curve: const Interval(0.55, 0.78, curve: Curves.easeOut));
+        curve: const Interval(0.42, 0.5, curve: Curves.easeOut));
     _wordmarkSlide = Tween(begin: const Offset(0, 0.4), end: Offset.zero)
         .animate(_wordmarkFade);
     _controller.addStatusListener((status) {
